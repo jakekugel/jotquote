@@ -1,0 +1,2 @@
+graft src/popquote/templates
+graft src/popquote/static

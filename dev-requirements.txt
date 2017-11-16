@@ -1,0 +1,7 @@
+wheel
+nose
+tox
+mock
+setuptools
+coverage
+flake8

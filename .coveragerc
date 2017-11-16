@@ -1,0 +1,12 @@
+[run]
+branch = True
+source = popquote
+
+[paths]
+source =
+   src/popquote
+   .tox/*/lib/python*/site-packages/popquote
+
+[report]
+include = src/popquote/*
+show_missing = True

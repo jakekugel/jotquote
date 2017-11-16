@@ -1,0 +1,15 @@
+*.pyc
+build/
+dist/
+MANIFEST
+popquote.egg-info/
+.tox
+
+# PyCharm metadata
+.idea/
+
+# Virtual environment
+venv/
+
+# Temporary file for coverage.py
+.coverage

@@ -1,0 +1,2 @@
+# Syntax error in following line - double quote character in quote.
+A book is a gift you can open again and " again.|Garrison Keillor||U
