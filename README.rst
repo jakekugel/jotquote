@@ -3,9 +3,9 @@ popquote
 
 popquote is a command-line tool for building a collection of quotes,
 and it includes a simple web server to display a quote of the day.
-The quotes are stored in a single text file on your computer in a
-human-friendly syntax, one per line.  100 famous quotes are included
-with the package, and it is easy to get started::
+The quotes are stored in a single text file in a human-friendly syntax,
+one per line.  100 famous quotes are included with the package, and
+it is easy to get started::
 
     $ pip install popquote
     $ popquote
