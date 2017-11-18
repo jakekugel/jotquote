@@ -4,9 +4,9 @@ source = popquote
 
 [paths]
 source =
-   src/popquote
+   popquote
    .tox/*/lib/python*/site-packages/popquote
 
 [report]
-include = src/popquote/*
+include = popquote/*
 show_missing = True
