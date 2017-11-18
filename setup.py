@@ -23,6 +23,7 @@ setup(name='popquote',
       version=version,
       keywords='quotes',
       include_package_data=True,
+      packages='popquote',
       install_requires=[
           'flask >= 0.10.1',
           'configparser >= 3.5.0',
