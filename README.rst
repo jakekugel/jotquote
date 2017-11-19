@@ -3,9 +3,11 @@ popquote
 
 .. image:: https://travis-ci.org/jakekugel/popquote.svg?branch=master
     :target: https://travis-ci.org/jakekugel/popquote
+    :alt: Build Status
 
-.. image:: https://travis-ci.org/jakekugel/popquote/coverage.svg?branch=master
-    :target: https://travis-ci.org/jakekugel/popquote?branch=master
+.. image:: http://codecov.io/github/jakekugel/popquote/coverage.svg?branch=master%precision=2
+    :target: http://codecov.io/github/jakekugel/popquote?branch=master
+    :alt: Coverage
 
 popquote is a command-line tool for building a collection of quotes,
 and it includes a simple web server to display a quote of the day.
