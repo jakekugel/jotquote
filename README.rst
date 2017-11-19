@@ -5,7 +5,7 @@ popquote
     :target: https://travis-ci.org/jakekugel/popquote
     :alt: Build Status
 
-.. image:: http://codecov.io/github/jakekugel/popquote/coverage.svg?branch=master%precision=2
+.. image:: http://codecov.io/github/jakekugel/popquote/coverage.svg?branch=master&precision=2
     :target: http://codecov.io/github/jakekugel/popquote?branch=master
     :alt: Coverage
 
