@@ -4,6 +4,9 @@ popquote
 .. image:: https://travis-ci.org/jakekugel/popquote.svg?branch=master
     :target: https://travis-ci.org/jakekugel/popquote
 
+.. image:: https://travis-ci.org/jakekugel/popquote/coverage.svg?branch=master
+    :target: https://travis-ci.org/jakekugel/popquote?branch=master
+
 popquote is a command-line tool for building a collection of quotes,
 and it includes a simple web server to display a quote of the day.
 The quotes are stored in a single text file in a human-friendly syntax,
