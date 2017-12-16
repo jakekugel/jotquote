@@ -1,4 +1,4 @@
-Contributing to popquote
+Contributing to jotquote
 ========================
 
 As an open source project, contributions are welcome.  Examples of
@@ -8,7 +8,7 @@ contributions include:
 * Documentation improvements
 * Bug reports and patch reviews
 
-If you have an idea for popquote, run it by me before you begin
+If you have an idea for jotquote, run it by me before you begin
 writing code.  This way, I can get you going in the right direction.
 
 Development environment setup

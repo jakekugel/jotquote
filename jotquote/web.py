@@ -9,7 +9,7 @@ import os
 
 from flask import Flask, render_template, g
 
-from popquote import api
+from jotquote import api
 
 app = Flask(__name__)
 
@@ -79,9 +79,9 @@ def main():
 
     # Load needed configuration from settings.conf file
     config = api.get_config()
-    app.config['QUOTE_FILE'] = config.get('popquote', 'quote_file')
-    listen_port = config.get('popquote', 'web_port')
-    listen_ip = config.get('popquote', 'web_ip')
+    app.config['QUOTE_FILE'] = config.get('jotquote', 'quote_file')
+    listen_port = config.get('jotquote', 'web_port')
+    listen_ip = config.get('jotquote', 'web_ip')
 
     if not listen_port:
         listen_port = 80

@@ -1,2 +1,2 @@
-graft src/popquote/templates
-graft src/popquote/static
+graft src/jotquote/templates
+graft src/jotquote/static

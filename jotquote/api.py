@@ -18,8 +18,8 @@ from io import open
 import shutil
 
 
-APP_NAME = 'popquote'
-CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.popquote', 'settings.conf')
+APP_NAME = 'jotquote'
+CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.jotquote', 'settings.conf')
 
 
 class Quote:
@@ -264,18 +264,18 @@ def _parse_tags(tag_string):
 
 
 def get_config():
-    """This function reads the file ~/.popquote/settings.conf and returns a
+    """This function reads the file ~/.jotquote/settings.conf and returns a
     ConfigParser object containing the settings.  If settings.conf
     does not yet exist, a file containing default settings is created.
     """
 
     if not os.path.exists(CONFIG_FILE):
-        # Create config directory ~/.popquote if it does not exist
-        config_dir = os.path.join(os.path.expanduser('~'), '.popquote')
+        # Create config directory ~/.jotquote if it does not exist
+        config_dir = os.path.join(os.path.expanduser('~'), '.jotquote')
         if not os.path.exists(config_dir):
             os.mkdir(config_dir)
 
-        # Create settings.conf within ~/.popquote
+        # Create settings.conf within ~/.jotquote
         quote_file = os.path.join(config_dir, 'quotes.txt')
         config = ConfigParser()
         config.add_section(APP_NAME)

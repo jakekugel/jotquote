@@ -1,12 +1,12 @@
 [run]
 branch = True
-source = popquote
+source = jotquote
 
 [paths]
 source =
-   popquote
-   .tox/*/lib/python*/site-packages/popquote
+   jotquote
+   .tox/*/lib/python*/site-packages/jotquote
 
 [report]
-include = popquote/*
+include = jotquote/*
 show_missing = True

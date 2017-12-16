@@ -2,10 +2,10 @@
 build/
 dist/
 MANIFEST
-popquote.egg-info/
+jotquote.egg-info/
 .tox
 
-# PyCharm metadata
+# PyCharm/IntelliJ metadata
 .idea/
 
 # Virtual environment

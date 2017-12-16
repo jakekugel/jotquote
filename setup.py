@@ -17,7 +17,7 @@ with open('README.rst') as readme:
     long_description = readme.read()
 
 setup(name='popquote',
-      description='A command-line interface and web server for viewing and managing quotes.',
+      description='A command-line interface for collecting and organizing quotes, and a quote of the day web server.',
       author='Jake Kugel',
       author_email='jake_kugel@yahoo.com',
       version=version,

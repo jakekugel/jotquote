@@ -12,14 +12,14 @@ import sys
 
 import click
 
-from popquote import api
+from jotquote import api
 
 # Click gives warning about use of unicode_literals in __future__, but
 # I decided to ignore these.  Once Python 2 goes away, will be moot.
 click.disable_unicode_literals_warning = True
 
 HELP_MAIN_F_ARG = 'optional path to quote file (if not provided, the command ' \
-                  'will check ~/.popquote/settings.conf for path)'
+                  'will check ~/.jotquote/settings.conf for path)'
 
 HELP_LIST_E_ARG = 'list the quotes using the same pipe-delimited format used in the quote file.'
 HELP_LIST_S_ARG = 'list the quote with the matching hash value'
@@ -29,7 +29,7 @@ HELP_LIST_L_ARG = 'list the quotes using long-form output which includes publica
 HELP_LIST_K_ARG = 'list the quotes the given keyword in quote, author, or publication'
 HELP_LIST_T_ARG = 'list the quotes with the given tag will be displayed'
 
-HELP_ADD_USAGE = 'popquote add [-e] [ - | <quote> ]'
+HELP_ADD_USAGE = 'jotquote add [-e] [ - | <quote> ]'
 HELP_ADD_POS_ARG = 'this positional argument can either be a single dash indicating multiple ' \
                    'quotes should be read from stdin, or a quote in the following ' \
                    'format: "<quote> - <author> [(publication)]"'
@@ -38,7 +38,7 @@ HELP_ADD_E_ARG = 'use the extended (pipe-delimited) quote format: ' \
 
 HELP_SHOWALLTAGS_USAGE = 'quote showalltags [-h]'
 
-HELP_SETTAGS_USAGE = 'popquote settags [-n <number> | -s <hash>] <new tags>'
+HELP_SETTAGS_USAGE = 'jotquote settags [-n <number> | -s <hash>] <new tags>'
 
 HELP_SETTAGS_N_ARG = 'the quote with the given position in the text file should have its tags set'
 HELP_SETTAGS_S_ARG = 'the quote with the given hash value in the text file should have its tags set'
@@ -54,7 +54,7 @@ HELP_TODAY_T_ARG = 'the quote must have the given tag'
 @click.option('--quotefile', type=click.Path(exists=False), help=HELP_MAIN_F_ARG)
 @click.version_option()
 @click.pass_context
-def popquote(ctx, quotefile):
+def jotquote(ctx, quotefile):
     """This command allows you to manage a collection of quotes contained in a text
     file; you can add, view, and tag quotes.  The command can also be used to start
     a simple web server to display a quote of the day.
@@ -80,7 +80,7 @@ def popquote(ctx, quotefile):
         _print_random(quotefile, None, None)
 
 
-@popquote.command()
+@jotquote.command()
 @click.option('--extended', '-e', help=HELP_ADD_E_ARG, is_flag=True)
 @click.argument('quote')  # , help=HELP_ADD_POS_ARG
 @click.pass_context
@@ -92,7 +92,7 @@ def add(ctx, extended, quote):
     _add_quotes(quotefile, quote, extended)
 
 
-@popquote.command()
+@jotquote.command()
 @click.option('--tags', '-t', help=HELP_LIST_T_ARG, multiple=False)
 @click.option('--keyword', '-k', help=HELP_LIST_K_ARG, multiple=False)
 @click.option('--long', '-l', help=HELP_LIST_L_ARG, is_flag=True)
@@ -125,7 +125,7 @@ def list(ctx, tags, keyword, long, number, hash, extended):
             print_quote_short(quote)
 
 
-@popquote.command()
+@jotquote.command()
 @click.pass_context
 def showalltags(ctx):
     """Show all tags used in the quote file.
@@ -137,7 +137,7 @@ def showalltags(ctx):
         print(tag)
 
 
-@popquote.command()
+@jotquote.command()
 @click.option('--number', '-n', help=HELP_SETTAGS_N_ARG)
 @click.option('--hash', '-s', help=HELP_SETTAGS_S_ARG)
 @click.argument('newtags')
@@ -169,17 +169,17 @@ def settags(ctx, number, hash, newtags):
     api.write_quotes(quotefile, quotes)
 
 
-@popquote.command()
+@jotquote.command()
 @click.pass_context
 def webserver(ctx):
     """Start a web server to display quote of the day."""
 
     # Lazy import to avoid importing web packages when using pure cli
-    import popquote.web
-    popquote.web.main()
+    import jotquote.web
+    jotquote.web.main()
 
 
-@popquote.command()
+@jotquote.command()
 @click.option('--tags', '-t', help=HELP_RANDOM_T_ARG)
 @click.option('--keyword', '-k', help=HELP_RANDOM_K_ARG)
 @click.pass_context
@@ -191,7 +191,7 @@ def random(ctx, tags, keyword):
     _print_random(quotefile, tags, keyword)
 
 
-@popquote.command()
+@jotquote.command()
 @click.pass_context
 def today(ctx):
     """Display a random quote, seeding the random number generator with the
@@ -209,13 +209,13 @@ def today(ctx):
         print_quote_short(quote)
 
 
-@popquote.command()
+@jotquote.command()
 @click.pass_context
 def info(ctx):
     """Show location of config file and quote file."""
 
-    import popquote
-    print("Version: {}".format(popquote.__version__))
+    import jotquote
+    print("Version: {}".format(jotquote.__version__))
     print("Settings file: {}".format(api.CONFIG_FILE))
     print("Quote file: {}".format(ctx.obj['QUOTEFILE']))
 
@@ -348,7 +348,7 @@ def _select_quotes(quotes, tags=None, keyword=None, number=None, hash_arg=None, 
 
 
 def popmain():
-    return popquote(obj={})
+    return jotquote(obj={})
 
 
 if __name__ == '__main__':
