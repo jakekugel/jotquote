@@ -12,14 +12,14 @@ import unittest
 from flask import g
 
 import tests.test_util
-from popquote import web
+from jotquote import web
 
 
-class Testpopquote(unittest.TestCase):
+class TestJotquote(unittest.TestCase):
     """A few integration tests for the Flask app in web.py"""
     def setUp(self):
         # Create a temporary directory for use by the current unit test
-        self.tempdir = tempfile.mkdtemp(prefix='popquote.unittest.')
+        self.tempdir = tempfile.mkdtemp(prefix='jotquote.unittest.')
 
         self.file = tests.test_util.init_quotefile(self.tempdir, "quotes5.txt")
 
@@ -34,19 +34,19 @@ class Testpopquote(unittest.TestCase):
         """A few sanity tests on web page"""
         rv = self.app.get('/')
         assert b'<!DOCTYPE html>' in rv.data
-        assert b'<title>popquote</title>' in rv.data
-        assert b'<div class="quote">A book is a gift you can open again and again.</div>' in rv.data
-        assert b'<div class="author">Garrison Keillor</div>' in rv.data
+        assert b'<title>jotquote</title>' in rv.data
+        assert b'<div class="quote">They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.</div>' in rv.data
+        assert b'<div class="author">Ben Franklin</div>' in rv.data
 
     def test_page_tags(self):
         """A few sanity tests on web page"""
         rv = self.app.get('/tags')
         print(rv.data)
         assert b'<!DOCTYPE html>' in rv.data
-        assert b'<title>popquote</title>' in rv.data
-        assert b'<div class="quote">A book is a gift you can open again and again.</div>' in rv.data
-        assert b'<div class="author">Garrison Keillor</div>' in rv.data
-        assert b'<div id=\'settag\' class="command" style="display:none;">$ popquote settags -s a166ebeb047ebdd9 U</div>' in rv.data
+        assert b'<title>jotquote</title>' in rv.data
+        assert b'<div class="quote">They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.</div>' in rv.data
+        assert b'<div class="author">Ben Franklin</div>' in rv.data
+        assert b'<div id=\'settag\' class="command" style="display:none;">$ jotquote settags -s 25382c2519fb23bd U</div>' in rv.data
 
     def test_quote_caching(self):
         """Test that quotes cached but reloaded if quote file changes"""

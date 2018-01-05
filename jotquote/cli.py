@@ -347,9 +347,9 @@ def _select_quotes(quotes, tags=None, keyword=None, number=None, hash_arg=None, 
     return selected_quotes
 
 
-def popmain():
+def main():
     return jotquote(obj={})
 
 
 if __name__ == '__main__':
-    popmain()
+    main()

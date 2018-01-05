@@ -10,20 +10,20 @@ from setuptools import setup
 
 _version_re = re.compile(r'__version__\s+=\s+(.*)')
 
-with open('popquote/__init__.py', 'rb') as f:
+with open('jotquote/__init__.py', 'rb') as f:
     version = str(ast.literal_eval(_version_re.search(f.read().decode('utf-8')).group(1)))
 
 with open('README.rst') as readme:
     long_description = readme.read()
 
-setup(name='popquote',
+setup(name='jotquote',
       description='A command-line interface for collecting and organizing quotes, and a quote of the day web server.',
       author='Jake Kugel',
       author_email='jake_kugel@yahoo.com',
       version=version,
       keywords='quotes',
       include_package_data=True,
-      packages=['popquote'],
+      packages=['jotquote'],
       install_requires=[
           'flask >= 0.10.1',
           'configparser >= 3.5.0',
@@ -33,7 +33,7 @@ setup(name='popquote',
       python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, <4',
       entry_points={  # Generate appropriate executables based on platform
           'console_scripts': [
-              'popquote = popquote.cli:popmain'
+              'jotquote = jotquote.cli:main'
           ],
       },
       url='',

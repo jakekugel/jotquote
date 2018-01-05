@@ -13,6 +13,7 @@ import datetime
 import hashlib
 import os
 import random as randomlib
+import re
 from string import ascii_letters
 from io import open
 import shutil
@@ -20,6 +21,8 @@ import shutil
 
 APP_NAME = 'jotquote'
 CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.jotquote', 'settings.conf')
+INVALID_CHARS_QUOTE = re.compile("[|\"\n\r]")
+INVALID_CHARS = re.compile("[|\n\r]")
 
 
 class Quote:
@@ -36,6 +39,13 @@ class Quote:
             self.publication = None
         else:
             self.publication = publication.strip()
+
+        _assert_no_invalid_chars_quote(self.quote, "quote")
+        _assert_no_invalid_chars(self.author, "author")
+
+        if self.publication is not None:
+            _assert_no_invalid_chars(self.publication, "publication")
+
         self.tags = []
         self.set_tags(tags)
 
@@ -163,20 +173,22 @@ def _parse_quote(raw_line, simple_format=True):
 
         <quote> - <author> [(publication)]
 
-    If simple_quote=False, the quote is expected in format:
+    If simple_quote=False, the quote is expected in same format as quote file:
 
         <quote>|<author>|[<publication>]|[<tag1>,<tag2>,...]
 
     The function parses the quote in the given format and returns a Quote object.
     An exception is raised if there is a syntax error.
 
-    Valid characters:
+    The following characters are not allowed in the quote, author, and
+    publication:
 
-        The quote, author, and publication can contain any characters except
-        the pipe character (|), the double quote character ("), and end-of-
-        line characters.
+        pipe character (|)
+        double quote (")
+        newline (0x0a)
+        carriage return (0x0d)
 
-        The tags are restricted to letters, digits, and underscore characters.
+    The tags are restricted to letters, digits, and underscore characters.
     """
     line = raw_line.strip()
 
@@ -192,10 +204,6 @@ def _parse_quote(raw_line, simple_format=True):
         raise click.ClickException("an author was not included with the quote.  " +
                                    "Expecting quote in the format \"<quote> - <author>\".")
 
-    if any(c == '"' for c in quotestring):
-        raise click.ClickException(
-            "the quote included an embedded double quote character, but only single quote characters (') allowed in "
-            "quotes")
     quote = Quote(quotestring, author, publication, tags)
     return quote
 
@@ -439,6 +447,38 @@ def _check_for_duplicates(quotes, source):
         else:
             raise click.ClickException("a duplicate quote was found on line {} of '{}'.  "
                                        "Quote: \"{}\".".format(index + 1, source, quote.quote))
+
+
+def _assert_does_not_contain(text, char, component_name):
+    """Internal function to assert that text does not contain char.  If it does,
+    an exception is raised from this function.
+    """
+    if any(c in char for c in text):
+        _raise_invalid_char_exception(char, component_name)
+
+
+def _assert_no_invalid_chars_quote(text, component_name):
+    match = INVALID_CHARS_QUOTE.search(text)
+    if match is not None:
+        char = text[match.span()[0]:match.span()[1]]
+        _raise_invalid_char_exception(char, component_name)
+
+
+def _assert_no_invalid_chars(text, component_name):
+    match = INVALID_CHARS.search(text)
+    if match is not None:
+        char = text[match.span()[0]:match.span()[1]]
+        _raise_invalid_char_exception(char, component_name)
+
+
+def _raise_invalid_char_exception(char, component_name):
+    if char == '\n':
+        charstring = "newline (0x0a)"
+    elif char == '\r':
+        charstring = "carriage return (0x0d)"
+    else:
+        charstring = "(" + char + ")"
+    raise click.ClickException("the {} included a {} character".format(component_name, charstring))
 
 
 if __name__ == '__main__':

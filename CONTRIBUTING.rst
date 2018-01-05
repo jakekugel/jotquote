@@ -19,6 +19,10 @@ Development environment setup
 
     $ pip install -r dev-requirements.txt
 
+3.  Install jotquote in editable mode::
+
+    $ pip install --editable .
+
 Running unit tests
 ------------------
 Once the development environment has been configured as described above,

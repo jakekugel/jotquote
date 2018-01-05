@@ -18,13 +18,13 @@ import click
 import mock
 
 import tests.test_util
-from popquote import api
+from jotquote import api
 
 
-class TestPopquote(unittest.TestCase):
+class TestJotquote(unittest.TestCase):
     def setUp(self):
         # Create a temporary directory for use by the current unit test
-        self.tempdir = tempfile.mkdtemp(prefix='popquote.unittest.')
+        self.tempdir = tempfile.mkdtemp(prefix='jotquote.unittest.')
 
         # Create a test ConfigParser object
         self.config = ConfigParser()
@@ -91,17 +91,14 @@ class TestPopquote(unittest.TestCase):
         path = tests.test_util.init_quotefile(self.tempdir, "quotes6.txt")
 
         with self.assertRaisesRegexp(Exception, re.escape(
-                "syntax error on line 1 of {0}: did not find 3 '|' characters.  Line with error: \"A book is a gift "
-                "you can open again and again.|Garrison Keillor||U|\"".format(path))):
+                "syntax error on line 1 of {0}: did not find 3 '|' characters.  Line with error: \"They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.|Ben Franklin||U|\"".format(path))):
             api.read_quotes(path)
 
     def test_read_quotes_with_double_quote_in_quotefile(self):
         """read_quotes() should raise exception if there is a double-quote character in the quote."""
         path = tests.test_util.init_quotefile(self.tempdir, "quotes7.txt")
         with self.assertRaisesRegexp(Exception, re.escape(
-                "syntax error on line 2 of {0}: the quote included an embedded double quote "
-                "character, but only single quote characters (\') allowed in quotes.  Line with error: \"A book is a "
-                "gift you can open again and \" again.|Garrison Keillor||U\"".format(path))):
+                "syntax error on line 2 of {0}: the quote included a (\") character.  Line with error: \"They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor \" safety.|Ben Franklin||U\"".format(path))):
             api.read_quotes(path)
 
     def test_parse_quotes(self):
@@ -115,9 +112,7 @@ class TestPopquote(unittest.TestCase):
 
     def test_parse_quotes_doublequote(self):
         """parse_quote() should raise exception if there is double quote in quote being parsed."""
-        with self.assertRaisesRegexp(Exception, re.escape(
-                "the quote included an embedded double quote character, but only single quote characters (') "
-                "allowed in quotes")):
+        with self.assertRaisesRegexp(Exception, re.escape("the quote included a (\") character")):
             api.parse_quote("  This is a quote\". |  Author  | Publication   | tag1, tag2 , tag3  ",
                             simple_format=False)
 
@@ -153,8 +148,7 @@ class TestPopquote(unittest.TestCase):
 
     def test_parse_simple_quote_with_double_quote(self):
         """Not allowed to have double quote character in quote itself"""
-        with self.assertRaisesRegexp(Exception, "the quote included an embedded double quote character, "
-                                                "but only single quote characters \('\) allowed in quotes"):
+        with self.assertRaisesRegexp(Exception, re.escape("the quote included a (\") character")):
             api.parse_quote("  We accept the love we think we \" deserve.  - Stephen Chbosky",
                             simple_format=True)
 
@@ -188,6 +182,16 @@ class TestPopquote(unittest.TestCase):
         with self.assertRaisesRegexp(Exception, "the quote included an embedded pipe character (|)"):
             api.parse_quote(" Quote with | character - Author", simple_format=True)
 
+    def test_parse_simple_quote_with_newline(self):
+        """parse_quote() should raise exception if parsing simple format and there is a newline char."""
+        with self.assertRaisesRegexp(Exception, re.escape("the quote included a newline (0x0a) character")):
+            api.parse_quote(" Quote with \n character - Author", simple_format=True)
+
+    def test_parse_simple_quote_with_carriage_return(self):
+        """parse_quote() should raise exception if parsing simple format and there is a carriage return char."""
+        with self.assertRaisesRegexp(Exception, re.escape("the quote included a carriage return (0x0d) character")):
+            api.parse_quote(" Quote with \r character - Author", simple_format=True)
+
     def test_add_quote(self):
         """add_quote() method should add single quote to end of quote file."""
 
@@ -202,7 +206,7 @@ class TestPopquote(unittest.TestCase):
         with open(path, 'rb') as file:
             data = file.read()
         text_data = data.decode('utf-8')
-        expected = u'A book is a gift you can open again and again. | Garrison Keillor |  | U' + os.linesep + \
+        expected = u'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U' + os.linesep + \
                    u'This is an added quote. | Another author | Publication | tag1, tag2' + os.linesep
         self.assertEquals(expected, text_data)
 
@@ -309,9 +313,9 @@ class TestPopquote(unittest.TestCase):
         with open(path, "rb") as openfile:
             whole_file = openfile.read().decode("utf-8")
         expected = "The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it. | Linus Torvalds |  | U\n" + \
-                   "God writes a lot of comedy... the trouble is, he's stuck with so many bad actors who don't know how to play funny. | Garrison Keillor |  | U\n" + \
-                   "I believe in looking reality straight in the eye and denying it. | Garrison Keillor |  | U\n" + \
-                   "A book is a gift you can open again and again. | Garrison Keillor |  | U\n"
+                   "The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall. | Mitch Hedberg |  | U\n" + \
+                   "Ask for what you want and be prepared to get it. | Maya Angelou |  | U\n" + \
+                   "They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\n"
         self.assertEqual(expected, whole_file)
 
     def test_write_quotes_windows(self):
@@ -333,10 +337,9 @@ class TestPopquote(unittest.TestCase):
             whole_file = binfile.read()
         expected = b"The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. " + \
                    b"Yes, that's it. | Linus Torvalds |  | U\r\n" + \
-                   b"God writes a lot of comedy... the trouble is, he's stuck with so many bad actors who don't " + \
-                   b"know how to play funny. | Garrison Keillor |  | U\r\n" + \
-                   b"I believe in looking reality straight in the eye and denying it. | Garrison Keillor |  | U\r\n" + \
-                   b"A book is a gift you can open again and again. | Garrison Keillor |  | U\r\n"
+                   b"The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall. | Mitch Hedberg |  | U\r\n" + \
+                   b"Ask for what you want and be prepared to get it. | Maya Angelou |  | U\r\n" + \
+                   b"They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\r\n"
         self.assertEqual(expected, whole_file)
 
     def test_write_quotes_invalid(self):
@@ -477,15 +480,17 @@ class TestPopquote(unittest.TestCase):
         path = tests.test_util.init_quotefile(self.tempdir, "quotes8.txt")
 
         # Call function being tested
-        with self.assertRaisesRegexp(Exception, re.escape("a duplicate quote was found on line 5 of '{}'.  Quote: \"God "
-                                     "writes a lot of comedy... the trouble is, he's stuck with so many bad actors "
-                                     "who don't know how to play funny.\"".format(path))):
+        with self.assertRaisesRegexp(Exception, re.escape("a duplicate quote was found on line 5 of '{}'.  Quote: \"The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall.\"".format(path))):
             api.read_quotes(path)
 
-    # def _get_test_data_to_temp(self, data_filename):
-    #     test_module_directory = os.path.dirname(__file__)
-    #     test_data_source = os.path.join(test_module_directory, "testdata", data_filename);
-    #     test_data_target = os.path.join(self.tempdir, data_filename)
-    # 
-    #     shutil.copyfile(test_data_source, test_data_target)
-    #     return test_data_target
+    def test_assert_does_not_contain_period(self):
+        """The interal _assert_does_not_contain function should raise exception if char in text."""
+
+        with self.assertRaisesRegexp(Exception, re.escape("the quote included a (.) character")):
+            api._assert_does_not_contain("There is a period in this string.", ".", "quote")
+
+    def test_assert_does_not_contain_newline(self):
+        """The interal _assert_does_not_contain function should raise exception if char missing from text."""
+
+        with self.assertRaisesRegexp(Exception, re.escape("the quote included a newline (0x0a) character")):
+            api._assert_does_not_contain("There is a newline (\n) in this string.", "\n", "quote")

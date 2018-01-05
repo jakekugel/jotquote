@@ -1,2 +1,2 @@
 # Syntax error in following line - double quote character in quote.
-A book is a gift you can open again and " again.|Garrison Keillor||U
+They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor " safety.|Ben Franklin||U

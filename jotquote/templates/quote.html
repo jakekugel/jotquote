@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>popquote</title>
+<title>jotquote</title>
 
 <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Open%20Sans">
 <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
@@ -105,7 +105,7 @@
             <span class="footer quotenum">{{ date1 }}</span>
         </div>
         {% if hash is not none %}
-            <div id='settag' class="command" style="display:none;">$ popquote settags -s {{hash}} {{comma_tags}}</div>
+            <div id='settag' class="command" style="display:none;">$ jotquote settags -s {{hash}} {{comma_tags}}</div>
         {% endif %}
     </div>
 </body>
