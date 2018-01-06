@@ -298,7 +298,7 @@ class TestQuoteCli(unittest.TestCase):
         assert result.exit_code == 0
 
         # Confirm a single line of output was returned.
-        self.assertEquals('They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin', result.output)
+        self.assertEquals('They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n', result.output)
 
     def test_random_with_tags_nomatch(self):
         """Test that the random subcommand returns nothing if no matching tag"""
@@ -324,7 +324,7 @@ class TestQuoteCli(unittest.TestCase):
 
         # Call random subcommand
         runner = CliRunner()
-        result = runner.invoke(cli.jotquote, ['random', '-k', 'franklin'], obj={})
+        result = runner.invoke(cli.jotquote, ['random', '-k', 'Franklin'], obj={})
 
         # Check results
         assert result.exit_code == 0
