@@ -89,7 +89,7 @@ def main():
 
     # A hack to deal with Python 2.7 quirk:
     if sys.version_info < (3, 0, 0):
-        if isinstance(listen_port, basestring): # noqa: F821
+        if isinstance(listen_port, basestring):  # noqa: F821
             listen_port = int(listen_port)
 
     if not listen_ip:
