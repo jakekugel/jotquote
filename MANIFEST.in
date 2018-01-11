@@ -1,2 +1,2 @@
-graft src/jotquote/templates
-graft src/jotquote/static
+graft jotquote/templates
+graft jotquote/static

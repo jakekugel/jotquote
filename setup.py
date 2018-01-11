@@ -39,7 +39,7 @@ setup(name='jotquote',
       url='',
       license='MIT License',
       classifiers=[
-          'Development Status :: 3 - Alpha',
+          'Development Status :: 4 - Beta',
           'Environment :: Console',
           'Environment :: Web Environment',
           'Operating System :: MacOS :: MacOS X',
