@@ -1,5 +1,5 @@
 wheel
-nose
+pytest
 tox
 mock
 setuptools

@@ -300,7 +300,7 @@ def _parse_number_arg(number):
     if number is None:
         return None
 
-    if len(number) is 0:
+    if len(number) == 0:
         return None
 
     if number[0].isdigit():
@@ -328,10 +328,10 @@ def _select_quotes(quotes, tags=None, keyword=None, number=None, hash_arg=None, 
     selected_quotes = []
     for index in range(0, len(quotes)):
         quote = quotes[index]
-        if ((keyword is None or quote.has_keyword(keyword)) and
-                (tags is None or quote.has_tags(taglist)) and
-                (number is None or number == index + 1) and
-                (hash_arg is None or hash_arg == quote.get_hash())):
+        if ((keyword is None or quote.has_keyword(keyword))
+                and (tags is None or quote.has_tags(taglist))
+                and (number is None or number == index + 1)
+                and (hash_arg is None or hash_arg == quote.get_hash())):
             selected_quotes.append(index)
 
     # If there is a hash collision (unlikely), show an error.

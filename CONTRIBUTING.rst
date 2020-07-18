@@ -28,16 +28,18 @@ Running unit tests
 Once the development environment has been configured as described above,
 the unit tests can be run with this command::
 
-    $ nosetests
+    $ pytest
 
 Or to run and measure code coverage::
 
-    $ nosetests  --with-coverage
+    $ coverage run -m pytest
+    $ coverage report
+
 
 Running tox tests
 -----------------
 Tox can be used to run the tests on multiple Python versions.  As a
-prerequisite, the Python interpreters for the different versions must
+prerequisite, the Python interpreters for the supported versions must
 be installed.  After installing development requirements as described above,
 the tox tests can be run using this command::
 

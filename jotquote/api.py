@@ -50,10 +50,10 @@ class Quote:
         self.set_tags(tags)
 
     def __eq__(self, other):
-        if ((self.quote == other.quote) and
-                (self.author == other.author) and
-                (self.publication == other.publication) and
-                (self.tags == other.tags)):
+        if ((self.quote == other.quote)
+                and (self.author == other.author)
+                and (self.publication == other.publication)
+                and (self.tags == other.tags)):
             return True
         else:
             return False
@@ -201,8 +201,8 @@ def _parse_quote(raw_line, simple_format=True):
         raise click.ClickException("a quote was not found")
 
     if len(author) == 0:
-        raise click.ClickException("an author was not included with the quote.  " +
-                                   "Expecting quote in the format \"<quote> - <author>\".")
+        raise click.ClickException("an author was not included with the quote.  "
+                                   + "Expecting quote in the format \"<quote> - <author>\".")
 
     quote = Quote(quotestring, author, publication, tags)
     return quote
@@ -238,7 +238,7 @@ def _parse_quote_extended(quote_line):
     """
     fields = quote_line.split('|')
 
-    if len(fields) is not 4:
+    if len(fields) != 4:
         raise click.ClickException("did not find 3 '|' characters")
 
     quote = fields[0].strip()
@@ -265,7 +265,7 @@ def _parse_tags(tag_string):
         if not all(c in ascii_letters + '0123456789_' for c in tag):
             raise click.ClickException("invalid tag '{0}': only numbers, letters, and commas are "
                                        "allowed in tags".format(tag))
-        if tag is not "":
+        if tag != "":
             tagset.add(tag)
 
     return sorted(list(tagset))

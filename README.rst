@@ -85,7 +85,7 @@ and Linux.
 
 Supported environments
 ~~~~~~~~~~~~~~~~~~~~~~
-jotquote is tested on Python 2.7, 3.4, 3.5, and 3.6 on Windows, Mac, and Linux.
+jotquote is tested on Python 2.7, and 3.7 through 3.8 on Windows, Mac, and Linux.
 
 Cloud storage
 ~~~~~~~~~~~~~
