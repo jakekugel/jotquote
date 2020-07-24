@@ -341,7 +341,11 @@ def add_quote(filename, quote):
 
 
 def add_quotes(filename, newquotes):
-    """Adds the list of quotes to end of the quote file with given file name.
+    """Adds the list of quotes to end of filename.
+
+    If more than one process calls this function at the same time, the results
+    are undefined.
+
     Returns total number of quotes including new quote.
     """
     if not os.path.exists(filename):
@@ -369,11 +373,14 @@ def add_quotes(filename, newquotes):
     return len(quotes)
 
 
-def write_quotes(filename, quotes):
-    """Writes the given list of quotes to quote file with given filename, atomically
-    overwriting the existing file."""
-    if not os.path.exists(filename):
-        raise click.ClickException("the quote file '{0}' was not found.".format(filename))
+def write_quotes(quote_path, quotes):
+    """Writes the given list of quotes to quote_path.
+
+    Atomically overwrites quote_path with the quotes in the list.  If more than one
+    process calls this function at the same time, the results are undefined.
+    """
+    if not os.path.exists(quote_path):
+        raise click.ClickException("the quote file '{0}' was not found.".format(quote_path))
 
     config = get_config()
     linesep_property = config.get(APP_NAME, 'line_separator')
@@ -390,11 +397,58 @@ def write_quotes(filename, quotes):
             "the value '{0}' is not valid value for the line_separator property."
             "  Valid values are 'platform', 'windows', or 'unix'.".format(linesep_property))
 
-    # Need to use binary mode so that I can control the newline characters that are written
-    with click.open_file(filename, mode='wb', errors='strict', atomic=True) as outfile:
-        for quote in quotes:
-            output_bytes = format_quote(quote).encode('utf-8') + newline.encode('utf-8')
-            outfile.write(output_bytes)
+    parent_path = os.path.abspath(os.path.join(quote_path, os.pardir))
+    quote_file = os.path.basename(quote_path)
+    backup_file = '.' + quote_file + '.jotquote.bak'
+    backup_path = os.path.join(parent_path, backup_file)
+
+    while True:
+        temp_file = '.' + quote_file + str(randomlib.randint(0, 99999999)) + '.jotquote.tmp'
+        temp_path = os.path.join(parent_path, temp_file)
+        if not os.path.exists(temp_path):
+            break
+
+    try:
+        # I had previously called open_file with atomic=True and passed the quote
+        # file directly, but hit a bug in Cryptomator filesystem where write() failed
+        # but the close() succeeded, so Click replaced quote file with a partially
+        # written temp file.  Cryptomator fixed the bug, but I am creating the temp
+        # file myself now to avoid this class of error, and use atomic=False instead
+        # of atomic=True.
+        with click.open_file(temp_path, mode='wb', errors='strict', atomic=False) as outfile:
+            for quote in quotes:
+                output_bytes = format_quote(quote).encode('utf-8') + newline.encode('utf-8')
+                outfile.write(output_bytes)
+
+        # Sanity check backup size before overwriting backup
+        if os.path.exists(backup_path):
+            if os.path.getsize(backup_path) > os.path.getsize(temp_path):
+                os.remove(temp_path)
+                raise click.ClickException(
+                    "the backup file '{0}' is larger than the quote file '{1}' would be after this operation.  "
+                    "This is suspicious, the quote file was not modified.  If this was expected, "
+                    "delete the backup file and try again.".format(backup_file, quote_file))
+
+        # Create a backup (overwriting existing backup)
+        shutil.copy(quote_path, backup_path)
+    except click.ClickException:
+        raise
+    except:
+        os.remove(temp_path)
+        raise click.ClickException(
+            "an error occurred writing the quotes.  The file '{0}' was not modified."
+            .format(quote_path))
+
+    # Replace original file with the new temp file.  The os.replace() function is
+    # safest, but only available in Python 3.3 and later.
+    try:
+        if hasattr(os, 'replace'):
+            os.replace(temp_path, quote_path)
+        else:
+            os.remove(quote_path)
+            os.rename(temp_path, quote_path)
+    except:
+        raise click.ClickException("an error occurred writing the quotes.")
 
 
 def format_quote(quote):

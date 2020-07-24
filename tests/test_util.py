@@ -16,3 +16,14 @@ def init_quotefile(tempdir, data_filename):
 
     shutil.copyfile(test_data_source, test_data_target)
     return test_data_target
+
+
+def compare_quotes(quotes, quotes2):
+    if len(quotes) != len(quotes2):
+        return False
+
+    for i in range(len(quotes)):
+        if not quotes[i] == quotes2[i]:
+            return False
+
+    return True
