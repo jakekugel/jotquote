@@ -9,6 +9,7 @@ import locale
 import os
 import random as randomlib
 import sys
+import time
 
 import click
 
@@ -31,9 +32,9 @@ HELP_LIST_T_ARG = 'list the quotes with the given tag will be displayed'
 
 HELP_ADD_USAGE = 'jotquote add [-e] [ - | <quote> ]'
 HELP_ADD_POS_ARG = 'this positional argument can either be a single dash indicating multiple ' \
-                   'quotes should be read from stdin, or a quote in the following ' \
-                   'format: "<quote> - <author> [(publication)]"'
-HELP_ADD_E_ARG = 'use the extended (pipe-delimited) quote format: ' \
+                   'quotes should be read from stdin, or a quote in following ' \
+                   'format: "<quote> - <author> [(publication)]", or "<quote> - <author> [\'publication\']"'
+HELP_ADD_E_ARG = 'use the same pipe-delimited quote format that is used in the quote file: ' \
                  '"<quote>|<author>|[<publication>]|[<tag1>,<tag2>,...]"'
 
 HELP_SHOWALLTAGS_USAGE = 'quote showalltags [-h]'
@@ -64,8 +65,10 @@ def jotquote(ctx, quotefile):
     # Get path to quote file
     if quotefile is None:
         quotefile = config.get(api.APP_NAME, 'quote_file')
-        if not os.path.exists(quotefile):
-            # Create settings.conf if it doesn't exist
+
+        # All subcommands except webserver require quotefile to exist.  The
+        # webserver subcommand lazy-loads when user views page.
+        if ctx.invoked_subcommand != 'webserver' and not os.path.exists(quotefile):
             config_dir = click.get_app_dir(api.APP_NAME, roaming=True, force_posix=False)
             config_path = os.path.join(config_dir, 'settings.conf')
             print("The quote file '{0}' does not exist.  Either create an empty file with this name, or edit "
@@ -214,17 +217,20 @@ def today(ctx):
 def info(ctx):
     """Show location of config file and quote file."""
 
+    quotefile = ctx.obj['QUOTEFILE']
+
+    # This import is required to read that package version below
     import jotquote
+
     print("Version: {}".format(jotquote.__version__))
     print("Settings file: {}".format(api.CONFIG_FILE))
-    print("Quote file: {}".format(ctx.obj['QUOTEFILE']))
-
-    quotefile = ctx.obj['QUOTEFILE']
+    print("Quote file: {}".format(quotefile))
 
     # The info subcommand should still work even if quote file not found.
     if os.path.exists(quotefile):
         quotes = api.read_quotes(quotefile)
         print("Number of quotes: {}".format(str(len(quotes))))
+        print("Time quote file last modified: {}".format(time.ctime(os.path.getmtime(quotefile))))
 
 
 def _add_quotes(quotefile, newquote_str, extended):

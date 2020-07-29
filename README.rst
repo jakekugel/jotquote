@@ -20,7 +20,7 @@ it is easy to get started::
     The best way out is always through.  - Robert Frost
 
 Although there are 100 quotes included with the package, the purpose of
-jotquote is to help you build a collection of your own favorites.  Adding
+jotquote is to help you build a collection of your own favorite quotes.  Adding
 new quotes is easy::
 
     $ jotquote add "The larger the island of knowledge, the longer the shoreline of wonder. - James Madison"
@@ -99,9 +99,8 @@ Credit
 ~~~~~~
 This package was inspired by other similar utilities including Ken Arnold's original
 UNIX utility ``fortune``.  This package also relies on the Flask and Click packages
-by Armin Ronacher.  The Click package was especially useful and resolved some headaches
-related to the earlier argparse-based implementation.
+by Armin Ronacher.
 
 Contributing
 ~~~~~~~~~~~~
-Contributions are welcome!  See CONTRIBUTING.rst for contribution instructions.
+Contributions are welcome, see CONTRIBUTING.rst for details.

@@ -115,3 +115,77 @@ def test__write_quotes__should_return_good_exception_when_backup_larger_than_quo
     # Then an error message returned indicating backup file larger than new quotes5.txt
     assert "the backup file '.quotes5.txt.jotquote.bak' is larger than the quote file 'quotes5.txt' would be after this operation.  This is suspicious, the quote file was not modified.  If this was expected, delete the backup file and try again." == str(excinfo.value)
     assert tests.test_util.compare_quotes(quotes, api.read_quotes(quote_path))
+
+
+@pytest.mark.parametrize("raw_quote, expected_quote, expected_author, expected_publication",
+     [
+         ("This is a quote. - Author",
+              "This is a quote.",
+              "Author",
+              None),
+         ("This is-a quote. - Author",
+              "This is-a quote.",
+              "Author",
+              None),
+         ("This is a quote. - Author-name",
+              "This is a quote.",
+              "Author-name",
+              None),
+         ("This is a quote.-Author",
+              "This is a quote.",
+              "Author",
+              None),
+         ("This is a quote with alternative-punctuation! - Author",
+              "This is a quote with alternative-punctuation!",
+              "Author",
+              None),
+         ("This is a quote. - Author(My Publication)",
+              "This is a quote.",
+              "Author",
+              "My Publication"),
+         ("This is a quote. - Author (My Publication)",
+              "This is a quote.",
+              "Author",
+              "My Publication"),
+         ("This is a quote. - Author,(My Publication)",
+              "This is a quote.",
+              "Author",
+              "My Publication"),
+         ("This is a quote. - Author, (My Publication)",
+              "This is a quote.",
+              "Author",
+              "My Publication"),
+         ("This is a quote. - Author,'My Publication-name'",
+              "This is a quote.",
+              "Author",
+              "My Publication-name"),
+         ("This is a quote. - Author, 'My Publication-name'",
+              "This is a quote.",
+              "Author",
+              "My Publication-name"),
+         ("This is a quote. - Author, Publication",
+              "This is a quote.",
+              "Author",
+              "Publication")])
+def test__parse_quote_simple__should_parse_out_author_and_publication(raw_quote, expected_quote, expected_author, expected_publication):
+    quote, author, publication, tags = api._parse_quote_simple(raw_quote)
+
+    assert quote == expected_quote
+    assert author == expected_author
+    assert publication == expected_publication
+    assert tags == []
+
+
+@pytest.mark.parametrize("raw_quote, error_message",
+     [
+         ("This is a quote. - Author name (publication name) more stuff", "unable to parse the author and publication.  Try 'Quote - Author (Publication)', or 'Quote - Author, Publication'"),
+         ("This is-a quote. - Author name, publication name, more stuff", "unable to parse the author and publication.  Try 'Quote - Author (Publication)', or 'Quote - Author, Publication'"),
+         ("This-is-a quote-Author-name", "unable to determine which hyphen separates the quote from the author."),
+         ("This - is a quote - Author", "unable to determine which hyphen separates the quote from the author."),
+         ("This is a quote. - Author 'The-Rock' Last Name", "unable to parse the author and publication.  Try 'Quote - Author (Publication)', or 'Quote - Author, Publication'")])
+def test__parse_quote_simple__should_raise_exception_if_not_parseable(raw_quote, error_message):
+    try:
+        quote, author, publication, tags = api._parse_quote_simple(raw_quote)
+        pytest.fail('An exception was expected')
+    except click.ClickException as exception:
+        assert str(exception) == error_message

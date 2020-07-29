@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>jotquote</title>
+
+<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Open%20Sans">
+<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<style>
+
+.container {
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 3em;
+    width: 40em;
+}
+
+.quote {
+    font-family: "Open Sans", Palatino, serif;
+    font-size: 175%;
+}
+
+.author {
+    font-family: "Open Sans", Palatino, serif;
+    font-size: 175%;
+    font-variant: small-caps;
+    font-weight: bold;
+    text-align: right;
+}
+
+.publication {
+    font-family: "Open Sans", Palatino, serif;
+    font-size: 100%;
+    text-align: right;
+    font-style: italic;
+}
+
+.footer {
+    font-family: "Open Sans", Palatino, serif;
+    font-size: 100%;
+    font-style: italic;
+}
+
+.command {
+    font-family:Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New,monospace;
+    font-size: 100%;
+    border: 2px;
+    color: white;
+    border-style: solid;
+    background-color: #505050;
+    border-radius: 8px;
+    padding: 5px;
+    margin-top: 5px;
+}
+
+.quotenum {
+    float: right;
+}
+
+.horiz-line {
+    height:2px;
+    background:black;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.button {
+    background-color: #CCCCCC; # Light gray
+    border: 1px;
+    border-style: solid;
+    border-radius: 4px;
+    color: black;
+    font-family: "Open Sans", Palatino, serif;
+    font-size: 75%;
+    font-weight: bold;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    margin: 2px 2px;
+    padding: 2px 6px;
+    cursor: pointer;
+}
+</style>
+    <script>
+        function setDisplay (target, str) {
+            document.getElementById(target).style.display = str;
+        }
+    </script>
+</head>
+<body style="background-color:white;">
+    <div class="container">
+        <div class="quote">The quotes are not yet available; please try again later.</div>
+        <div>
+            <span class="footer">
+            </span>
+            <span class="footer quotenum">{{ date1 }}</span>
+        </div>
+        {% if hash is not none %}
+            <div id='settag' class="command" style="display:none;">$ jotquote settags -s {{hash}} {{comma_tags}}</div>
+        {% endif %}
+    </div>
+</body>
+</html>

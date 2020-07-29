@@ -28,7 +28,12 @@ def tagspage():
 def showpage(settags=False):
     """Render the template"""
 
+    now = datetime.datetime.now()
+    date1 = now.strftime("%A, %B %d, %Y")
+
     quotes = get_quotes()
+    if quotes is None:
+        return render_template("unavailable.html", date1=date1)
 
     # Get random random quote based on date and number of quotes
     index = api.get_random_choice(len(quotes))
@@ -46,8 +51,6 @@ def showpage(settags=False):
         hashstring = None
     space_tags = " ".join(quote.tags)
     comma_tags = ",".join(quote.tags)
-    now = datetime.datetime.now()
-    date1 = now.strftime("%A, %B %d, %Y")
     return render_template("quote.html", quote=quotestring, author=author, date1=date1,
                            publication=publication, quotenum=(index + 1), totalquotes=len(quotes),
                            space_tags=space_tags, comma_tags=comma_tags, hash=hashstring)
@@ -57,26 +60,34 @@ def get_quotes():
     """Get cached list of quotes from application context.  If not set, read"""
     quotes = getattr(g, '_quotes', None)
 
-    if quotes is None:
-        # Quotes not cached yet, read quote file
-        quotes = api.read_quotes(app.config['QUOTE_FILE'])
-        setattr(g, '_quotes', quotes)
-        mtime = os.stat(app.config['QUOTE_FILE']).st_mtime
-        setattr(g, '_cached_mtime', mtime)
-    else:
-        # Quotes had been previously cached, check if file modified
-        mtime = os.stat(app.config['QUOTE_FILE']).st_mtime
-        cached_mtime = getattr(g, '_cached_mtime', None)
-        if mtime != cached_mtime:
-            setattr(g, '_cached_mtime', mtime)
+    try:
+        if quotes is None:
+            # Quotes not cached yet, read quote file
             quotes = api.read_quotes(app.config['QUOTE_FILE'])
             setattr(g, '_quotes', quotes)
+            mtime = os.stat(app.config['QUOTE_FILE']).st_mtime
+            setattr(g, '_cached_mtime', mtime)
+        else:
+            # Quotes had been previously cached, check if file modified
+            mtime = os.stat(app.config['QUOTE_FILE']).st_mtime
+            cached_mtime = getattr(g, '_cached_mtime', None)
+            if mtime != cached_mtime:
+                setattr(g, '_cached_mtime', mtime)
+                quotes = api.read_quotes(app.config['QUOTE_FILE'])
+                setattr(g, '_quotes', quotes)
+    except BaseException as exception:
+        app.logger.error("unable to read quote file '{0}'.  Details: {1}".format(app.config['QUOTE_FILE'], str(exception)))
+        setattr(g, '_quotes', None)
+        setattr(g, '_cached_mtime', None)
+        return None
 
     return quotes
 
 
 def main():
     """Set up flask app and run it."""
+
+    print("In main")
 
     # Load needed configuration from settings.conf file
     config = api.get_config()
@@ -92,6 +103,7 @@ def main():
         if isinstance(listen_port, basestring):  # noqa: F821
             listen_port = int(listen_port)
 
+    print("About to run")
     if not listen_ip:
         listen_ip = "127.0.0.1"
     app.run(host=listen_ip, port=listen_port)

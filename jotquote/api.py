@@ -213,21 +213,48 @@ def _parse_quote_simple(line):
     if any(c == '|' for c in line):
         raise click.ClickException("the quote included an embedded pipe character (|)")
 
-    if line.count('-') != 1:
+    # Get a list of matchers for hyphens next to and not next to a space char
+    hyphen_w_period = list(re.finditer("(?<=\\.)\\s*[-]\\s*", line))
+    hyphen_w_space = list(re.finditer("\\s+-\\s*|\\s*-\\s+", line))
+    hyphen_wo_space = list(re.finditer("(?<=[^ ])-(?=[^ ])", line))
+
+    # Based on hyphens found, infer which one separates quote from author.
+    if len(hyphen_w_period) == 1:
+        selected_matcher = hyphen_w_period[0]
+    elif len(hyphen_w_space) == 1:
+        selected_matcher = hyphen_w_space[0]
+    elif len(hyphen_w_space) == 0 and len(hyphen_wo_space) == 1:
+        selected_matcher = hyphen_wo_space[0]
+    else:
         raise click.ClickException(
-            "the quote line does not contain exactly one hyphen.  Expected "
-            "format: \"<quote> - <author> [(publication)]\"")
+            "unable to determine which hyphen separates the quote from the author.")
 
-    components = line.split('-')
-    quote = components[0].strip()
-    author = components[1].strip()
+    quote = line[:selected_matcher.start()]
+    author = line[selected_matcher.end():]
 
-    # Determine if there was a publication
-    publication = None
-    if author.count('(') == 1 and author.endswith(')'):
-        components = author.split('(')
-        author = components[0].strip()
-        publication = components[1].split(')')[0]
+    # Check if publication exists using parentheses
+    regexes = [
+        "^([^,]+)\\s*\\((.*)\\)$", # Author name (publication)
+        "^([^,]+),\\s*[(](.+)[)]$", # Author name, (publication)
+        "^([^,]+),\\s*([^,']+)$", # Author name, publication
+        "^([^,]+),\\s*'(.+)'$", # Author name, 'publication'
+        "^([^,\\(\\)']+)\\s*()$", # Author name
+    ]
+    for regex in regexes:
+        match = re.search(regex, author)
+
+        if match is not None:
+            break
+
+    if match is not None:
+        author = match.group(1).strip()
+        publication = match.group(2).strip()
+    else:
+        raise click.ClickException(
+            "unable to parse the author and publication.  Try 'Quote - Author (Publication)', or 'Quote - Author, Publication'")
+
+    if publication is '':
+        publication = None
 
     return quote, author, publication, []
 
@@ -298,24 +325,12 @@ def get_config():
         if not os.path.exists(quote_file):
             template_quote_file = os.path.normpath(os.path.join(__file__, '../templates/quotes.txt'))
             shutil.copyfile(template_quote_file, quote_file)
-            # open(quote_file, 'a').close()
-            # print("Created new quote file '{0}'.".format(quote_file))
 
-    else:
-
-        # Handle the case where the settings.conf file exists, but does not
-        # point to an existing quote file - treat this as an error for the
-        # user to resolve rather than just creating a new quote file.
-        config = ConfigParser()
-        config.read(CONFIG_FILE)
-        quotefile = config.get(APP_NAME, 'quote_file')
-        if not os.path.exists(quotefile):
-            raise click.ClickException("The quote file '{}' was not found.".format(quotefile))
 
     config = ConfigParser()
     config.read(CONFIG_FILE)
 
-    # If we made it here, the settings.conf file and quote file exist.
+    # If we made it here, the settings.conf file exists
     return config
 
 

@@ -162,8 +162,7 @@ class TestJotquote(unittest.TestCase):
 
     def test_parse_simple_quote_with_no_hyphen(self):
         """Test that parse_quote() raises exception if there is not a hyphen."""
-        with self.assertRaisesRegexp(Exception, re.escape('the quote line does not contain exactly one hyphen.  '
-                                     'Expected format: "<quote> - <author> [(publication)]"')):
+        with self.assertRaisesRegexp(Exception, re.escape('unable to determine which hyphen separates the quote from the author.')):
             api.parse_quote("  We accept the love we think we deserve. Stephen Chbosky", simple_format=True)
 
     def test_parse_simple_quote_with_no_quote(self):
@@ -173,8 +172,7 @@ class TestJotquote(unittest.TestCase):
 
     def test_parse_simple_quote_with_no_author(self):
         """parse_quote() should raise exception if parsing simple format and no author after hyphen."""
-        with self.assertRaisesRegexp(Exception, "an author was not included with the quote.  Expecting quote in " 
-                                                "the format \"<quote> - <author>\""):
+        with self.assertRaisesRegexp(Exception, "unable to parse the author and publication.  Try \\'Quote \\- Author \\(Publication\\)\\', or \\'Quote \\- Author\\, Publication\\'"):
             api.parse_quote(" Quote -   ", simple_format=True)
 
     def test_parse_simple_quote_with_pipe_character(self):
@@ -494,3 +492,4 @@ class TestJotquote(unittest.TestCase):
 
         with self.assertRaisesRegexp(Exception, re.escape("the quote included a newline (0x0a) character")):
             api._assert_does_not_contain("There is a newline (\n) in this string.", "\n", "quote")
+

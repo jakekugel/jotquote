@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 import os
 import shutil
 import tempfile
+import time
 import unittest
 from configparser import ConfigParser
 
@@ -425,8 +426,8 @@ class TestQuoteCli(unittest.TestCase):
         result = runner.invoke(cli.jotquote, ['add', '  We accept the love we think we deserve.-'], obj={})
 
         assert result.exit_code == 1
-        self.assertEquals("Error: an author was not included with the quote.  Expecting quote in the format "
-                          "\"<quote> - <author>\".\n", result.output)
+        self.assertEquals("Error: unable to parse the author and publication.  "
+            "Try 'Quote - Author (Publication)', or 'Quote - Author, Publication'\n", result.output)
 
     def test_add_with_publication(self):
         """The add subcommand should accept a publication after author if provided in parentheses."""
@@ -695,5 +696,46 @@ class TestQuoteCli(unittest.TestCase):
             "Version: {}\n"
             "Settings file: /fake/config/file.conf\n"
             "Quote file: {}\n"
-            "Number of quotes: 4\n".format(jotquote.__version__, path),
+            "Number of quotes: 4\n"
+            "Time quote file last modified: {}\n".format(jotquote.__version__, path, time.ctime(os.path.getmtime(path))),
             result.output)
+
+    # def test_random(self):
+    #     """Manual test to ensure quotes randomly picked with even distribution."""
+
+    #     # Setup
+    #     path = os.path.join(self.tempdir, "large-file.txt")
+    #     open(path, 'w').close()
+    #     self.config[api.APP_NAME]['quote_file'] = path
+
+    #     runner = CliRunner()
+
+    #     for index in range(20):
+    #         quotestring = '{0} - author'.format(str(index))
+    #         result = runner.invoke(cli.jotquote, ['add', quotestring], obj={})
+    #         if result.exit_code != 0:
+    #             print(result.output)
+    #             self.assertEqual(0, result.exit_code)
+
+    #     mydict = {}
+    #     for index in range(500):
+    #         result = runner.invoke(cli.jotquote, ['random'], obj={})
+    #         if result.exit_code != 0:
+    #             print(result.output)
+    #             self.assertEqual(0, result.exit_code)
+    #         quotenum = int(result.output.split('-')[0])
+    #         try:
+    #             count = mydict[quotenum]
+    #         except KeyError:
+    #             count = 0
+    #         count = count + 1
+    #         mydict[quotenum] = count
+
+    #     for index in range(20):
+    #         try:
+    #             count = mydict[index]
+    #         except KeyError:
+    #             count = 0
+    #         print("{0}: {1}".format(str(index), count))
+
+    #     self.assertEqual(1, 2)

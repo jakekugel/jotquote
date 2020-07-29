@@ -61,6 +61,36 @@ class TestJotquote(unittest.TestCase):
             cached_time_3 = getattr(g, '_cache_mtime', None)
             assert cached_time_3 != cached_time_1
 
+    def test_io_errors(self):
+        """Test that app responds gracefully to IO errors"""
+        with web.app.app_context():
+            self.app.get('/')
+            cached_time = getattr(g, '_cached_mtime', None)
+            quotes = getattr(g, '_quotes', None)
+            assert cached_time != None
+            assert quotes != None
+
+            # Delete the test file
+            os.remove(self.file)
+
+            rv = self.app.get('/')
+            assert b'The quotes are not yet available; please try again later.' in rv.data
+
+            cached_time = getattr(g, '_cached_mtime', None)
+            quotes = getattr(g, '_quotes', None)
+            assert cached_time == None
+            assert quotes == None
+
+            self.file = tests.test_util.init_quotefile(self.tempdir, "quotes5.txt")
+
+            rv = self.app.get('/')
+            assert b'The quotes are not yet available; please try again later.' not in rv.data
+
+            cached_time = getattr(g, '_cached_mtime', None)
+            quotes = getattr(g, '_quotes', None)
+            assert cached_time != None
+            assert quotes != None
+
 
 if __name__ == '__main__':
     unittest.main()
