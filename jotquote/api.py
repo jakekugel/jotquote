@@ -234,11 +234,11 @@ def _parse_quote_simple(line):
 
     # Check if publication exists using parentheses
     regexes = [
-        "^([^,]+)\\s*\\((.*)\\)$", # Author name (publication)
-        "^([^,]+),\\s*[(](.+)[)]$", # Author name, (publication)
-        "^([^,]+),\\s*([^,']+)$", # Author name, publication
-        "^([^,]+),\\s*'(.+)'$", # Author name, 'publication'
-        "^([^,\\(\\)']+)\\s*()$", # Author name
+        "^([^,]+)\\s*\\((.*)\\)$",  # Author name (publication)
+        "^([^,]+),\\s*[(](.+)[)]$",  # Author name, (publication)
+        "^([^,]+),\\s*([^,']+)$",  # Author name, publication
+        "^([^,]+),\\s*'(.+)'$",  # Author name, 'publication'
+        "^([^,\\(\\)']+)\\s*()$",  # Author name
     ]
     for regex in regexes:
         match = re.search(regex, author)
@@ -253,7 +253,7 @@ def _parse_quote_simple(line):
         raise click.ClickException(
             "unable to parse the author and publication.  Try 'Quote - Author (Publication)', or 'Quote - Author, Publication'")
 
-    if publication is '':
+    if publication == '':
         publication = None
 
     return quote, author, publication, []
@@ -325,7 +325,6 @@ def get_config():
         if not os.path.exists(quote_file):
             template_quote_file = os.path.normpath(os.path.join(__file__, '../templates/quotes.txt'))
             shutil.copyfile(template_quote_file, quote_file)
-
 
     config = ConfigParser()
     config.read(CONFIG_FILE)
