@@ -1,6 +1,11 @@
 language: python
 sudo: false
 
+os:
+  - linux
+  - osx
+  - win
+
 matrix:
     include:
         # Following example from cryptography package
