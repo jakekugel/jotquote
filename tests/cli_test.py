@@ -615,9 +615,9 @@ class TestQuoteCli(unittest.TestCase):
             "δηψ. | Greek Author |  | " + os.linesep
         self.assertEquals(expected, text_data)
 
-    @mock.patch('jotquote.web.main')
+    @mock.patch('jotquote.web.run_server')
     def test_webserver(self, mock_main):
-        """Test webserver subcommand calls web.main"""
+        """Test webserver subcommand calls web.run_server"""
         # Setup
         path = tests.test_util.init_quotefile(self.tempdir, "quotes2.txt")
         self.config[api.APP_NAME]['quote_file'] = path

@@ -1,22 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>jotquote</title>
 
 <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Open%20Sans">
 <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 <style>
 
+/* Centering CSS from here: https://stackoverflow.com/a/36717369 */
 .container {
-    margin-left: auto;
-    margin-right: auto;
-    margin-top: 3em;
     width: 40em;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    -webkit-transform: translate(-50%, -50%);
+    -moz-transform: translate(-50%, -50%);
+    -o-transform: translate(-50%, -50%);
+    -ms-transform: translate(-50%, -50%);
+
 }
 
 .quote {
     font-family: "Open Sans", Palatino, serif;
     font-size: 175%;
+
 }
 
 .author {
@@ -79,6 +88,31 @@
     padding: 2px 6px;
     cursor: pointer;
 }
+
+/* Modify CSS for small screens */
+@media screen and (max-width: 700px) {
+    .container {
+        width: 80%;
+    }
+
+    .quote {
+        font-size: 150%;
+    }
+
+    .author {
+        font-size: 150%;
+    }
+
+    .footer {
+        font-size: 75%;
+    }
+
+    .publication {
+        font-size: 75%;
+    }
+}
+
+
 </style>
     <script>
         function setDisplay (target, str) {
@@ -97,10 +131,12 @@
         <div class="horiz-line"></div>
         <div>
             <span class="footer">
-                tagged: {{space_tags}}
+              {% if show_tags %}
+                tags: {{space_tags}}
                   {% if hash is not none %}
                     <button id="edit-button" class="button" onclick="setDisplay('settag', 'block'); setDisplay('edit-button', 'none');">EDIT TAGS</button>
                   {% endif %}
+              {% endif %}
             </span>
             <span class="footer quotenum">{{ date1 }}</span>
         </div>

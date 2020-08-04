@@ -91,6 +91,3 @@ class TestJotquote(unittest.TestCase):
             assert cached_time != None
             assert quotes != None
 
-
-if __name__ == '__main__':
-    unittest.main()

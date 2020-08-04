@@ -179,7 +179,7 @@ def webserver(ctx):
 
     # Lazy import to avoid importing web packages when using pure cli
     import jotquote.web
-    jotquote.web.main()
+    jotquote.web.run_server()
 
 
 @jotquote.command()

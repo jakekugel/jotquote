@@ -53,12 +53,17 @@ def showpage(settags=False):
     comma_tags = ",".join(quote.tags)
     return render_template("quote.html", quote=quotestring, author=author, date1=date1,
                            publication=publication, quotenum=(index + 1), totalquotes=len(quotes),
-                           space_tags=space_tags, comma_tags=comma_tags, hash=hashstring)
+                           space_tags=space_tags, comma_tags=comma_tags, hash=hashstring, show_tags=False)
 
 
 def get_quotes():
     """Get cached list of quotes from application context.  If not set, read"""
     quotes = getattr(g, '_quotes', None)
+
+    # Ensure that path to quote file read from configuration file
+    if 'QUOTE_FILE' not in app.config:
+        config = api.get_config()
+        app.config['QUOTE_FILE'] = config.get('jotquote', 'quote_file')
 
     try:
         if quotes is None:
@@ -84,14 +89,18 @@ def get_quotes():
     return quotes
 
 
-def main():
-    """Set up flask app and run it."""
+def run_server():
+    """Set up flask app and run it.
 
-    print("In main")
+    This function is called when the 'jotquote webserver' command is called.
+    When this method is used, the port and IP address from the config file
+    are used.  However, it is possible to start the web server using a
+    WSGI container.  In that case, this function is not called, and the
+    WSGI container determines the port and IP address used.
+    """
 
     # Load needed configuration from settings.conf file
     config = api.get_config()
-    app.config['QUOTE_FILE'] = config.get('jotquote', 'quote_file')
     listen_port = config.get('jotquote', 'web_port')
     listen_ip = config.get('jotquote', 'web_ip')
 
@@ -103,11 +112,6 @@ def main():
         if isinstance(listen_port, basestring):  # noqa: F821
             listen_port = int(listen_port)
 
-    print("About to run")
     if not listen_ip:
         listen_ip = "127.0.0.1"
     app.run(host=listen_ip, port=listen_port)
-
-
-if __name__ == '__main__':
-    main()
