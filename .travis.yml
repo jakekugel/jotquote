@@ -1,11 +1,6 @@
 language: python
 sudo: false
 
-os:
-  - linux
-  - osx
-  - win
-
 matrix:
     include:
         # Following example from cryptography package
@@ -21,7 +16,45 @@ matrix:
           env: TOXENV=py38
         - python: 3.8
           env: TOXENV=pep8
-
+        - name: "Python 3.6 on Windows"
+          os: windows
+          language: shell
+          before_install:
+            - choco install python --version 3.6.7
+            - python --version
+            - python -m pip install --upgrade pip
+            - python -m pip install --upgrade virtualenv wheel
+            - python -m virtualenv $HOME/venv
+            - source $HOME/venv/Scripts/activate
+          env:
+            - TOXENV=py36
+            - PATH=/c/Python36:/c/Python36/Scripts:$PATH
+        - name: "Python 3.7 on Windows"
+          os: windows
+          language: shell
+          before_install:
+            - choco install python --version 3.7.2
+            - python --version
+            - python -m pip install --upgrade pip
+            - python -m pip install --upgrade virtualenv wheel
+            - python -m virtualenv $HOME/venv
+            - source $HOME/venv/Scripts/activate
+          env:
+            - TOXENV=py37
+            - PATH=/c/Python37:/c/Python37/Scripts:$PATH
+        - name: "Python 3.8 on Windows"
+          os: windows
+          language: shell
+          before_install:
+            - choco install python --version 3.8.0
+            - python --version
+            - python -m pip install --upgrade pip
+            - python -m pip install --upgrade virtualenv wheel
+            - python -m virtualenv $HOME/venv
+            - source $HOME/venv/Scripts/activate
+          env:
+            - TOXENV=py38
+            - PATH=/c/Python38:/c/Python38/Scripts:$PATH
 install:
   - pip install tox
 
