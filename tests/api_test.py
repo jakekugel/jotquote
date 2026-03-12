@@ -56,7 +56,7 @@ class TestJotquote(unittest.TestCase):
     def test_read_quotes_fnf(self):
         """read_quotes() should raise exception if file not found."""
         path = os.path.join(self.tempdir, "fakename.txt")
-        with self.assertRaisesRegexp(Exception, re.escape("The quote file '{0}' was not found.".format(path))):
+        with self.assertRaisesRegex(Exception, re.escape("The quote file '{0}' was not found.".format(path))):
             api.read_quotes(path)
 
     def test_read_quotes_empty_file(self):
@@ -90,14 +90,14 @@ class TestJotquote(unittest.TestCase):
         """read_quotes() should raise exception if there is extra pipe character on line."""
         path = tests.test_util.init_quotefile(self.tempdir, "quotes6.txt")
 
-        with self.assertRaisesRegexp(Exception, re.escape(
+        with self.assertRaisesRegex(Exception, re.escape(
                 "syntax error on line 1 of {0}: did not find 3 '|' characters.  Line with error: \"They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.|Ben Franklin||U|\"".format(path))):
             api.read_quotes(path)
 
     def test_read_quotes_with_double_quote_in_quotefile(self):
         """read_quotes() should raise exception if there is a double-quote character in the quote."""
         path = tests.test_util.init_quotefile(self.tempdir, "quotes7.txt")
-        with self.assertRaisesRegexp(Exception, re.escape(
+        with self.assertRaisesRegex(Exception, re.escape(
                 "syntax error on line 2 of {0}: the quote included a (\") character.  Line with error: \"They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor \" safety.|Ben Franklin||U\"".format(path))):
             api.read_quotes(path)
 
@@ -112,29 +112,29 @@ class TestJotquote(unittest.TestCase):
 
     def test_parse_quotes_doublequote(self):
         """parse_quote() should raise exception if there is double quote in quote being parsed."""
-        with self.assertRaisesRegexp(Exception, re.escape("the quote included a (\") character")):
+        with self.assertRaisesRegex(Exception, re.escape("the quote included a (\") character")):
             api.parse_quote("  This is a quote\". |  Author  | Publication   | tag1, tag2 , tag3  ",
                             simple_format=False)
 
     def test_parse_quotes_not_three_vertical_bars(self):
         """parse_quote() should raise exception if there are not three pipe characters"""
-        with self.assertRaisesRegexp(Exception, re.escape("did not find 3 '|' characters")):
+        with self.assertRaisesRegex(Exception, re.escape("did not find 3 '|' characters")):
             api.parse_quote("  This is a quote||", simple_format=False)
 
     def test_parse_quotes_no_quote(self):
         """parse_quote() should raise exception if the quote field is empty."""
-        with self.assertRaisesRegexp(Exception, 'a quote was not found'):
+        with self.assertRaisesRegex(Exception, 'a quote was not found'):
             api.parse_quote("|  Author  | Publication   | tag1, tag2 , tag3  ", simple_format=False)
 
     def test_parse_quotes_no_author(self):
         """parse_quote() should raise exception if there is no author."""
-        with self.assertRaisesRegexp(Exception, re.escape('an author was not included with the quote.  Expecting '
+        with self.assertRaisesRegex(Exception, re.escape('an author was not included with the quote.  Expecting '
                                                           'quote in the format \"<quote> - <author>\".')):
             api.parse_quote("This is a quote. | | Publication   | tag1, tag2 , tag3  ", simple_format=False)
 
     def test_parse_quotes_alphanumerics_only_in_tags(self):
         """parse_quote() should raise exception if there are invalid characters in tags."""
-        with self.assertRaisesRegexp(click.ClickException, "invalid tag 'tag3!': only numbers, letters, and commas are allowed in tags"):
+        with self.assertRaisesRegex(click.ClickException, "invalid tag 'tag3!': only numbers, letters, and commas are allowed in tags"):
             api.parse_quote("This is a quote. | Author | Publication   | tag1, tag2 , tag3!  ",
                             simple_format=False)
 
@@ -148,7 +148,7 @@ class TestJotquote(unittest.TestCase):
 
     def test_parse_simple_quote_with_double_quote(self):
         """Not allowed to have double quote character in quote itself"""
-        with self.assertRaisesRegexp(Exception, re.escape("the quote included a (\") character")):
+        with self.assertRaisesRegex(Exception, re.escape("the quote included a (\") character")):
             api.parse_quote("  We accept the love we think we \" deserve.  - Stephen Chbosky",
                             simple_format=True)
 
@@ -158,36 +158,36 @@ class TestJotquote(unittest.TestCase):
                                 simple_format=True)
 
         # Check that it parsed correctly
-        self.assertEquals("Arthur \"Fonzie\" Fonzarelli", quote.author)
+        self.assertEqual("Arthur \"Fonzie\" Fonzarelli", quote.author)
 
     def test_parse_simple_quote_with_no_hyphen(self):
         """Test that parse_quote() raises exception if there is not a hyphen."""
-        with self.assertRaisesRegexp(Exception, re.escape('unable to determine which hyphen separates the quote from the author.')):
+        with self.assertRaisesRegex(Exception, re.escape('unable to determine which hyphen separates the quote from the author.')):
             api.parse_quote("  We accept the love we think we deserve. Stephen Chbosky", simple_format=True)
 
     def test_parse_simple_quote_with_no_quote(self):
         """parse_quote() should raise exception if parsing simple format and there is no quote before hyphen."""
-        with self.assertRaisesRegexp(Exception, re.escape("a quote was not found")):
+        with self.assertRaisesRegex(Exception, re.escape("a quote was not found")):
             api.parse_quote(" - Hamlet  ", simple_format=True)
 
     def test_parse_simple_quote_with_no_author(self):
         """parse_quote() should raise exception if parsing simple format and no author after hyphen."""
-        with self.assertRaisesRegexp(Exception, "unable to parse the author and publication.  Try \\'Quote \\- Author \\(Publication\\)\\', or \\'Quote \\- Author\\, Publication\\'"):
+        with self.assertRaisesRegex(Exception, "unable to parse the author and publication.  Try \\'Quote \\- Author \\(Publication\\)\\', or \\'Quote \\- Author\\, Publication\\'"):
             api.parse_quote(" Quote -   ", simple_format=True)
 
     def test_parse_simple_quote_with_pipe_character(self):
         """pares_quote() should raise exception if parsing simple format and there is a pipe character."""
-        with self.assertRaisesRegexp(Exception, "the quote included an embedded pipe character (|)"):
+        with self.assertRaisesRegex(Exception, "the quote included an embedded pipe character (|)"):
             api.parse_quote(" Quote with | character - Author", simple_format=True)
 
     def test_parse_simple_quote_with_newline(self):
         """parse_quote() should raise exception if parsing simple format and there is a newline char."""
-        with self.assertRaisesRegexp(Exception, re.escape("the quote included a newline (0x0a) character")):
+        with self.assertRaisesRegex(Exception, re.escape("the quote included a newline (0x0a) character")):
             api.parse_quote(" Quote with \n character - Author", simple_format=True)
 
     def test_parse_simple_quote_with_carriage_return(self):
         """parse_quote() should raise exception if parsing simple format and there is a carriage return char."""
-        with self.assertRaisesRegexp(Exception, re.escape("the quote included a carriage return (0x0d) character")):
+        with self.assertRaisesRegex(Exception, re.escape("the quote included a carriage return (0x0d) character")):
             api.parse_quote(" Quote with \r character - Author", simple_format=True)
 
     def test_add_quote(self):
@@ -206,20 +206,20 @@ class TestJotquote(unittest.TestCase):
         text_data = data.decode('utf-8')
         expected = u'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U' + os.linesep + \
                    u'This is an added quote. | Another author | Publication | tag1, tag2' + os.linesep
-        self.assertEquals(expected, text_data)
+        self.assertEqual(expected, text_data)
 
     def test_add_quote_but_file_not_found(self):
         """Test that add_quote() raises exception if quote file does not exist."""
         quote = api.Quote("  This is an added quote.", "Another author", "Publication", ["tag1, tag2"])
         quotefile = os.path.join(self.tempdir, "fakename.txt")
 
-        with self.assertRaisesRegexp(Exception, re.escape("The quote file '{0}' does not exist.".format(quotefile))):
+        with self.assertRaisesRegex(Exception, re.escape("The quote file '{0}' does not exist.".format(quotefile))):
             api.add_quote(quotefile, quote)
 
     def test_add_quote_but_quote_object_not_passed(self):
         """Test that add_quote() raises exception if object passed is not Quote object."""
         path = tests.test_util.init_quotefile(self.tempdir, "quotes1.txt")
-        with self.assertRaisesRegexp(Exception, "The quote parameter must be type class Quote."):
+        with self.assertRaisesRegex(Exception, "The quote parameter must be type class Quote."):
             api.add_quote(path, None)
 
     def test_add_quote_but_file_contains_quote_already(self):
@@ -228,7 +228,7 @@ class TestJotquote(unittest.TestCase):
         quote = api.Quote("  This is an added quote.", "Another author", "Publication", ["tag1, tag2"])
         api.add_quote(path, quote)
 
-        with self.assertRaisesRegexp(Exception, re.escape(
+        with self.assertRaisesRegex(Exception, re.escape(
                 'the quote "This is an added quote." is already in the quote file {0}.'.format(path))):
             api.add_quote(path, quote)
 
@@ -238,7 +238,7 @@ class TestJotquote(unittest.TestCase):
                   api.Quote("  This is an added quote.", "Another author2", "Publication", ["tag1, tag2"]),
                   api.Quote("  This is an added quote.", "Another author3", "Publication", ["tag1, tag2"])]
 
-        with self.assertRaisesRegexp(Exception, "a duplicate quote was found on line 2 of 'stdin'.  "
+        with self.assertRaisesRegex(Exception, "a duplicate quote was found on line 2 of 'stdin'.  "
                                                           "Quote: \"This is an added quote.\"."):
 
             api._check_for_duplicates(quotes, "stdin")
@@ -279,7 +279,7 @@ class TestJotquote(unittest.TestCase):
         """The parse_tags() method should raise exception if invalid character in tag"""
         tagstring = "tag1, tag2, tag3!"
 
-        with self.assertRaisesRegexp(Exception, "invalid tag 'tag3!': only numbers, letters, and commas are "
+        with self.assertRaisesRegex(Exception, "invalid tag 'tag3!': only numbers, letters, and commas are "
                                      "allowed in tags"):
             api.parse_tags(tagstring)
 
@@ -350,7 +350,7 @@ class TestJotquote(unittest.TestCase):
         quotes = api.read_quotes(path)
 
         # Call write_quotes to write file
-        with self.assertRaisesRegexp(Exception,
+        with self.assertRaisesRegex(Exception,
                                      "the value 'VAX-VMS' is not valid value for the line_separator property.  Valid "
                                      "values are 'platform', 'windows', or 'unix'."):
             api.write_quotes(path, quotes)
@@ -364,7 +364,7 @@ class TestJotquote(unittest.TestCase):
         quotes = [quote]
 
         # Call function under test, check that exception raised
-        with self.assertRaisesRegexp(Exception, re.escape("the quote file '{0}' was not found.".format(path))):
+        with self.assertRaisesRegex(Exception, re.escape("the quote file '{0}' was not found.".format(path))):
             api.write_quotes(path, quotes)
 
     # This is a performance test, need to decide what to do with these
@@ -469,7 +469,7 @@ class TestJotquote(unittest.TestCase):
             self.assertEqual(5, items[10])
             self.assertEqual(2, items[11])
         else:
-            self.assertEquals([0, 3, 4, 7, 1, 2, 5, 6, 0, 3, 4, 7], items)
+            self.assertEqual([0, 3, 4, 7, 1, 2, 5, 6, 0, 3, 4, 7], items)
 
     def test_duplicate_quotes(self):
         """The read_quotes() function should raise exception if there are duplicate quotes."""
@@ -478,18 +478,18 @@ class TestJotquote(unittest.TestCase):
         path = tests.test_util.init_quotefile(self.tempdir, "quotes8.txt")
 
         # Call function being tested
-        with self.assertRaisesRegexp(Exception, re.escape("a duplicate quote was found on line 5 of '{}'.  Quote: \"The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall.\"".format(path))):
+        with self.assertRaisesRegex(Exception, re.escape("a duplicate quote was found on line 5 of '{}'.  Quote: \"The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall.\"".format(path))):
             api.read_quotes(path)
 
     def test_assert_does_not_contain_period(self):
         """The interal _assert_does_not_contain function should raise exception if char in text."""
 
-        with self.assertRaisesRegexp(Exception, re.escape("the quote included a (.) character")):
+        with self.assertRaisesRegex(Exception, re.escape("the quote included a (.) character")):
             api._assert_does_not_contain("There is a period in this string.", ".", "quote")
 
     def test_assert_does_not_contain_newline(self):
         """The interal _assert_does_not_contain function should raise exception if char missing from text."""
 
-        with self.assertRaisesRegexp(Exception, re.escape("the quote included a newline (0x0a) character")):
+        with self.assertRaisesRegex(Exception, re.escape("the quote included a newline (0x0a) character")):
             api._assert_does_not_contain("There is a newline (\n) in this string.", "\n", "quote")
 

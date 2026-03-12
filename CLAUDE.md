@@ -9,28 +9,27 @@ The [plans/](plans/) folder stores implementation plans created by Claude for fu
 ## Commands
 
 ```bash
-# Install in editable mode for development
-pip install --editable .
-pip install -r dev-requirements.txt
+# Install project and dev dependencies
+uv sync --group dev
 
 # Run tests
-pytest
+uv run pytest
 
 # Run a single test file
-pytest tests/api_test.py
+uv run pytest tests/api_test.py
 
 # Run a single test
-pytest tests/api_test.py::TestClassName::test_method_name
+uv run pytest tests/api_test.py::TestClassName::test_method_name
 
-# Lint
-flake8 .
+# Lint (use python -m on Windows if flake8 executable is blocked by App Control policy)
+uv run python -m flake8 jotquote/
 
 # Run tests with coverage
-coverage run -m pytest
-coverage report
+uv run coverage run -m pytest
+uv run coverage report
 
-# Run all environments (py27, py37, py38, pep8)
-tox
+# Build wheel and sdist
+uv build
 ```
 
 ## Architecture
@@ -60,7 +59,7 @@ There are two input formats for the `add` command:
 - **Atomic writes**: `write_quotes()` writes to a randomly-named temp file, sanity-checks it against the backup size, creates a backup, then uses `os.replace()` to atomically swap it in.
 - **Duplicate detection**: `add_quotes()` compares quote text (not hash) against existing quotes before appending.
 - **Config auto-creation**: First run creates `~/.jotquote/settings.conf` and copies the template quote file from `jotquote/templates/quotes.txt`.
-- **Version**: Defined in `jotquote/__init__.py` as `__version__`. Convention is `X.Y.Z.dev` between releases; strip `.dev` when releasing and tag the commit.
+- **Version**: Defined in `jotquote/__init__.py` as `__version__`. Convention is `X.Y.Z.dev0` between releases; strip `.dev0` when releasing and tag the commit.
 
 ### Test infrastructure
 
@@ -71,4 +70,4 @@ There are two input formats for the `add` command:
 
 ### Flake8 rules
 
-Config is in `tox.ini`: line length max 120; E501, W503, and E722 are ignored; `tests/` directory is excluded.
+Config is in `.flake8`: line length max 120; E501, W503, and E722 are ignored; `tests/` directory is excluded.

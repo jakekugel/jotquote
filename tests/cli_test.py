@@ -73,7 +73,7 @@ class TestQuoteCli(unittest.TestCase):
                    "The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall.  - Mitch Hedberg\n" + \
                    "Ask for what you want and be prepared to get it.  - Maya Angelou\n" + \
                    "They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n"
-        self.assertEquals(expected, result.output)
+        self.assertEqual(expected, result.output)
 
     def test_list_by_tag(self):
         """The list subcommand should return quotes with matching tag."""
@@ -90,7 +90,7 @@ class TestQuoteCli(unittest.TestCase):
         assert result.exit_code == 0
 
         # Check three quotes returned
-        self.assertEquals(2, result.output.count('\n'))
+        self.assertEqual(2, result.output.count('\n'))
 
     def test_list_by_tags(self):
         """The list subcommand should only return quotes matching multiple tags."""
@@ -107,7 +107,7 @@ class TestQuoteCli(unittest.TestCase):
         assert result.exit_code == 0
 
         # Check two quotes returned
-        self.assertEquals(1, result.output.count('\n'))
+        self.assertEqual(1, result.output.count('\n'))
 
     def test_list_by_tags_none_found(self):
         """The list subcommand should return no quotes if none match tags."""
@@ -124,7 +124,7 @@ class TestQuoteCli(unittest.TestCase):
         assert result.exit_code == 0
 
         # Check no quotes returned
-        self.assertEquals(0, result.output.count('\n'))
+        self.assertEqual(0, result.output.count('\n'))
 
     def test_list_by_keyword(self):
         # Setup
@@ -138,7 +138,7 @@ class TestQuoteCli(unittest.TestCase):
         # Check results
         assert result.exit_code == 0
         # Check results
-        self.assertEquals(1, result.output.count('\n'))
+        self.assertEqual(1, result.output.count('\n'))
 
     def test_list_by_keyword_none_found(self):
         # Setup
@@ -152,7 +152,7 @@ class TestQuoteCli(unittest.TestCase):
         # Check results
         assert result.exit_code == 0
         # Check results
-        self.assertEquals(0, result.output.count('\n'))
+        self.assertEqual(0, result.output.count('\n'))
 
     def test_list_by_number(self):
         # Setup
@@ -166,7 +166,7 @@ class TestQuoteCli(unittest.TestCase):
         # Check results
         assert result.exit_code == 0
         # Check results
-        self.assertEquals("Ask for what you want and be prepared to get it.  - Maya Angelou",
+        self.assertEqual("Ask for what you want and be prepared to get it.  - Maya Angelou",
                           result.output.strip())
 
     def test_list_by_hash(self):
@@ -181,7 +181,7 @@ class TestQuoteCli(unittest.TestCase):
         # Check results
         assert result.exit_code == 0
         # Check results
-        self.assertEquals("Ask for what you want and be prepared to get it.  - Maya Angelou",
+        self.assertEqual("Ask for what you want and be prepared to get it.  - Maya Angelou",
                           result.output.strip())
 
     def test_list_by_number_out_of_range(self):
@@ -196,7 +196,7 @@ class TestQuoteCli(unittest.TestCase):
 
         assert result.exit_code == 1
 
-        self.assertEquals('Error: the number argument 7 is too large, there are only '
+        self.assertEqual('Error: the number argument 7 is too large, there are only '
                           '4 quotes in the file.\n', result.output)
 
     def test_list_by_invalid_number(self):
@@ -216,7 +216,7 @@ class TestQuoteCli(unittest.TestCase):
         # Verify results
         expected = "Error: the value 'notanumber' is not a valid number, " + \
                    "the -n option requires an integer line number.\n"
-        self.assertEquals(expected, result.output)
+        self.assertEqual(expected, result.output)
 
     def test_list_invalid_tag(self):
         """The list subcommand shouldn't accept exclamation characters in tag."""
@@ -231,7 +231,7 @@ class TestQuoteCli(unittest.TestCase):
 
         # Verify results
         assert result.exit_code == 1
-        self.assertEquals("Error: invalid tag 'badtag!': only numbers, letters, and commas are allowed in tags\n",
+        self.assertEqual("Error: invalid tag 'badtag!': only numbers, letters, and commas are allowed in tags\n",
                           result.output)
 
     def test_list_extended(self):
@@ -247,7 +247,7 @@ class TestQuoteCli(unittest.TestCase):
         # Check results
         assert result.exit_code == 0
         # Check results
-        self.assertEquals(
+        self.assertEqual(
             "Ask for what you want and be prepared to get it. | Maya Angelou |  | life",
             result.output.strip())
 
@@ -265,7 +265,7 @@ class TestQuoteCli(unittest.TestCase):
         # Check results
         assert result.exit_code == 1
         # Check results
-        self.assertEquals("Error: the 'extended' option and the 'long' option are mutually exclusive.\n",
+        self.assertEqual("Error: the 'extended' option and the 'long' option are mutually exclusive.\n",
                           result.output)
 
     def test_random(self):
@@ -283,7 +283,7 @@ class TestQuoteCli(unittest.TestCase):
         assert result.exit_code == 0
 
         # Confirm a single result returned.
-        self.assertEquals(1, result.output.count('\n'))
+        self.assertEqual(1, result.output.count('\n'))
 
     def test_random_with_tags(self):
         """Test that the random subcommand returns single line of output."""
@@ -299,7 +299,7 @@ class TestQuoteCli(unittest.TestCase):
         assert result.exit_code == 0
 
         # Confirm a single line of output was returned.
-        self.assertEquals('They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n', result.output)
+        self.assertEqual('They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n', result.output)
 
     def test_random_with_tags_nomatch(self):
         """Test that the random subcommand returns nothing if no matching tag"""
@@ -315,7 +315,7 @@ class TestQuoteCli(unittest.TestCase):
         assert result.exit_code == 0
 
         # Confirm no output.
-        self.assertEquals('', result.output)
+        self.assertEqual('', result.output)
 
     def test_random_with_keyword(self):
         """Test that the random subcommand returns something when keyword given"""
@@ -330,7 +330,7 @@ class TestQuoteCli(unittest.TestCase):
         # Check results
         assert result.exit_code == 0
         # Confirm no output.
-        self.assertEquals('They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n', result.output)
+        self.assertEqual('They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n', result.output)
 
     def test_random_with_keyword_nomatch(self):
         """Test that the random subcommand returns nothing if keyword doesn't match"""
@@ -345,7 +345,7 @@ class TestQuoteCli(unittest.TestCase):
         # Check results
         assert result.exit_code == 0
         # Confirm no output.
-        self.assertEquals('', result.output)
+        self.assertEqual('', result.output)
 
     def test_add(self):
         """Test the add subcommand works with normal arguments"""
@@ -361,7 +361,7 @@ class TestQuoteCli(unittest.TestCase):
 
         # Check results
         assert result.exit_code == 0
-        self.assertEquals('1 quote added for total of 5.\n', result.output)
+        self.assertEqual('1 quote added for total of 5.\n', result.output)
         runner = CliRunner()
         result = runner.invoke(cli.jotquote, ['list'], obj={})
         expected = "The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it.  - Linus Torvalds\n" + \
@@ -369,7 +369,7 @@ class TestQuoteCli(unittest.TestCase):
                    "Ask for what you want and be prepared to get it.  - Maya Angelou\n" + \
                    "They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n" + \
                    "We accept the love we think we deserve.  - Stephen Chbosky\n"
-        self.assertEquals(expected, result.output)
+        self.assertEqual(expected, result.output)
 
     def test_add_when_quote_already_in_file(self):
         """The add subcommand should return error if quote is already in the quote file.
@@ -384,7 +384,7 @@ class TestQuoteCli(unittest.TestCase):
 
         assert result.exit_code == 1
         print(result.output)
-        self.assertEquals(
+        self.assertEqual(
             "Error: the quote \"Ask for what you want and be prepared to get it.\" is already " +
             "in the quote file {0}.\n".format(path), result.output)
 
@@ -404,7 +404,7 @@ class TestQuoteCli(unittest.TestCase):
         # Check results
         assert result.exit_code == 0
         # Check correct output on stdout
-        self.assertEquals("1 quote added for total of 2.\n", result.output)
+        self.assertEqual("1 quote added for total of 2.\n", result.output)
 
         # Check file modifications correct
         with open(path, "r") as modified_quotefile:
@@ -412,7 +412,7 @@ class TestQuoteCli(unittest.TestCase):
 
         expected = ['They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\n',
                     'Ask for what you want and be prepared to get it. | Maya Angelou |  | \n']
-        self.assertEquals(expected, returned)
+        self.assertEqual(expected, returned)
 
     def test_add_with_no_author(self):
         """The add subcommand should return error if author not included with quote."""
@@ -426,7 +426,7 @@ class TestQuoteCli(unittest.TestCase):
         result = runner.invoke(cli.jotquote, ['add', '  We accept the love we think we deserve.-'], obj={})
 
         assert result.exit_code == 1
-        self.assertEquals("Error: unable to parse the author and publication.  "
+        self.assertEqual("Error: unable to parse the author and publication.  "
             "Try 'Quote - Author (Publication)', or 'Quote - Author, Publication'\n", result.output)
 
     def test_add_with_publication(self):
@@ -444,7 +444,7 @@ class TestQuoteCli(unittest.TestCase):
         # Check results
         assert result.exit_code == 0
         # Check no output
-        self.assertEquals('1 quote added for total of 5.', result.output.strip())
+        self.assertEqual('1 quote added for total of 5.', result.output.strip())
         # Check that quote added
         runner = CliRunner()
         result = runner.invoke(cli.jotquote, ['list', '-n', '5', '-l'], obj={})
@@ -453,7 +453,7 @@ class TestQuoteCli(unittest.TestCase):
                    "    publication: Publication\n" + \
                    "    tags: \n" + \
                    "    hash: 53e070059e1c14f7\n"
-        self.assertEquals(expected, result.output)
+        self.assertEqual(expected, result.output)
 
     def test_bulk_add_from_stdin(self):
         """Test add of multiple quotes from stdin"""
@@ -472,7 +472,7 @@ class TestQuoteCli(unittest.TestCase):
         # Check results
         assert result.exit_code == 0
         # Check correct output on stdout
-        self.assertEquals('3 quotes added for total of 4.\n', result.output)
+        self.assertEqual('3 quotes added for total of 4.\n', result.output)
         # Check file modifications correct
         expected = "1: They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.\n" + \
                    "    author: Ben Franklin\n" + \
@@ -499,7 +499,7 @@ class TestQuoteCli(unittest.TestCase):
 
         # Check zero return code
         assert result.exit_code == 0
-        self.assertEquals(expected, result.output)
+        self.assertEqual(expected, result.output)
 
     def test_add_extended_format(self):
         """The add subcommand with -e option should allow extended format to be passed."""
@@ -518,7 +518,7 @@ class TestQuoteCli(unittest.TestCase):
         print(result.output)
         assert result.exit_code == 0
         # Check correct output on stdout
-        self.assertEquals("1 quote added for total of 2.\n", result.output)
+        self.assertEqual("1 quote added for total of 2.\n", result.output)
 
         # Check file modifications correct
         with open(path, "r") as modified_quotefile:
@@ -526,7 +526,7 @@ class TestQuoteCli(unittest.TestCase):
 
         expected = ['They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\n',
                     'Ask for what you want and be prepared to get it. | Maya Angelou |  | \n']
-        self.assertEquals(expected, returned)
+        self.assertEqual(expected, returned)
 
     def test_add_extended_format_with_error(self):
         """Test add subcommand with extended format, error case"""
@@ -544,13 +544,13 @@ class TestQuoteCli(unittest.TestCase):
         # Check expected error message
         expected = "Error: syntax error on line 1 of stdin: did not find 3 '|' characters.  " + \
                    "Line with error: \"This is not properly formatted\"\n"
-        self.assertEquals(expected, result.output)
+        self.assertEqual(expected, result.output)
 
         # Check file not modified
         with open(path, "r") as modified_quotefile:
             returned = modified_quotefile.readlines()
         expected = ['They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.|Ben Franklin||U\n']
-        self.assertEquals(expected, returned)
+        self.assertEqual(expected, returned)
 
     def test_showalltags(self):
         """Test showalltags subcommand"""
@@ -567,7 +567,7 @@ class TestQuoteCli(unittest.TestCase):
         assert result.exit_code == 0
         # Check correct output on stdout
         expected = "franklin\nfreedom\nfunny\nhedberg\nlife\n"
-        self.assertEquals(expected, result.output)
+        self.assertEqual(expected, result.output)
 
     def test_missing_subcommand(self):
         """A random quote should be displayed if no subcommand."""
@@ -584,7 +584,7 @@ class TestQuoteCli(unittest.TestCase):
         assert result.exit_code == 0
         # Check correct output on stdout
         expected = "They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n"
-        self.assertEquals(expected, result.output)
+        self.assertEqual(expected, result.output)
 
     def test_codepage_conversion(self):
         """Characters in non-standard codepage should round trip OK to file and back."""
@@ -613,7 +613,7 @@ class TestQuoteCli(unittest.TestCase):
             "| Maya Angelou |  | life" + os.linesep + \
             "They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | franklin, freedom" + os.linesep + \
             "δηψ. | Greek Author |  | " + os.linesep
-        self.assertEquals(expected, text_data)
+        self.assertEqual(expected, text_data)
 
     @mock.patch('jotquote.web.run_server')
     def test_webserver(self, mock_main):
@@ -645,7 +645,7 @@ class TestQuoteCli(unittest.TestCase):
         print(result.output)
         assert result.exit_code == 0
         # Check correct output on stdout
-        self.assertEquals("", result.output)
+        self.assertEqual("", result.output)
 
         # Check file modifications correct
         with open(path, "r") as modified_quotefile:
@@ -656,7 +656,7 @@ class TestQuoteCli(unittest.TestCase):
             "The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall. | Mitch Hedberg |  | U\n",
             "Ask for what you want and be prepared to get it. | Maya Angelou |  | tag1, tag2\n",
             "They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\n"]
-        self.assertEquals(expected, returned)
+        self.assertEqual(expected, returned)
 
     def test_settags_invalid_args(self):
         """The settags subcommand should display error if both -s and -n given."""
@@ -672,7 +672,7 @@ class TestQuoteCli(unittest.TestCase):
         assert result.exit_code == 1
         # Check expected error message
         expected = "Error: both the -s and -n option were included, but only one allowed.\n"
-        self.assertEquals(expected, result.output)
+        self.assertEqual(expected, result.output)
 
     @patch('jotquote.api.CONFIG_FILE', '/fake/config/file.conf')
     def test_jotquote_info(self):
@@ -689,10 +689,10 @@ class TestQuoteCli(unittest.TestCase):
         result = runner.invoke(cli.jotquote, ['info'], obj={})
 
         # Check zero return code
-        self.assertEquals(result.exit_code, 0)
+        self.assertEqual(result.exit_code, 0)
         # Check correct output on stdout
         import jotquote
-        self.assertEquals(
+        self.assertEqual(
             "Version: {}\n"
             "Settings file: /fake/config/file.conf\n"
             "Quote file: {}\n"

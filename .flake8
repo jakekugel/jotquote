@@ -1,0 +1,6 @@
+[flake8]
+ignore = E501, W503, E722
+exclude = .tox,*.egg,.git,venv,tests,__pycache__,.venv
+max-line-length = 120
+select = E,W,F,N,I
+application-import-names = jotquote,tests

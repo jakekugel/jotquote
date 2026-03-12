@@ -2,11 +2,6 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
-from __future__ import print_function
-from __future__ import unicode_literals
-
-# This import requires 'configparser' to be installed for Python 2.7
-# noinspection PyCompatibility
 from configparser import ConfigParser
 import click
 import datetime
@@ -15,7 +10,6 @@ import os
 import random as randomlib
 import re
 from string import ascii_letters
-from io import open
 import shutil
 
 
@@ -453,14 +447,8 @@ def write_quotes(quote_path, quotes):
             "an error occurred writing the quotes.  The file '{0}' was not modified."
             .format(quote_path))
 
-    # Replace original file with the new temp file.  The os.replace() function is
-    # safest, but only available in Python 3.3 and later.
     try:
-        if hasattr(os, 'replace'):
-            os.replace(temp_path, quote_path)
-        else:
-            os.remove(quote_path)
-            os.rename(temp_path, quote_path)
+        os.replace(temp_path, quote_path)
     except:
         raise click.ClickException("an error occurred writing the quotes.")
 

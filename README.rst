@@ -1,8 +1,8 @@
 jotquote
 ========
 
-.. image:: https://travis-ci.org/jakekugel/jotquote.svg?branch=master
-    :target: https://travis-ci.org/jakekugel/jotquote
+.. image:: https://github.com/jakekugel/jotquote/actions/workflows/ci.yml/badge.svg
+    :target: https://github.com/jakekugel/jotquote/actions/workflows/ci.yml
     :alt: Build Status
 
 .. image:: http://codecov.io/github/jakekugel/jotquote/coverage.svg?branch=master&precision=2
@@ -85,7 +85,7 @@ and Linux.
 
 Supported environments
 ~~~~~~~~~~~~~~~~~~~~~~
-jotquote is tested on Python 2.7, and 3.5 through 3.8 on Windows, Mac, and Linux.
+jotquote is tested on Python 3.8 through 3.14 on Windows, Mac, and Linux.
 
 Cloud storage
 ~~~~~~~~~~~~~
