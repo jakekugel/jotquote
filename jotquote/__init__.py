@@ -4,4 +4,9 @@
 
 from __future__ import print_function, unicode_literals
 
-__version__ = "0.9.5.dev0"
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("jotquote")
+except PackageNotFoundError:
+    __version__ = "unknown"
