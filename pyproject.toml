@@ -4,9 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "jotquote"
-dynamic = ["version"]
+version = "0.9.5.dev0"
 description = "A command-line interface for collecting and organizing quotes, and a quote of the day web server."
-readme = "README.rst"
+readme = "README.md"
 license = { text = "MIT License" }
 authors = [
     { name = "Jake Kugel", email = "jake_kugel@yahoo.com" }
@@ -36,9 +36,6 @@ dependencies = [
 
 [project.scripts]
 jotquote = "jotquote.cli:main"
-
-[tool.hatch.version]
-path = "jotquote/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["jotquote"]
