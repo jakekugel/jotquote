@@ -15,9 +15,6 @@ import click
 
 from jotquote import api
 
-# Click gives warning about use of unicode_literals in __future__, but
-# I decided to ignore these.  Once Python 2 goes away, will be moot.
-click.disable_unicode_literals_warning = True
 
 HELP_MAIN_F_ARG = 'optional path to quote file (if not provided, the command ' \
                   'will check ~/.jotquote/settings.conf for path)'

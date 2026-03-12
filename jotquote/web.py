@@ -2,11 +2,8 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
-from __future__ import unicode_literals
-
 import datetime
 import os
-import sys
 
 from flask import Flask, render_template, g
 
@@ -106,11 +103,6 @@ def run_server():
 
     if not listen_port:
         listen_port = 5544
-
-    # A hack to deal with Python 2.7 quirk:
-    if sys.version_info < (3, 0, 0):
-        if isinstance(listen_port, basestring):  # noqa: F821
-            listen_port = int(listen_port)
 
     if not listen_ip:
         listen_ip = "127.0.0.1"

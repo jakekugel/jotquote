@@ -13,35 +13,34 @@ writing code.  This way, I can get you going in the right direction.
 
 Development environment setup
 -----------------------------
-1. (Optional, but recommended) Create a virtualenv to work in, and activate it.
+1. (Optional, but recommended) Install `uv <https://docs.astral.sh/uv/>`_.
 
-2. Install development requirements::
+2. Install jotquote and all development dependencies::
 
-    $ pip install -r dev-requirements.txt
-
-3.  Install jotquote in editable mode::
-
-    $ pip install --editable .
+    $ uv sync --group dev
 
 Running unit tests
 ------------------
 Once the development environment has been configured as described above,
 the unit tests can be run with this command::
 
-    $ pytest
+    $ uv run pytest
 
 Or to run and measure code coverage::
 
-    $ coverage run -m pytest
-    $ coverage report
+    $ uv run coverage run -m pytest
+    $ uv run coverage report
 
+Running lint
+------------
+::
 
-Running tox tests
------------------
-Tox can be used to run the tests on multiple Python versions.  As a
-prerequisite, the Python interpreters for the supported versions must
-be installed.  After installing development requirements as described above,
-the tox tests can be run using this command::
+    $ uv run python -m flake8 jotquote/
 
-    $ tox
+On Windows, using ``python -m flake8`` avoids Application Control policy
+restrictions that may block the ``flake8`` wrapper executable directly.
 
+Multi-version CI
+----------------
+Multi-version testing (Python 3.8–3.13 on Linux, Mac, and Windows) is
+handled automatically by GitHub Actions on push and pull request.

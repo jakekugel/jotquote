@@ -1,8 +1,0 @@
-wheel
-pytest
-tox
-mock
-setuptools
-coverage
-flake8
-twine
