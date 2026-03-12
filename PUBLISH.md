@@ -23,7 +23,7 @@ version = "1.0.0"
 
 ### 2. Merge PR to main
 
-Open a pull request with the version bump and merge it to `master`.
+Open a pull request with the version bump and merge it to `main`.
 
 ### 3. Build the distribution
 
@@ -105,4 +105,4 @@ version = "1.0.0"
 version = "1.0.1.dev0"
 ```
 
-Commit and push directly to `master` (or open a follow-up PR).
+Commit and push directly to `main` (or open a follow-up PR).

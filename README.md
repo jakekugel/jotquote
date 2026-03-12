@@ -1,7 +1,7 @@
 # jotquote
 
 [![Build Status](https://github.com/jakekugel/jotquote/actions/workflows/ci.yml/badge.svg)](https://github.com/jakekugel/jotquote/actions/workflows/ci.yml)
-[![Coverage](http://codecov.io/github/jakekugel/jotquote/coverage.svg?branch=master&precision=2)](http://codecov.io/github/jakekugel/jotquote?branch=master)
+[![Coverage](http://codecov.io/github/jakekugel/jotquote/coverage.svg?branch=main&precision=2)](http://codecov.io/github/jakekugel/jotquote?branch=main)
 [![PyPI version](https://badge.fury.io/py/jotquote.svg)](https://pypi.org/project/jotquote/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 
