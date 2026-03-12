@@ -1038,8 +1038,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "click", specifier = ">=7.0" },
-    { name = "flask", specifier = ">=0.10.1" },
+    { name = "click", specifier = ">=8.0" },
+    { name = "flask", specifier = ">=3.0" },
 ]
 
 [package.metadata.requires-dev]
