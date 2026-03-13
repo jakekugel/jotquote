@@ -3,13 +3,37 @@
 # file in the root of this repository for complete details.
 
 import datetime
+import logging
 import os
 
-from flask import Flask, render_template, g
+from flask import Flask, render_template, g, request
 
 from jotquote import api
 
 app = Flask(__name__)
+
+_access_logger = logging.getLogger("jotquote.access")
+_access_logger.setLevel(logging.INFO)
+_access_logger.propagate = False
+_access_handler = logging.StreamHandler()
+_access_handler.setFormatter(logging.Formatter("%(message)s"))
+_access_logger.addHandler(_access_handler)
+
+
+def _sanitize_for_log(value):
+    """Remove newline and carriage return characters to prevent log injection."""
+    return value.replace("\r", "").replace("\n", "")
+
+
+@app.after_request
+def log_request(response):
+    _access_logger.info(
+        "%s %s %s",
+        request.method,
+        _sanitize_for_log(request.full_path.rstrip("?")),
+        response.status_code,
+    )
+    return response
 
 
 @app.route('/')
@@ -87,13 +111,20 @@ def get_quotes():
 
 
 def run_server():
-    """Set up flask app and run it.
+    """Start the web server using Waitress as the WSGI server.
 
     This function is called when the 'jotquote webserver' command is called.
-    When this method is used, the port and IP address from the config file
-    are used.  However, it is possible to start the web server using a
-    WSGI container.  In that case, this function is not called, and the
-    WSGI container determines the port and IP address used.
+    Waitress is used as the WSGI server, which is suitable for production use.
+    The host and port are read from the settings.conf configuration file.
+
+    Alternatively, any WSGI server can be pointed directly at the 'app' object
+    exported from this module.  For example:
+
+        waitress-serve --host 127.0.0.1 --port 5544 jotquote.web:app
+        gunicorn --bind 127.0.0.1:5544 jotquote.web:app  (Linux/Mac only)
+
+    When using a WSGI server directly, this function is not called and the
+    WSGI server determines the host and port.
     """
 
     # Load needed configuration from settings.conf file
@@ -106,4 +137,7 @@ def run_server():
 
     if not listen_ip:
         listen_ip = "127.0.0.1"
-    app.run(host=listen_ip, port=listen_port)
+
+    logging.basicConfig(level=logging.INFO)
+    from waitress import serve
+    serve(app, host=listen_ip, port=int(listen_port))

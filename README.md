@@ -30,17 +30,36 @@ $ jotquote add "The larger the island of knowledge, the longer the shoreline of 
 
 In some cases, the command-line might be good enough for viewing the quotes in your
 collection, but you can start a web server that will show a quote of the day.
-The `jotquote webserver` command can be used to start the webserver:
+
+**Method 1 — `jotquote webserver` command (recommended)**
+
+The simplest way to start the web server is with the built-in command.  The host
+and port are read from settings.conf (default: `127.0.0.1:5544`):
 
 ```bash
 $ jotquote webserver
- * Running on http://127.0.0.1:5544/ (Press CTRL+C to quit)
 ```
 
 By default, the web server is only accessible on the system on which
 it is running.  But by editing the settings.conf file, the web server can be
 made accessible to computers on the network also.  See the section below about
 the settings.conf file for details.
+
+**Method 2 — WSGI server (advanced)**
+
+For more control, you can point any WSGI server directly at the `jotquote.web:app`
+object and specify the host and port on the command line.  For example:
+
+```bash
+# Using gunicorn (Linux/Mac):
+$ gunicorn --bind 0.0.0.0:5544 jotquote.web:app
+
+# Using waitress-serve (all platforms):
+$ waitress-serve --host 0.0.0.0 --port 5544 jotquote.web:app
+```
+
+This method is useful when hosting jotquote on a cloud platform such as
+[Render](https://render.com) where the WSGI server is configured separately.
 
 ## The quote file
 
