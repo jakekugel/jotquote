@@ -4,9 +4,29 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>jotquote</title>
 
-<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Open%20Sans">
 <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 <style>
+
+@font-face {
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 400;
+    src: url("{{ url_for('static', filename='fonts/OpenSans-Regular.ttf') }}") format('truetype');
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 700;
+    src: url("{{ url_for('static', filename='fonts/OpenSans-Bold.ttf') }}") format('truetype');
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    font-style: italic;
+    font-weight: 400;
+    src: url("{{ url_for('static', filename='fonts/OpenSans-Italic.ttf') }}") format('truetype');
+}
 
 /* Centering CSS from here: https://stackoverflow.com/a/36717369 */
 .container {

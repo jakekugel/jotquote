@@ -54,7 +54,7 @@ restrictions that may block the `flake8` wrapper executable directly.
 
 ## Multi-version CI
 
-Multi-version testing (Python 3.8–3.14 on Linux, Mac, and Windows) is
+Multi-version testing (Python 3.9–3.14 on Linux, Mac, and Windows) is
 handled automatically by GitHub Actions on push and pull request.
 
 ## Submitting changes
