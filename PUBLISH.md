@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- PyPI and TestPyPI accounts with API tokens configured in `~/.pypirc` or as environment variables (`TWINE_USERNAME`, `TWINE_PASSWORD`)
+- PyPI and TestPyPI accounts with API tokens
 - uv installed and dev dependencies synced (`uv sync --group dev`)
 
 ---
@@ -36,17 +36,13 @@ uv build
 
 This creates `dist/jotquote-X.Y.Z-py3-none-any.whl` and `dist/jotquote-X.Y.Z.tar.gz`.
 
-Verify the metadata is valid:
-
-```bash
-uv run twine check dist/*
-```
-
 ### 4. Publish to TestPyPI
 
 ```bash
-uv run twine upload --repository testpypi dist/*
+uv publish --publish-url https://test.pypi.org/legacy/ dist/*
 ```
+
+Authenticate with a TestPyPI API token via the `UV_PUBLISH_TOKEN` environment variable or the `--token` flag.
 
 ### 5. Install from TestPyPI and test
 
@@ -68,8 +64,10 @@ deactivate
 ### 6. Publish to PyPI
 
 ```bash
-uv run twine upload dist/*
+uv publish dist/*
 ```
+
+Authenticate with a PyPI API token via the `UV_PUBLISH_TOKEN` environment variable or the `--token` flag.
 
 ### 7. Install from PyPI and test
 

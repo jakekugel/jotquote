@@ -97,7 +97,7 @@ and Linux.
 
 ## Supported environments
 
-jotquote is tested on Python 3.8 through 3.14 on Windows, Mac, and Linux.
+jotquote is tested on Python 3.9 through 3.14 on Windows, Mac, and Linux.
 
 ## Cloud storage
 
