@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Plans
 
-The [plans/](plans/) folder stores implementation plans created by Claude for future PRs. Before starting a non-trivial implementation, save the plan there for reference. At the end of every implementation, save a copy of the final plan to this folder.
+The [plans/](plans/) folder stores implementation plans created by Claude for future PRs. Before starting a non-trivial implementation, save the plan there for reference. At the end of every implementation, save a copy of the final plan to this folder.  The filename format should be <year>-<day>-<month>-<description>.md, for example:
+
+2026-03-14-migrate-tests-to-pytest.md
 
 ## Commands
 
