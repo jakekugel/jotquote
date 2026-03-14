@@ -10,6 +10,16 @@ import tests.test_util
 from jotquote import web
 
 
+def test_charset(flask_client):
+    """Both main and unavailable pages declare UTF-8 charset"""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'<meta charset="UTF-8">' in rv.data
+    os.remove(quote_file)
+    rv = client.get('/')
+    assert b'<meta charset="UTF-8">' in rv.data
+
+
 def test_page_basics(flask_client):
     """A few sanity tests on web page"""
     client, quote_file = flask_client
