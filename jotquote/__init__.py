@@ -4,7 +4,7 @@
 
 from __future__ import print_function, unicode_literals
 
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
 
 try:
     __version__ = version("jotquote")

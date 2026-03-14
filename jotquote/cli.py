@@ -2,8 +2,7 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 
 import locale
 import os
@@ -14,7 +13,6 @@ import time
 import click
 
 from jotquote import api
-
 
 HELP_MAIN_F_ARG = 'optional path to quote file (if not provided, the command ' \
                   'will check ~/.jotquote/settings.conf for path)'
