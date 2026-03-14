@@ -7,7 +7,7 @@ import os
 from flask import g
 
 import tests.test_util
-from jotquote import web
+from jotquote import api, web
 
 
 def test_charset(flask_client):
@@ -109,3 +109,46 @@ def test_io_errors(flask_client):
         quotes = getattr(g, '_quotes', None)
         assert cached_time is not None
         assert quotes is not None
+
+
+def test_web_cache_minutes(flask_client, config):
+    """Cache-Control max-age respects web_cache_minutes config property."""
+    config[api.APP_NAME]['web_cache_minutes'] = '1'
+    client, quote_file = flask_client
+    rv = client.get('/')
+    cc = rv.headers.get('Cache-Control', '')
+    max_age = int(cc.split('=')[1])
+    assert max_age <= 60
+
+
+def test_web_cache_minutes_default(flask_client, config):
+    """Cache-Control max-age uses 240-minute default when web_cache_minutes is not set."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    cc = rv.headers.get('Cache-Control', '')
+    max_age = int(cc.split('=')[1])
+    assert max_age <= 14400
+
+
+def test_web_page_title_custom(flask_client, config):
+    """Page title reflects web_page_title config property."""
+    config[api.APP_NAME]['web_page_title'] = 'My Quotes'
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'<title>My Quotes</title>' in rv.data
+
+
+def test_web_page_title_custom_unavailable(flask_client, config):
+    """Unavailable page title also reflects web_page_title config property."""
+    config[api.APP_NAME]['web_page_title'] = 'My Quotes'
+    client, quote_file = flask_client
+    os.remove(quote_file)
+    rv = client.get('/')
+    assert b'<title>My Quotes</title>' in rv.data
+
+
+def test_web_page_title_default(flask_client, config):
+    """Page title defaults to 'jotquote' when web_page_title is not set."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'<title>jotquote</title>' in rv.data

@@ -35,16 +35,17 @@ SETTINGS_CONF_TEMPLATE = """\
 quote_file = {quote_file}
 web_port = {port}
 web_ip = 127.0.0.1
-"""
+{extra}"""
 
 
-def _make_env(tmp_path, quote_file):
+def _make_env(tmp_path, quote_file, **extra_props):
     """Build a settings.conf in tmp_path and return a subprocess env dict."""
+    extra = "\n".join("{} = {}".format(k, v) for k, v in extra_props.items())
     jotquote_dir = tmp_path / ".jotquote"
     jotquote_dir.mkdir()
     conf_path = jotquote_dir / "settings.conf"
     conf_path.write_text(
-        SETTINGS_CONF_TEMPLATE.format(quote_file=str(quote_file), port=TEST_PORT),
+        SETTINGS_CONF_TEMPLATE.format(quote_file=str(quote_file), port=TEST_PORT, extra=extra),
         encoding="utf-8",
     )
     env = os.environ.copy()
@@ -143,6 +144,27 @@ def test_waitress_serve_command(tmp_path):
         ],
         startup_log="Serving on http://127.0.0.1:{}".format(TEST_PORT),
     )
+
+
+def test_web_page_title(tmp_path):
+    """jotquote webserver uses web_page_title from config as the HTML page title."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file, web_page_title="My Quotes")
+
+    proc = subprocess.Popen(
+        [_script("jotquote"), "webserver"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            body = resp.read().decode("utf-8")
+        assert "<title>My Quotes</title>" in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="gunicorn not supported on Windows")

@@ -52,14 +52,17 @@ def showpage(settags=False):
     now = datetime.datetime.now()
     date1 = now.strftime("%A, %B %d, %Y")
 
-    # Calculate max-age: 4 hours or seconds until midnight, whichever is less
+    # Calculate max-age: configured cap or seconds until midnight, whichever is less
     midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     seconds_until_midnight = int((midnight - now).total_seconds())
-    max_age = min(14400, seconds_until_midnight)
+    config = api.get_config()
+    cap_minutes = int(config[api.APP_NAME].get('web_cache_minutes', '240'))
+    page_title = config[api.APP_NAME].get('web_page_title', 'jotquote')
+    max_age = min(cap_minutes * 60, seconds_until_midnight)
 
     quotes = get_quotes()
     if quotes is None:
-        response = make_response(render_template("unavailable.html", date1=date1))
+        response = make_response(render_template("unavailable.html", date1=date1, page_title=page_title))
         response.headers['Cache-Control'] = f'public, max-age={max_age}'
         return response
 
@@ -82,7 +85,7 @@ def showpage(settags=False):
     response = make_response(render_template("quote.html", quote=quotestring, author=author, date1=date1,
                                              publication=publication, quotenum=(index + 1), totalquotes=len(quotes),
                                              space_tags=space_tags, comma_tags=comma_tags, hash=hashstring,
-                                             show_tags=False))
+                                             show_tags=False, page_title=page_title))
     response.headers['Cache-Control'] = f'public, max-age={max_age}'
     return response
 

@@ -258,6 +258,11 @@ def _add_quotes(quotefile, newquote_str, extended):
 
     if new_count == 1:
         print("{0} quote added for total of {1}.".format(str(new_count), str(total_count)))
+        config = api.get_config()
+        if config[api.APP_NAME].getboolean('show_author_count', fallback=False):
+            all_quotes = api.read_quotes(quotefile)
+            count = sum(1 for q in all_quotes if q.author == quote.author)
+            print("You now have {0} quote{1} by {2}.".format(count, '' if count == 1 else 's', quote.author))
     else:
         print("{0} quotes added for total of {1}.".format(str(new_count), str(total_count)))
 
