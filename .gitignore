@@ -11,6 +11,7 @@ jotquote.egg-info/
 
 # Virtual environment
 venv/
+.venv/
 
 # Temporary file for coverage.py
 .coverage
