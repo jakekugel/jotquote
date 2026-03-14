@@ -46,6 +46,27 @@ def test_quote_caching(flask_client):
         assert cached_time_3 != cached_time_1
 
 
+def test_cache_control_header(flask_client):
+    """Cache-Control header is set and max-age is within expected bounds."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    cc = rv.headers.get('Cache-Control', '')
+    assert cc.startswith('public, max-age=')
+    max_age = int(cc.split('=')[1])
+    assert 0 < max_age <= 14400
+
+
+def test_cache_control_header_unavailable(flask_client):
+    """Cache-Control header is set even when quote file is unavailable."""
+    client, quote_file = flask_client
+    os.remove(quote_file)
+    rv = client.get('/')
+    cc = rv.headers.get('Cache-Control', '')
+    assert cc.startswith('public, max-age=')
+    max_age = int(cc.split('=')[1])
+    assert 0 < max_age <= 14400
+
+
 def test_io_errors(flask_client):
     """Test that app responds gracefully to IO errors"""
     client, quote_file = flask_client

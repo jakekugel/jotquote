@@ -2,6 +2,7 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
+import datetime as real_datetime
 import os
 import re
 
@@ -568,3 +569,31 @@ def test__parse_quote_simple__should_parse_out_author_and_publication(raw_quote,
 def test__parse_quote_simple__should_raise_exception_if_not_parseable(raw_quote, error_message):
     with pytest.raises(click.ClickException, match=re.escape(error_message)):
         api._parse_quote_simple(raw_quote)
+
+
+def test_get_random_choice_uses_today_before_cutoff(monkeypatch):
+    """Before 11:45 PM, today's date drives quote selection."""
+    class FakeDatetime(real_datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return real_datetime.datetime(2026, 3, 14, 23, 44, 0)
+
+    monkeypatch.setattr(api.datetime, 'datetime', FakeDatetime)
+    result = api.get_random_choice(100)
+    beginday = real_datetime.date(2016, 1, 1)
+    days = (real_datetime.date(2026, 3, 14) - beginday).days
+    assert result == api._get_random_value(days, 100)
+
+
+def test_get_random_choice_uses_tomorrow_at_cutoff(monkeypatch):
+    """At 11:45 PM exactly, tomorrow's date drives quote selection."""
+    class FakeDatetime(real_datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return real_datetime.datetime(2026, 3, 14, 23, 45, 0)
+
+    monkeypatch.setattr(api.datetime, 'datetime', FakeDatetime)
+    result = api.get_random_choice(100)
+    beginday = real_datetime.date(2016, 1, 1)
+    days = (real_datetime.date(2026, 3, 15) - beginday).days
+    assert result == api._get_random_value(days, 100)

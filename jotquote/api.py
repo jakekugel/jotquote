@@ -472,8 +472,13 @@ def format_quote(quote):
 def get_random_choice(numquotes):
     """Return a random value between 0 and numquotes -1, inclusive."""
 
-    # Get days since epoch
-    endday = datetime.datetime.now().date()
+    # Get days since epoch, advancing to next day after 11:45 PM so caches
+    # expiring at midnight will already contain the next day's quote
+    now = datetime.datetime.now()
+    if now.hour == 23 and now.minute >= 45:
+        endday = (now + datetime.timedelta(days=1)).date()
+    else:
+        endday = now.date()
     beginday = datetime.date(2016, 1, 1)
     days_since_epoch = (endday - beginday).days
 
