@@ -509,3 +509,42 @@ def test_jotquote_info(config, tmp_path):
         "Quote file: {}\n"
         "Number of quotes: 4\n"
         "Time quote file last modified: {}\n".format(jotquote.__version__, path, time.ctime(os.path.getmtime(path))))
+
+
+def test_show_author_count(config, tmp_path):
+    """add subcommand prints author count when show_author_count=true."""
+    config[api.APP_NAME]['show_author_count'] = 'true'
+    path = tests.test_util.init_quotefile(str(tmp_path), "quotes1.txt")
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['add', 'New wisdom quote - Ben Franklin'], obj={})
+
+    assert result.exit_code == 0
+    assert '1 quote added for total of 5.' in result.output
+    assert 'You now have 2 quotes by Ben Franklin.' in result.output
+
+
+def test_show_author_count_singular(config, tmp_path):
+    """add subcommand uses singular 'quote' when author has exactly one quote."""
+    config[api.APP_NAME]['show_author_count'] = 'true'
+    path = tests.test_util.init_quotefile(str(tmp_path), "quotes1.txt")
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['add', 'A brand new thought - New Author'], obj={})
+
+    assert result.exit_code == 0
+    assert 'You now have 1 quote by New Author.' in result.output
+
+
+def test_show_author_count_disabled(config, tmp_path):
+    """add subcommand does not print author count when show_author_count is not set."""
+    path = tests.test_util.init_quotefile(str(tmp_path), "quotes1.txt")
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['add', 'New wisdom quote - Ben Franklin'], obj={})
+
+    assert result.exit_code == 0
+    assert result.output == '1 quote added for total of 5.\n'
