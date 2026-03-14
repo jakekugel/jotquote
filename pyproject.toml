@@ -48,7 +48,6 @@ include = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
-    "mock>=5.0",
     "flake8>=6.0",
     "coverage>=7.0",
     "gunicorn>=23.0",

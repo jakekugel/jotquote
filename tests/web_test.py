@@ -2,12 +2,7 @@
 # This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
-from __future__ import unicode_literals
-
 import os
-import shutil
-import tempfile
-import unittest
 
 from flask import g
 
@@ -15,79 +10,71 @@ import tests.test_util
 from jotquote import web
 
 
-class TestJotquote(unittest.TestCase):
-    """A few integration tests for the Flask app in web.py"""
-    def setUp(self):
-        # Create a temporary directory for use by the current unit test
-        self.tempdir = tempfile.mkdtemp(prefix='jotquote.unittest.')
+def test_page_basics(flask_client):
+    """A few sanity tests on web page"""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'<!DOCTYPE html>' in rv.data
+    assert b'<title>jotquote</title>' in rv.data
+    assert b'<div class="quote">They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.</div>' in rv.data
+    assert b'<div class="author">Ben Franklin</div>' in rv.data
 
-        self.file = tests.test_util.init_quotefile(self.tempdir, "quotes5.txt")
 
-        web.app.testing = True
-        web.app.config['QUOTE_FILE'] = self.file
-        self.app = web.app.test_client()
+def test_page_tags(flask_client):
+    """A few sanity tests on web page"""
+    client, quote_file = flask_client
+    rv = client.get('/tags')
+    assert b'<!DOCTYPE html>' in rv.data
+    assert b'<title>jotquote</title>' in rv.data
+    assert b'<div class="quote">They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.</div>' in rv.data
+    assert b'<div class="author">Ben Franklin</div>' in rv.data
+    assert b'<div id=\'settag\' class="command" style="display:none;">$ jotquote settags -s 25382c2519fb23bd U</div>' in rv.data
 
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
 
-    def test_page_basics(self):
-        """A few sanity tests on web page"""
-        rv = self.app.get('/')
-        assert b'<!DOCTYPE html>' in rv.data
-        assert b'<title>jotquote</title>' in rv.data
-        assert b'<div class="quote">They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.</div>' in rv.data
-        assert b'<div class="author">Ben Franklin</div>' in rv.data
+def test_quote_caching(flask_client):
+    """Test that quotes cached but reloaded if quote file changes"""
+    client, quote_file = flask_client
+    with web.app.app_context():
+        client.get('/')
+        cached_time_1 = getattr(g, '_cached_mtime', None)
+        client.get('/')
+        cached_time_2 = getattr(g, '_cached_mtime', None)
+        assert cached_time_1 == cached_time_2
+        os.utime(quote_file, (cached_time_2 + 1.0, cached_time_2 + 1.0))
+        client.get('/')
+        cached_time_3 = getattr(g, '_cache_mtime', None)
+        assert cached_time_3 != cached_time_1
 
-    def test_page_tags(self):
-        """A few sanity tests on web page"""
-        rv = self.app.get('/tags')
-        print(rv.data)
-        assert b'<!DOCTYPE html>' in rv.data
-        assert b'<title>jotquote</title>' in rv.data
-        assert b'<div class="quote">They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.</div>' in rv.data
-        assert b'<div class="author">Ben Franklin</div>' in rv.data
-        assert b'<div id=\'settag\' class="command" style="display:none;">$ jotquote settags -s 25382c2519fb23bd U</div>' in rv.data
 
-    def test_quote_caching(self):
-        """Test that quotes cached but reloaded if quote file changes"""
-        with web.app.app_context():
-            self.app.get('/')
-            cached_time_1 = getattr(g, '_cached_mtime', None)
-            self.app.get('/')
-            cached_time_2 = getattr(g, '_cached_mtime', None)
-            assert cached_time_1 == cached_time_2
-            os.utime(self.file, (cached_time_2 + 1.0, cached_time_2 + 1.0))
-            self.app.get('/')
-            cached_time_3 = getattr(g, '_cache_mtime', None)
-            assert cached_time_3 != cached_time_1
+def test_io_errors(flask_client):
+    """Test that app responds gracefully to IO errors"""
+    client, quote_file = flask_client
+    with web.app.app_context():
+        client.get('/')
+        cached_time = getattr(g, '_cached_mtime', None)
+        quotes = getattr(g, '_quotes', None)
+        assert cached_time is not None
+        assert quotes is not None
 
-    def test_io_errors(self):
-        """Test that app responds gracefully to IO errors"""
-        with web.app.app_context():
-            self.app.get('/')
-            cached_time = getattr(g, '_cached_mtime', None)
-            quotes = getattr(g, '_quotes', None)
-            assert cached_time != None
-            assert quotes != None
+        # Delete the test file
+        os.remove(quote_file)
 
-            # Delete the test file
-            os.remove(self.file)
+        rv = client.get('/')
+        assert b'The quotes are not yet available; please try again later.' in rv.data
 
-            rv = self.app.get('/')
-            assert b'The quotes are not yet available; please try again later.' in rv.data
+        cached_time = getattr(g, '_cached_mtime', None)
+        quotes = getattr(g, '_quotes', None)
+        assert cached_time is None
+        assert quotes is None
 
-            cached_time = getattr(g, '_cached_mtime', None)
-            quotes = getattr(g, '_quotes', None)
-            assert cached_time == None
-            assert quotes == None
+        # Restore the test file (use the same directory as the original quote_file)
+        quote_dir = os.path.dirname(quote_file)
+        quote_file = tests.test_util.init_quotefile(quote_dir, "quotes5.txt")
 
-            self.file = tests.test_util.init_quotefile(self.tempdir, "quotes5.txt")
+        rv = client.get('/')
+        assert b'The quotes are not yet available; please try again later.' not in rv.data
 
-            rv = self.app.get('/')
-            assert b'The quotes are not yet available; please try again later.' not in rv.data
-
-            cached_time = getattr(g, '_cached_mtime', None)
-            quotes = getattr(g, '_quotes', None)
-            assert cached_time != None
-            assert quotes != None
-
+        cached_time = getattr(g, '_cached_mtime', None)
+        quotes = getattr(g, '_quotes', None)
+        assert cached_time is not None
+        assert quotes is not None
