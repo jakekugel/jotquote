@@ -6,7 +6,7 @@ import datetime
 import logging
 import os
 
-from flask import Flask, render_template, g, request
+from flask import Flask, make_response, render_template, g, request
 
 from jotquote import api
 
@@ -52,9 +52,16 @@ def showpage(settags=False):
     now = datetime.datetime.now()
     date1 = now.strftime("%A, %B %d, %Y")
 
+    # Calculate max-age: 4 hours or seconds until midnight, whichever is less
+    midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    seconds_until_midnight = int((midnight - now).total_seconds())
+    max_age = min(14400, seconds_until_midnight)
+
     quotes = get_quotes()
     if quotes is None:
-        return render_template("unavailable.html", date1=date1)
+        response = make_response(render_template("unavailable.html", date1=date1))
+        response.headers['Cache-Control'] = f'public, max-age={max_age}'
+        return response
 
     # Get random random quote based on date and number of quotes
     index = api.get_random_choice(len(quotes))
@@ -72,9 +79,12 @@ def showpage(settags=False):
         hashstring = None
     space_tags = " ".join(quote.tags)
     comma_tags = ",".join(quote.tags)
-    return render_template("quote.html", quote=quotestring, author=author, date1=date1,
-                           publication=publication, quotenum=(index + 1), totalquotes=len(quotes),
-                           space_tags=space_tags, comma_tags=comma_tags, hash=hashstring, show_tags=False)
+    response = make_response(render_template("quote.html", quote=quotestring, author=author, date1=date1,
+                                             publication=publication, quotenum=(index + 1), totalquotes=len(quotes),
+                                             space_tags=space_tags, comma_tags=comma_tags, hash=hashstring,
+                                             show_tags=False))
+    response.headers['Cache-Control'] = f'public, max-age={max_age}'
+    return response
 
 
 def get_quotes():
