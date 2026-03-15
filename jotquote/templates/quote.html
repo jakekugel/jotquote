@@ -64,7 +64,13 @@
     font-style: italic;
 }
 
-.footer {
+.stars {
+    font-size: 131%;
+    color: black;
+    margin-top: -6px;
+}
+
+.date {
     font-family: "Open Sans", Palatino, serif;
     font-size: 100%;
     font-style: italic;
@@ -80,10 +86,6 @@
     border-radius: 8px;
     padding: 5px;
     margin-top: 5px;
-}
-
-.quotenum {
-    float: right;
 }
 
 .horiz-line {
@@ -124,7 +126,7 @@
         font-size: 150%;
     }
 
-    .footer {
+    .date {
         font-size: 75%;
     }
 
@@ -150,8 +152,9 @@
    	        <div class="publication">{{ publication }}</div>
    	    {% endif %}
         <div class="horiz-line"></div>
-        <div>
-            <span class="footer">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="stars">{% if show_stars and stars > 0 %}{{ '★' * stars }}{{ '☆' * (5 - stars) }}{% endif %}</span>
+            <span>
               {% if show_tags %}
                 tags: {{space_tags}}
                   {% if hash is not none %}
@@ -159,7 +162,7 @@
                   {% endif %}
               {% endif %}
             </span>
-            <span class="footer quotenum">{{ date1 }}</span>
+            <span class="date">{{ date1 }}</span>
         </div>
         {% if hash is not none %}
             <div id='settag' class="command" style="display:none;">$ jotquote settags -s {{hash}} {{comma_tags}}</div>

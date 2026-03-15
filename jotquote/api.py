@@ -316,6 +316,7 @@ def get_config():
         config[APP_NAME]['web_cache_minutes'] = '240'
         config[APP_NAME]['show_author_count'] = 'false'
         config[APP_NAME]['web_page_title'] = 'jotquote'
+        config[APP_NAME]['web_show_stars'] = 'false'
         with open(CONFIG_FILE, 'w') as configfile:
             config.write(configfile)
 

@@ -152,3 +152,35 @@ def test_web_page_title_default(flask_client, config):
     client, quote_file = flask_client
     rv = client.get('/')
     assert b'<title>jotquote</title>' in rv.data
+
+
+def test_stars_displayed(flask_client, config, monkeypatch):
+    """Star tag causes the correct number of star characters to appear when web_show_stars is true."""
+    config[api.APP_NAME]['web_show_stars'] = 'true'
+    client, quote_file = flask_client
+    with open(quote_file, 'w', encoding='utf-8') as f:
+        f.write('Some quote | Some Author | | 3stars\n')
+    monkeypatch.setattr(api, 'get_random_choice', lambda _: 0)
+    web.app.config['QUOTE_FILE'] = quote_file
+    rv = client.get('/')
+    assert '\u2605\u2605\u2605\u2606\u2606'.encode('utf-8') in rv.data  # ★★★☆☆
+
+
+def test_stars_hidden_when_show_stars_false(flask_client, config, monkeypatch):
+    """Stars are not rendered when web_show_stars is false."""
+    config[api.APP_NAME]['web_show_stars'] = 'false'
+    client, quote_file = flask_client
+    with open(quote_file, 'w', encoding='utf-8') as f:
+        f.write('Some quote | Some Author | | 3stars\n')
+    monkeypatch.setattr(api, 'get_random_choice', lambda _: 0)
+    web.app.config['QUOTE_FILE'] = quote_file
+    rv = client.get('/')
+    assert '\u2605'.encode('utf-8') not in rv.data
+
+
+def test_no_stars_when_untagged(flask_client, config):
+    """Quotes without a star tag don't render any star characters."""
+    config[api.APP_NAME]['web_show_stars'] = 'true'
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert '\u2605'.encode('utf-8') not in rv.data
