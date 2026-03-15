@@ -6,7 +6,7 @@ import datetime
 import logging
 import os
 
-from flask import Flask, make_response, render_template, g, request
+from flask import Flask, g, make_response, render_template, request
 
 from jotquote import api
 

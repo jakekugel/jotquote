@@ -2,10 +2,6 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
-from __future__ import print_function
-from __future__ import unicode_literals
-
-import locale
 import os
 import random as randomlib
 import sys
@@ -14,7 +10,6 @@ import time
 import click
 
 from jotquote import api
-
 
 HELP_MAIN_F_ARG = 'optional path to quote file (if not provided, the command ' \
                   'will check ~/.jotquote/settings.conf for path)'
@@ -233,16 +228,11 @@ def info(ctx):
 def _add_quotes(quotefile, newquote_str, extended):
     """Adds the new quote(s) to the quote file."""
 
-    # Python 2.x returns non-unicode strings from sys.stdin, need to decode to Unicode.
-    shell_encoding = None
-    if sys.version_info < (3, 0):
-        shell_encoding = locale.getpreferredencoding(False)
-
     if newquote_str == '-':
         if not extended:
-            quotes = api.parse_quotes(sys.stdin, "stdin", encoding=shell_encoding, simple_format=True)
+            quotes = api.parse_quotes(sys.stdin, "stdin", simple_format=True)
         else:
-            quotes = api.parse_quotes(sys.stdin, "stdin", encoding=shell_encoding, simple_format=False)
+            quotes = api.parse_quotes(sys.stdin, "stdin", simple_format=False)
 
         total_count = api.add_quotes(quotefile, quotes)
         new_count = len(quotes)

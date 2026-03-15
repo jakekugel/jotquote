@@ -2,16 +2,16 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
-from configparser import ConfigParser
-import click
 import datetime
 import hashlib
 import os
 import random as randomlib
 import re
-from string import ascii_letters
 import shutil
+from configparser import ConfigParser
+from string import ascii_letters
 
+import click
 
 APP_NAME = 'jotquote'
 CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.jotquote', 'settings.conf')
@@ -364,7 +364,7 @@ def add_quotes(filename, newquotes):
     if not os.path.exists(filename):
         raise click.ClickException("The quote file '%s' does not exist." % filename)
 
-    if not type(newquotes) is list:
+    if type(newquotes) is not list:
         raise Exception("the add_quotes() function expected a list as second parameter.")
 
     # Check for duplicates within new quotes.  Exception raised if duplicate found within input lines.

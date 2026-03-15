@@ -23,8 +23,8 @@ uv run pytest tests/api_test.py
 # Run a single test
 uv run pytest tests/api_test.py::TestClassName::test_method_name
 
-# Lint (use python -m on Windows if flake8 executable is blocked by App Control policy)
-uv run python -m flake8 jotquote/
+# Lint
+uv run ruff check jotquote/
 
 # Run tests with coverage
 uv run coverage run -m pytest
@@ -70,6 +70,6 @@ There are two input formats for the `add` command:
 - `tests/api_test.py` — unittest-style; monkey-patches `api.get_config` in `setUp` to return a test `ConfigParser`.
 - `tests/api_pytest_test.py` — pytest-style using `monkeypatch` and `tmp_path`.
 
-### Flake8 rules
+### Ruff rules
 
-Config is in `.flake8`: line length max 120; E501, W503, and E722 are ignored; `tests/` directory is excluded.
+Config is in `pyproject.toml` under `[tool.ruff]`: line length max 120; E501 and E722 are ignored; `tests/` directory is excluded.
