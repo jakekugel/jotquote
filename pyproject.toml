@@ -58,7 +58,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 120
-exclude = [".tox", "*.egg", ".git", "venv", "tests", "__pycache__", ".venv"]
+exclude = [".git", "tests", "__pycache__", ".venv"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "N", "I"]
