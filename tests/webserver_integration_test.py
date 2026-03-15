@@ -171,7 +171,7 @@ def test_stars_displayed(tmp_path):
     """Stars are rendered in the HTML when the daily quote has a star tag."""
     quote_file = tmp_path / "quotes_stars.txt"
     quote_file.write_text("A great quote | Famous Author | | 3stars\n", encoding="utf-8")
-    env = _make_env(tmp_path, quote_file)
+    env = _make_env(tmp_path, quote_file, web_show_stars='true')
 
     proc = subprocess.Popen(
         [_script("jotquote"), "webserver"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
