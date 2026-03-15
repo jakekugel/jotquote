@@ -20,7 +20,7 @@ def test_charset(flask_client):
     assert b'<meta charset="UTF-8">' in rv.data
 
 
-def test_page_basics(flask_client):
+def test_page_basics(flask_client, config):
     """A few sanity tests on web page"""
     client, quote_file = flask_client
     rv = client.get('/')
@@ -30,7 +30,7 @@ def test_page_basics(flask_client):
     assert b'<div class="author">Ben Franklin</div>' in rv.data
 
 
-def test_page_tags(flask_client):
+def test_page_tags(flask_client, config):
     """A few sanity tests on web page"""
     client, quote_file = flask_client
     rv = client.get('/tags')
