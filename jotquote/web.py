@@ -58,6 +58,7 @@ def showpage(settags=False):
     config = api.get_config()
     cap_minutes = int(config[api.APP_NAME].get('web_cache_minutes', '240'))
     page_title = config[api.APP_NAME].get('web_page_title', 'jotquote')
+    show_stars = config[api.APP_NAME].get('web_show_stars', 'false').lower() == 'true'
     max_age = min(cap_minutes * 60, seconds_until_midnight)
 
     quotes = get_quotes()
@@ -82,10 +83,13 @@ def showpage(settags=False):
         hashstring = None
     space_tags = " ".join(quote.tags)
     comma_tags = ",".join(quote.tags)
+    _star_tag_map = {'1star': 1, '2stars': 2, '3stars': 3, '4stars': 4, '5stars': 5}
+    stars = next((v for t, v in _star_tag_map.items() if t in quote.tags), 0)
     response = make_response(render_template("quote.html", quote=quotestring, author=author, date1=date1,
                                              publication=publication, quotenum=(index + 1), totalquotes=len(quotes),
                                              space_tags=space_tags, comma_tags=comma_tags, hash=hashstring,
-                                             show_tags=False, page_title=page_title))
+                                             show_tags=False, page_title=page_title, stars=stars,
+                                             show_stars=show_stars))
     response.headers['Cache-Control'] = f'public, max-age={max_age}'
     return response
 

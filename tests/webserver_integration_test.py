@@ -167,6 +167,28 @@ def test_web_page_title(tmp_path):
         proc.wait(timeout=10)
 
 
+def test_stars_displayed(tmp_path):
+    """Stars are rendered in the HTML when the daily quote has a star tag."""
+    quote_file = tmp_path / "quotes_stars.txt"
+    quote_file.write_text("A great quote | Famous Author | | 3stars\n", encoding="utf-8")
+    env = _make_env(tmp_path, quote_file, web_show_stars='true')
+
+    proc = subprocess.Popen(
+        [_script("jotquote"), "webserver"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            body = resp.read().decode("utf-8")
+        assert "\u2605\u2605\u2605\u2606\u2606" in body  # ★★★☆☆
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="gunicorn not supported on Windows")
 def test_gunicorn_launch(tmp_path):
     """gunicorn starts, serves the jotquote WSGI app, and logs to stderr (Linux/Mac only)."""
