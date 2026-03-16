@@ -102,7 +102,7 @@ def _start_review_server(tmp_path, quote_file, env):
     review_module = os.path.join(
         os.path.dirname(os.path.dirname(__file__)), "jotquote", "web_review.py"
     )
-    cmd = [flask_script, "--app", review_module, "run", "--port", str(TEST_PORT)]
+    cmd = [flask_script, "--app", review_module, "run", "--port", str(TEST_PORT), "--no-reload"]
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
