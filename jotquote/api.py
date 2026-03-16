@@ -15,8 +15,8 @@ import click
 
 APP_NAME = 'jotquote'
 CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.jotquote', 'settings.conf')
-INVALID_CHARS_QUOTE = re.compile("[|\"\n\r]")
-INVALID_CHARS = re.compile("[|\n\r]")
+INVALID_CHARS_QUOTE = re.compile('[|"\n\r]')
+INVALID_CHARS = re.compile('[|\n\r]')
 
 
 class Quote:
@@ -34,11 +34,11 @@ class Quote:
         else:
             self.publication = publication.strip()
 
-        _assert_no_invalid_chars_quote(self.quote, "quote")
-        _assert_no_invalid_chars(self.author, "author")
+        _assert_no_invalid_chars_quote(self.quote, 'quote')
+        _assert_no_invalid_chars(self.author, 'author')
 
         if self.publication is not None:
-            _assert_no_invalid_chars(self.publication, "publication")
+            _assert_no_invalid_chars(self.publication, 'publication')
 
         self.tags = []
         self.set_tags(tags)
@@ -79,7 +79,7 @@ class Quote:
             self.tags = []
         else:
             if type(tags) is not list:
-                raise click.ClickException("The quote object was not given a list for tags parameter.")
+                raise click.ClickException('The quote object was not given a list for tags parameter.')
             self.tags = tags
 
     # Returns first 64 bits of MD5 hash for quote.  Since there is chance of hash collision,
@@ -162,15 +162,15 @@ def settags(quotefile, n, hash, newtags):
     (already parsed); pass [] to clear all tags.
     """
     if n is not None and hash is not None:
-        raise click.ClickException("both the -s and -n option were included, but only one allowed.")
+        raise click.ClickException('both the -s and -n option were included, but only one allowed.')
     if n is None and hash is None:
-        raise click.ClickException("either the -n or the -s argument must be included.")
+        raise click.ClickException('either the -n or the -s argument must be included.')
 
     quotes = read_quotes(quotefile)
 
     if n is not None:
         if n < 1 or n > len(quotes):
-            raise click.ClickException("quote number {0} is out of range (1-{1}).".format(n, len(quotes)))
+            raise click.ClickException('quote number {0} is out of range (1-{1}).'.format(n, len(quotes)))
         quote = quotes[n - 1]
     else:
         matched = [q for q in quotes if q.get_hash() == hash]
@@ -199,19 +199,19 @@ def parse_quotes(rawlines, filename, encoding=None, simple_format=True):
         linenum += 1
 
         # Skip blank lines
-        if line == "":
+        if line == '':
             continue
 
         # Skip lines beginning with '#' (comments)
-        if line.startswith("#"):
+        if line.startswith('#'):
             continue
 
         try:
             quote = _parse_quote(line, simple_format=simple_format)
             quotes.append(quote)
         except Exception as exception:
-            raise click.ClickException("syntax error on line {0} of {1}: {2}.  Line with error: "
-                                       "\"{3}\"".format(str(linenum), filename, str(exception), line))
+            raise click.ClickException('syntax error on line {0} of {1}: {2}.  Line with error: '
+                                       '"{3}"'.format(str(linenum), filename, str(exception), line))
 
     return quotes
 
@@ -256,11 +256,11 @@ def _parse_quote(raw_line, simple_format=True):
         quotestring, author, publication, tags = _parse_quote_extended(line)
 
     if len(quotestring) == 0:
-        raise click.ClickException("a quote was not found")
+        raise click.ClickException('a quote was not found')
 
     if len(author) == 0:
-        raise click.ClickException("an author was not included with the quote.  "
-                                   + "Expecting quote in the format \"<quote> - <author>\".")
+        raise click.ClickException('an author was not included with the quote.  '
+                                   + 'Expecting quote in the format "<quote> - <author>".')
 
     quote = Quote(quotestring, author, publication, tags)
     return quote
@@ -269,12 +269,12 @@ def _parse_quote(raw_line, simple_format=True):
 def _parse_quote_simple(line):
     """Internal function to parse a single quote line in simple format."""
     if any(c == '|' for c in line):
-        raise click.ClickException("the quote included an embedded pipe character (|)")
+        raise click.ClickException('the quote included an embedded pipe character (|)')
 
     # Get a list of matchers for hyphens next to and not next to a space char
-    hyphen_w_period = list(re.finditer("(?<=\\.)\\s*[-]\\s*", line))
-    hyphen_w_space = list(re.finditer("\\s+-\\s*|\\s*-\\s+", line))
-    hyphen_wo_space = list(re.finditer("(?<=[^ ])-(?=[^ ])", line))
+    hyphen_w_period = list(re.finditer('(?<=\\.)\\s*[-]\\s*', line))
+    hyphen_w_space = list(re.finditer('\\s+-\\s*|\\s*-\\s+', line))
+    hyphen_wo_space = list(re.finditer('(?<=[^ ])-(?=[^ ])', line))
 
     # Based on hyphens found, infer which one separates quote from author.
     if len(hyphen_w_period) == 1:
@@ -285,15 +285,15 @@ def _parse_quote_simple(line):
         selected_matcher = hyphen_wo_space[0]
     else:
         raise click.ClickException(
-            "unable to determine which hyphen separates the quote from the author.")
+            'unable to determine which hyphen separates the quote from the author.')
 
     quote = line[:selected_matcher.start()]
     author = line[selected_matcher.end():]
 
     # Check if publication exists using parentheses
     regexes = [
-        "^([^,]+)\\s*\\((.*)\\)$",  # Author name (publication)
-        "^([^,]+),\\s*[(](.+)[)]$",  # Author name, (publication)
+        '^([^,]+)\\s*\\((.*)\\)$',  # Author name (publication)
+        '^([^,]+),\\s*[(](.+)[)]$',  # Author name, (publication)
         "^([^,]+),\\s*([^,']+)$",  # Author name, publication
         "^([^,]+),\\s*'(.+)'$",  # Author name, 'publication'
         "^([^,\\(\\)']+)\\s*()$",  # Author name
@@ -350,7 +350,7 @@ def _parse_tags(tag_string):
         if not all(c in ascii_letters + '0123456789_' for c in tag):
             raise click.ClickException("invalid tag '{0}': only numbers, letters, and commas are "
                                        "allowed in tags".format(tag))
-        if tag != "":
+        if tag != '':
             tagset.add(tag)
 
     return sorted(list(tagset))
@@ -411,7 +411,7 @@ def add_quote(filename, quote):
     Returns total number of quotes including new quote.
     """
     if not isinstance(quote, Quote):
-        raise click.ClickException("The quote parameter must be type class Quote.")
+        raise click.ClickException('The quote parameter must be type class Quote.')
 
     quotes = [quote]
     return add_quotes(filename, quotes)
@@ -429,10 +429,10 @@ def add_quotes(filename, newquotes):
         raise click.ClickException("The quote file '%s' does not exist." % filename)
 
     if type(newquotes) is not list:
-        raise Exception("the add_quotes() function expected a list as second parameter.")
+        raise Exception('the add_quotes() function expected a list as second parameter.')
 
     # Check for duplicates within new quotes.  Exception raised if duplicate found within input lines.
-    _check_for_duplicates(newquotes, "stdin")
+    _check_for_duplicates(newquotes, 'stdin')
 
     # If ascii_only is set, reject quotes containing non-ASCII characters
     config = get_config()
@@ -448,7 +448,7 @@ def add_quotes(filename, newquotes):
         for new_quote in newquotes:
             if new_quote.quote == existing_quote.quote:
                 raise click.ClickException(
-                    "the quote \"{}\" is already in the quote file {}.".format(new_quote.quote, filename))
+                    'the quote "{}" is already in the quote file {}.'.format(new_quote.quote, filename))
 
     # Rewrite quote file with any additional quotes
     quotes.extend(newquotes)
@@ -525,7 +525,7 @@ def write_quotes(quote_path, quotes):
     try:
         os.replace(temp_path, quote_path)
     except:
-        raise click.ClickException("an error occurred writing the quotes.")
+        raise click.ClickException('an error occurred writing the quotes.')
 
 
 def format_quote(quote):
@@ -533,15 +533,15 @@ def format_quote(quote):
     it will be written to the file: <quote> | <author> | [<publication>] | [<tag1>,<tag2>,...]
     """
     if not isinstance(quote, Quote):
-        raise click.ClickException("The quote parameter must be type class Quote.")
+        raise click.ClickException('The quote parameter must be type class Quote.')
 
     quotestr = quote.quote
     author = quote.author
     publication = quote.publication
     if publication is None:
-        publication = ""
-    tags = ", ".join(quote.tags)
-    return "%s | %s | %s | %s" % (quotestr, author, publication, tags)
+        publication = ''
+    tags = ', '.join(quote.tags)
+    return '%s | %s | %s | %s' % (quotestr, author, publication, tags)
 
 
 def get_random_choice(numquotes):
@@ -621,13 +621,13 @@ def _assert_no_invalid_chars(text, component_name):
 
 def _raise_invalid_char_exception(char, component_name):
     if char == '\n':
-        charstring = "newline (0x0a)"
+        charstring = 'newline (0x0a)'
     elif char == '\r':
-        charstring = "carriage return (0x0d)"
+        charstring = 'carriage return (0x0d)'
     else:
-        charstring = "(" + char + ")"
-    raise click.ClickException("the {} included a {} character".format(component_name, charstring))
+        charstring = '(' + char + ')'
+    raise click.ClickException('the {} included a {} character'.format(component_name, charstring))
 
 
 if __name__ == '__main__':
-    raise click.ClickException("This module is not executable.")
+    raise click.ClickException('This module is not executable.')

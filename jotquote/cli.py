@@ -197,15 +197,15 @@ def info(ctx):
     # This import is required to read that package version below
     import jotquote
 
-    print("Version: {}".format(jotquote.__version__))
-    print("Settings file: {}".format(api.CONFIG_FILE))
-    print("Quote file: {}".format(quotefile))
+    print('Version: {}'.format(jotquote.__version__))
+    print('Settings file: {}'.format(api.CONFIG_FILE))
+    print('Quote file: {}'.format(quotefile))
 
     # The info subcommand should still work even if quote file not found.
     if os.path.exists(quotefile):
         quotes = api.read_quotes(quotefile)
-        print("Number of quotes: {}".format(str(len(quotes))))
-        print("Time quote file last modified: {}".format(time.ctime(os.path.getmtime(quotefile))))
+        print('Number of quotes: {}'.format(str(len(quotes))))
+        print('Time quote file last modified: {}'.format(time.ctime(os.path.getmtime(quotefile))))
 
 
 def _add_quotes(quotefile, newquote_str, extended):
@@ -213,9 +213,9 @@ def _add_quotes(quotefile, newquote_str, extended):
 
     if newquote_str == '-':
         if not extended:
-            quotes = api.parse_quotes(sys.stdin, "stdin", simple_format=True)
+            quotes = api.parse_quotes(sys.stdin, 'stdin', simple_format=True)
         else:
-            quotes = api.parse_quotes(sys.stdin, "stdin", simple_format=False)
+            quotes = api.parse_quotes(sys.stdin, 'stdin', simple_format=False)
 
         total_count = api.add_quotes(quotefile, quotes)
         new_count = len(quotes)
@@ -230,14 +230,14 @@ def _add_quotes(quotefile, newquote_str, extended):
         new_count = 1
 
     if new_count == 1:
-        print("{0} quote added for total of {1}.".format(str(new_count), str(total_count)))
+        print('{0} quote added for total of {1}.'.format(str(new_count), str(total_count)))
         config = api.get_config()
         if config[api.APP_NAME].getboolean('show_author_count', fallback=False):
             all_quotes = api.read_quotes(quotefile)
             count = sum(1 for q in all_quotes if q.author == quote.author)
-            print("You now have {0} quote{1} by {2}.".format(count, '' if count == 1 else 's', quote.author))
+            print('You now have {0} quote{1} by {2}.'.format(count, '' if count == 1 else 's', quote.author))
     else:
-        print("{0} quotes added for total of {1}.".format(str(new_count), str(total_count)))
+        print('{0} quotes added for total of {1}.'.format(str(new_count), str(total_count)))
 
 
 def _print_random(quotefile, tags, keyword):
@@ -257,19 +257,19 @@ def _print_random(quotefile, tags, keyword):
 
 def print_quote_short(quote):
     publication = quote.publication
-    if publication is not None and publication != "":
-        pubstring = " (" + publication + ")"
+    if publication is not None and publication != '':
+        pubstring = ' (' + publication + ')'
     else:
-        pubstring = ""
-    print("{0}  - {1}{2}".format(quote.quote, quote.author, pubstring))
+        pubstring = ''
+    print('{0}  - {1}{2}'.format(quote.quote, quote.author, pubstring))
 
 
 def print_quote_long(quote, quotenum):
-    print("{0}: {1}".format(str(quotenum), quote.quote))
-    print("    author: {0}".format(quote.author))
-    print("    publication: {0}".format(quote.publication))
-    print("    tags: {0}".format(", ".join(quote.tags)))
-    print("    hash: {0}".format(quote.get_hash()))
+    print('{0}: {1}'.format(str(quotenum), quote.quote))
+    print('    author: {0}'.format(quote.author))
+    print('    publication: {0}'.format(quote.publication))
+    print('    tags: {0}'.format(', '.join(quote.tags)))
+    print('    hash: {0}'.format(quote.get_hash()))
 
 
 def print_quote_extended(quote):
@@ -299,8 +299,8 @@ def _select_quotes(quotes, tags=None, keyword=None, number=None, hash_arg=None, 
     # Validate the number argument is within range
     if number is not None:
         if number > len(quotes):
-            raise click.ClickException("the number argument {0} is too large, there are only "
-                                       "{1} quotes in the file.".format(str(number), str(len(quotes))))
+            raise click.ClickException('the number argument {0} is too large, there are only '
+                                       '{1} quotes in the file.'.format(str(number), str(len(quotes))))
     taglist = []
     if tags is not None:
         taglist = api.parse_tags(tags)
