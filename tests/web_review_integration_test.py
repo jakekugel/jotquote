@@ -18,18 +18,6 @@ import pytest
 TEST_PORT = 15545
 TEST_URL = "http://127.0.0.1:{}/".format(TEST_PORT)
 
-# Derive script paths from the running Python's venv (avoids nested `uv run` buffering).
-_SCRIPTS_DIR = os.path.dirname(sys.executable)
-
-
-def _script(name):
-    """Return the absolute path to a script in the current venv's Scripts/bin directory."""
-    candidates = [name + ".exe", name] if sys.platform == "win32" else [name]
-    for candidate in candidates:
-        path = os.path.join(_SCRIPTS_DIR, candidate)
-        if os.path.exists(path):
-            return path
-    return name  # fall back to PATH lookup
 
 
 SETTINGS_CONF_TEMPLATE = """\
@@ -97,17 +85,28 @@ def wait_for_log_line(lines, expected, timeout=5):
 
 
 def _start_review_server(tmp_path, quote_file, env):
-    """Launch the Flask dev server for web_review.py and return (proc, stderr_lines)."""
-    flask_script = _script("flask")
-    review_module = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "jotquote", "web_review.py"
-    )
-    cmd = [flask_script, "--app", review_module, "run", "--port", str(TEST_PORT)]
+    """Launch the web_review server and return (proc, stderr_lines)."""
+    cmd = [sys.executable, "-c",
+           "from waitress import serve; from jotquote.web_review import app; "
+           "serve(app, host='127.0.0.1', port={})".format(TEST_PORT)]
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
     reader.start()
     return proc, stderr_lines
+
+
+def _assert_server_started(proc, stderr_lines):
+    """Wait for the server to start and provide diagnostic output on failure."""
+    if not wait_for_server(TEST_URL):
+        time.sleep(1)  # let stderr accumulate
+        exit_code = proc.poll()
+        stderr_dump = "\n".join(stderr_lines) or "(no stderr captured)"
+        pytest.fail(
+            "Server did not start within timeout.\n"
+            "Process exit code: {}\n"
+            "Server stderr:\n{}".format(exit_code, stderr_dump)
+        )
 
 
 def test_get_index(tmp_path):
@@ -116,7 +115,7 @@ def test_get_index(tmp_path):
     env = _make_env(tmp_path, quote_file)
     proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
     try:
-        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        _assert_server_started(proc, stderr_lines)
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
             assert resp.status == 200
             body = resp.read().decode("utf-8")
@@ -132,7 +131,7 @@ def test_tags_displayed(tmp_path):
     env = _make_env(tmp_path, quote_file)
     proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
     try:
-        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        _assert_server_started(proc, stderr_lines)
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
             body = resp.read().decode("utf-8")
         # Star rating radio group
@@ -157,7 +156,7 @@ def test_page_title_config(tmp_path):
     env = _make_env(tmp_path, quote_file, web_page_title="My Review")
     proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
     try:
-        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        _assert_server_started(proc, stderr_lines)
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
             body = resp.read().decode("utf-8")
         assert "<title>My Review</title>" in body
@@ -172,7 +171,7 @@ def test_post_settags(tmp_path):
     env = _make_env(tmp_path, quote_file)
     proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
     try:
-        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        _assert_server_started(proc, stderr_lines)
 
         # Get the page first to find the hidden hash field
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
@@ -201,6 +200,23 @@ def test_post_settags(tmp_path):
         updated = [q for q in quotes if q.get_hash() == hash_val]
         assert updated, "Quote with hash {} not found after POST".format(hash_val)
         assert 'newtag' in updated[0].tags
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_no_matching_quote(tmp_path):
+    """GET / with an empty quote file returns 200 with 'No matching quote found'."""
+    quote_file = tmp_path / "empty_quotes.txt"
+    quote_file.write_text("", encoding="utf-8")
+    env = _make_env(tmp_path, quote_file)
+    proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
+    try:
+        _assert_server_started(proc, stderr_lines)
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            assert resp.status == 200
+            body = resp.read().decode("utf-8")
+        assert "No matching quote found" in body
     finally:
         proc.terminate()
         proc.wait(timeout=10)

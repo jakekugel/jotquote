@@ -22,16 +22,16 @@ def index():
     show_stars = config[api.APP_NAME].get('web_show_stars', 'false').lower() == 'true'
 
     quotes = api.read_quotes(quotefile)
-    quote = api.get_first_match(quotes, excluded_tags=','.join(STAR_TAGS), rand=True)
+    quote = api.get_first_match(quotes, excluded_tags=','.join(STAR_TAGS), rand=False)
 
     if quote is None:
-        return "<p>No matching quote found.</p>", 200
+        return '<p>No matching quote found.</p>', 200
 
     quote_tags_set = set(quote.tags)
     star_tag = next((t for t in STAR_TAGS if t in quote_tags_set), '')
     visibility_tag = next((t for t in VISIBILITY_TAGS if t in quote_tags_set), '')
     other_tags = sorted(t for t in quote_tags_set if t not in STAR_TAGS and t not in VISIBILITY_TAGS)
-    date1 = datetime.datetime.now().strftime("%A, %B %d, %Y")
+    date1 = datetime.datetime.now().strftime('%A, %B %d, %Y')
 
     return render_template(
         'review.html',

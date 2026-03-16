@@ -12,25 +12,25 @@ from jotquote import api
 
 app = Flask(__name__)
 
-_access_logger = logging.getLogger("jotquote.access")
+_access_logger = logging.getLogger('jotquote.access')
 _access_logger.setLevel(logging.INFO)
 _access_logger.propagate = False
 _access_handler = logging.StreamHandler()
-_access_handler.setFormatter(logging.Formatter("%(message)s"))
+_access_handler.setFormatter(logging.Formatter('%(message)s'))
 _access_logger.addHandler(_access_handler)
 
 
 def _sanitize_for_log(value):
     """Remove newline and carriage return characters to prevent log injection."""
-    return value.replace("\r", "").replace("\n", "")
+    return value.replace('\r', '').replace('\n', '')
 
 
 @app.after_request
 def log_request(response):
     _access_logger.info(
-        "%s %s %s",
+        '%s %s %s',
         request.method,
-        _sanitize_for_log(request.full_path.rstrip("?")),
+        _sanitize_for_log(request.full_path.rstrip('?')),
         response.status_code,
     )
     return response
@@ -50,7 +50,7 @@ def showpage(settags=False):
     """Render the template"""
 
     now = datetime.datetime.now()
-    date1 = now.strftime("%A, %B %d, %Y")
+    date1 = now.strftime('%A, %B %d, %Y')
 
     # Calculate max-age: configured cap or seconds until midnight, whichever is less
     midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -63,7 +63,7 @@ def showpage(settags=False):
 
     quotes = get_quotes()
     if quotes is None:
-        response = make_response(render_template("unavailable.html", date1=date1, page_title=page_title))
+        response = make_response(render_template('unavailable.html', date1=date1, page_title=page_title))
         response.headers['Cache-Control'] = f'public, max-age={max_age}'
         return response
 
@@ -81,10 +81,10 @@ def showpage(settags=False):
         hashstring = quote.get_hash()
     else:
         hashstring = None
-    space_tags = " ".join(quote.tags)
-    comma_tags = ",".join(quote.tags)
+    space_tags = ' '.join(quote.tags)
+    comma_tags = ','.join(quote.tags)
     stars = quote.get_num_stars()
-    response = make_response(render_template("quote.html", quote=quotestring, author=author, date1=date1,
+    response = make_response(render_template('quote.html', quote=quotestring, author=author, date1=date1,
                                              publication=publication, quotenum=(index + 1), totalquotes=len(quotes),
                                              space_tags=space_tags, comma_tags=comma_tags, hash=hashstring,
                                              show_tags=False, page_title=page_title, stars=stars,
@@ -152,7 +152,7 @@ def run_server():
         listen_port = 5544
 
     if not listen_ip:
-        listen_ip = "127.0.0.1"
+        listen_ip = '127.0.0.1'
 
     logging.basicConfig(level=logging.INFO)
     from waitress import serve

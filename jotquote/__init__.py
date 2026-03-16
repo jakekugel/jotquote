@@ -7,6 +7,6 @@ from __future__ import print_function, unicode_literals
 from importlib.metadata import PackageNotFoundError, version
 
 try:
-    __version__ = version("jotquote")
+    __version__ = version('jotquote')
 except PackageNotFoundError:
-    __version__ = "unknown"
+    __version__ = 'unknown'
