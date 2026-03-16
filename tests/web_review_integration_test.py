@@ -110,13 +110,26 @@ def _start_review_server(tmp_path, quote_file, env):
     return proc, stderr_lines
 
 
+def _assert_server_started(proc, stderr_lines):
+    """Wait for the server to start and provide diagnostic output on failure."""
+    if not wait_for_server(TEST_URL):
+        time.sleep(1)  # let stderr accumulate
+        exit_code = proc.poll()
+        stderr_dump = "\n".join(stderr_lines) or "(no stderr captured)"
+        pytest.fail(
+            "Server did not start within timeout.\n"
+            "Process exit code: {}\n"
+            "Flask stderr:\n{}".format(exit_code, stderr_dump)
+        )
+
+
 def test_get_index(tmp_path):
     """GET / returns HTTP 200 with the jotquote page title."""
     quote_file = _copy_quotes(tmp_path)
     env = _make_env(tmp_path, quote_file)
     proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
     try:
-        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        _assert_server_started(proc, stderr_lines)
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
             assert resp.status == 200
             body = resp.read().decode("utf-8")
@@ -132,7 +145,7 @@ def test_tags_displayed(tmp_path):
     env = _make_env(tmp_path, quote_file)
     proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
     try:
-        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        _assert_server_started(proc, stderr_lines)
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
             body = resp.read().decode("utf-8")
         # Star rating radio group
@@ -157,7 +170,7 @@ def test_page_title_config(tmp_path):
     env = _make_env(tmp_path, quote_file, web_page_title="My Review")
     proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
     try:
-        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        _assert_server_started(proc, stderr_lines)
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
             body = resp.read().decode("utf-8")
         assert "<title>My Review</title>" in body
@@ -172,7 +185,7 @@ def test_post_settags(tmp_path):
     env = _make_env(tmp_path, quote_file)
     proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
     try:
-        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        _assert_server_started(proc, stderr_lines)
 
         # Get the page first to find the hidden hash field
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
