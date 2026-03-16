@@ -1,6 +1,6 @@
 # jotquote Review App
 
-The review app (`web_review.py`) is a Flask web application for reviewing and tagging your quote collection. It displays the quote of the day alongside the full list of tags in your quote file, letting you update the quote's tags directly from the browser.
+The review app (`web_review.py`) is an undocumented Flask web server intended to help manage tags on quotes. It displays the quote of the day alongside the full list of tags in your quote file, letting you update the quote's tags directly from the browser.
 
 ---
 
@@ -8,7 +8,7 @@ The review app (`web_review.py`) is a Flask web application for reviewing and ta
 >
 > This app has **no authentication or access control**. Anyone who can reach the server can read your quote file and modify tags. **Only run this app bound to `127.0.0.1` (localhost).** Never expose it on a network interface accessible to other machines.
 >
-> The Flask development server (used below) binds to `127.0.0.1` by default, which is safe for local use.
+> The launch commands below bind to `127.0.0.1` by default, which is safe for local use.
 
 ---
 
@@ -19,27 +19,21 @@ The review app (`web_review.py`) is a Flask web application for reviewing and ta
 - Tags already assigned to the current quote are pre-checked
 - Check or uncheck any tag and click **Save Tags** to update the quote file
 
-## Prerequisites
-
-The review app requires Flask, which is included in the jotquote development dependencies:
-
-```bash
-uv sync --group dev
-```
-
 ## Launching the App
 
-```bash
-flask --app jotquote/web_review.py run
-```
-
-The server starts on `http://127.0.0.1:5000` by default. Open that URL in your browser.
-
-To use a different port:
+If you installed jotquote with pip into your global Python environment:
 
 ```bash
-flask --app jotquote/web_review.py run --port 8080
+waitress-serve --host 127.0.0.1 --port 5000 jotquote.web_review:app
 ```
+
+If you are running from a local development checkout with uv:
+
+```bash
+uv run waitress-serve --host 127.0.0.1 --port 5000 jotquote.web_review:app
+```
+
+Then open `http://127.0.0.1:5000` in your browser.
 
 ## Configuration
 

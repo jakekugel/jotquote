@@ -87,8 +87,8 @@ def wait_for_log_line(lines, expected, timeout=5):
 def _start_review_server(tmp_path, quote_file, env):
     """Launch the web_review server and return (proc, stderr_lines)."""
     cmd = [sys.executable, "-c",
-           "from jotquote.web_review import app; "
-           "app.run(host='127.0.0.1', port={}, use_reloader=False)".format(TEST_PORT)]
+           "from waitress import serve; from jotquote.web_review import app; "
+           "serve(app, host='127.0.0.1', port={})".format(TEST_PORT)]
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
@@ -105,7 +105,7 @@ def _assert_server_started(proc, stderr_lines):
         pytest.fail(
             "Server did not start within timeout.\n"
             "Process exit code: {}\n"
-            "Flask stderr:\n{}".format(exit_code, stderr_dump)
+            "Server stderr:\n{}".format(exit_code, stderr_dump)
         )
 
 
