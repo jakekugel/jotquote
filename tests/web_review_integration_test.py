@@ -85,12 +85,10 @@ def wait_for_log_line(lines, expected, timeout=5):
 
 
 def _start_review_server(tmp_path, quote_file, env):
-    """Launch the Flask dev server for web_review.py and return (proc, stderr_lines)."""
-    review_module = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "jotquote", "web_review.py"
-    )
-    cmd = [sys.executable, "-m", "flask", "--app", review_module, "run",
-           "--port", str(TEST_PORT), "--no-reload"]
+    """Launch the web_review server and return (proc, stderr_lines)."""
+    cmd = [sys.executable, "-c",
+           "from jotquote.web_review import app; "
+           "app.run(host='127.0.0.1', port={}, use_reloader=False)".format(TEST_PORT)]
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
