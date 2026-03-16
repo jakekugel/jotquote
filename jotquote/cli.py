@@ -142,26 +142,9 @@ def settags(ctx, number, hash, newtags):
     has one required argument, NEWTAGS, which is a comma-separated list of tags.
     """
     quotefile = ctx.obj['QUOTEFILE']
-
     quotenum = _parse_number_arg(number)
     tags = api.parse_tags(newtags)
-
-    # Get selected quotes
-    quotes = api.read_quotes(quotefile)
-
-    if quotenum is None and hash is None:
-        raise click.ClickException("either the -n or the -s argument must be included.")
-
-    if quotenum is not None and hash is not None:
-        raise click.ClickException("both the -s and -n option were included, but only one allowed.")
-
-    selected_quotes = _select_quotes(quotes, number=quotenum, hash_arg=hash)
-
-    # Update tags (quotes use list which is zero-based number, subtract one)
-    quote = quotes[selected_quotes[0]]
-    quote.set_tags(tags)
-
-    api.write_quotes(quotefile, quotes)
+    api.settags(quotefile, n=quotenum, hash=hash, newtags=tags)
 
 
 @jotquote.command()

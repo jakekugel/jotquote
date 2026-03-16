@@ -83,8 +83,7 @@ def showpage(settags=False):
         hashstring = None
     space_tags = " ".join(quote.tags)
     comma_tags = ",".join(quote.tags)
-    _star_tag_map = {'1star': 1, '2stars': 2, '3stars': 3, '4stars': 4, '5stars': 5}
-    stars = next((v for t, v in _star_tag_map.items() if t in quote.tags), 0)
+    stars = quote.get_num_stars()
     response = make_response(render_template("quote.html", quote=quotestring, author=author, date1=date1,
                                              publication=publication, quotenum=(index + 1), totalquotes=len(quotes),
                                              space_tags=space_tags, comma_tags=comma_tags, hash=hashstring,

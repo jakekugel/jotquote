@@ -637,3 +637,204 @@ def test_ascii_only_false_allows_non_ascii(config, tmp_path):
     non_ascii_quote = api.Quote("Hello\u200aWorld", "Author", None, [])
     total = api.add_quote(path, non_ascii_quote)
     assert total == 5
+
+
+# --- settags() tests ---
+
+def test_settags_by_hash(config, tmp_path):
+    """settags() should update tags on a quote identified by hash."""
+    path = tests.test_util.init_quotefile(str(tmp_path), "quotes1.txt")
+
+    # Hash for "Ask for what you want and be prepared to get it." (quote 3)
+    api.settags(path, n=None, hash='763188b907212a72', newtags=['newtag1', 'newtag2'])
+
+    quotes = api.read_quotes(path)
+    assert quotes[2].tags == ['newtag1', 'newtag2']
+    # Other quotes unchanged
+    assert quotes[0].tags == ['U']
+    assert quotes[1].tags == ['U']
+
+
+def test_settags_by_number(config, tmp_path):
+    """settags() should update tags on a quote identified by 1-based number."""
+    path = tests.test_util.init_quotefile(str(tmp_path), "quotes1.txt")
+
+    api.settags(path, n=1, hash=None, newtags=['firsttag'])
+
+    quotes = api.read_quotes(path)
+    assert quotes[0].tags == ['firsttag']
+    # Other quotes unchanged
+    assert quotes[1].tags == ['U']
+
+
+def test_settags_clears_tags(config, tmp_path):
+    """settags() with newtags=[] should clear all tags from the quote."""
+    path = tests.test_util.init_quotefile(str(tmp_path), "quotes1.txt")
+
+    api.settags(path, n=1, hash=None, newtags=[])
+
+    quotes = api.read_quotes(path)
+    assert quotes[0].tags == []
+
+
+def test_settags_both_n_and_hash_raises(config, tmp_path):
+    """settags() should raise ClickException if both n and hash are provided."""
+    path = tests.test_util.init_quotefile(str(tmp_path), "quotes1.txt")
+
+    with pytest.raises(click.ClickException, match=re.escape(
+            "both the -s and -n option were included, but only one allowed.")):
+        api.settags(path, n=1, hash='763188b907212a72', newtags=['tag1'])
+
+
+def test_settags_neither_n_nor_hash_raises(config, tmp_path):
+    """settags() should raise ClickException if neither n nor hash is provided."""
+    path = tests.test_util.init_quotefile(str(tmp_path), "quotes1.txt")
+
+    with pytest.raises(click.ClickException, match=re.escape(
+            "either the -n or the -s argument must be included.")):
+        api.settags(path, n=None, hash=None, newtags=['tag1'])
+
+
+def test_settags_hash_not_found_raises(config, tmp_path):
+    """settags() should raise ClickException if the given hash matches no quote."""
+    path = tests.test_util.init_quotefile(str(tmp_path), "quotes1.txt")
+
+    with pytest.raises(click.ClickException, match=re.escape(
+            "no quote found with hash 'deadbeefdeadbeef'.")):
+        api.settags(path, n=None, hash='deadbeefdeadbeef', newtags=['tag1'])
+
+
+def test_settags_n_out_of_range_raises(config, tmp_path):
+    """settags() should raise ClickException if n is out of range."""
+    path = tests.test_util.init_quotefile(str(tmp_path), "quotes1.txt")
+
+    with pytest.raises(click.ClickException, match=re.escape(
+            "quote number 99 is out of range (1-4).")):
+        api.settags(path, n=99, hash=None, newtags=['tag1'])
+
+
+# --- get_first_match() tests ---
+
+@pytest.fixture
+def sample_quotes():
+    return [
+        api.Quote("Python is great", "Guido", "", ["programming", "fun"]),
+        api.Quote("Python is elegant", "Alice", "", ["programming", "serious"]),
+        api.Quote("Nature is beautiful", "Bob", "", ["nature"]),
+        api.Quote("Life is short", "Guido", "", ["life", "fun"]),
+    ]
+
+
+def test_get_first_match_no_criteria(sample_quotes):
+    """No criteria returns the first quote."""
+    result = api.get_first_match(sample_quotes)
+    assert result == sample_quotes[0]
+
+
+def test_get_first_match_keyword_in_quote_text(sample_quotes):
+    """keyword matches against quote text."""
+    result = api.get_first_match(sample_quotes, keyword="elegant")
+    assert result == sample_quotes[1]
+
+
+def test_get_first_match_keyword_in_author(sample_quotes):
+    """keyword matches against the author field, returning the first match."""
+    result = api.get_first_match(sample_quotes, keyword="Guido")
+    assert result == sample_quotes[0]
+
+
+def test_get_first_match_keyword_no_match(sample_quotes):
+    """keyword with no match returns None."""
+    result = api.get_first_match(sample_quotes, keyword="xyz")
+    assert result is None
+
+
+def test_get_first_match_tags(sample_quotes):
+    """tags returns the first quote that has the tag."""
+    result = api.get_first_match(sample_quotes, tags="nature")
+    assert result == sample_quotes[2]
+
+
+def test_get_first_match_tags_returns_first_of_multiple(sample_quotes):
+    """When multiple quotes match a tag, the first one is returned."""
+    result = api.get_first_match(sample_quotes, tags="fun")
+    assert result == sample_quotes[0]
+
+
+def test_get_first_match_tags_no_match(sample_quotes):
+    """tags with no match returns None."""
+    result = api.get_first_match(sample_quotes, tags="missing")
+    assert result is None
+
+
+def test_get_first_match_multiple_tags_all_present(sample_quotes):
+    """Multiple tags: quote must have all of them."""
+    result = api.get_first_match(sample_quotes, tags="programming, fun")
+    assert result == sample_quotes[0]
+
+
+def test_get_first_match_multiple_tags_partial_match(sample_quotes):
+    """No quote has all three tags, so returns None."""
+    result = api.get_first_match(sample_quotes, tags="programming, fun, nature")
+    assert result is None
+
+
+def test_get_first_match_number(sample_quotes):
+    """number returns the quote at that 1-based position."""
+    result = api.get_first_match(sample_quotes, number=3)
+    assert result == sample_quotes[2]
+
+
+def test_get_first_match_number_out_of_range(sample_quotes):
+    """number larger than the list returns None rather than raising."""
+    result = api.get_first_match(sample_quotes, number=99)
+    assert result is None
+
+
+def test_get_first_match_hash_arg(sample_quotes):
+    """hash_arg returns the quote whose hash matches."""
+    target = sample_quotes[1]
+    result = api.get_first_match(sample_quotes, hash_arg=target.get_hash())
+    assert result == target
+
+
+def test_get_first_match_hash_arg_no_match(sample_quotes):
+    """hash_arg with no match returns None."""
+    result = api.get_first_match(sample_quotes, hash_arg="0000000000000000")
+    assert result is None
+
+
+def test_get_first_match_excluded_tags_skips_first(sample_quotes):
+    """excluded_tags skips quotes that carry the excluded tag."""
+    result = api.get_first_match(sample_quotes, excluded_tags="programming")
+    assert result == sample_quotes[2]
+
+
+def test_get_first_match_excluded_tags_eliminates_all(sample_quotes):
+    """excluded_tags that matches every quote returns None."""
+    result = api.get_first_match(sample_quotes, excluded_tags="fun, serious, nature, life")
+    assert result is None
+
+
+def test_get_first_match_tags_and_excluded_tags(sample_quotes):
+    """tags + excluded_tags: must have required tag but not excluded tag."""
+    result = api.get_first_match(sample_quotes, tags="programming", excluded_tags="fun")
+    assert result == sample_quotes[1]
+
+
+def test_get_first_match_rand_returns_a_valid_match(sample_quotes):
+    """rand=True returns one of the matching quotes, not necessarily the first."""
+    result = api.get_first_match(sample_quotes, tags="fun", rand=True)
+    assert result in (sample_quotes[0], sample_quotes[3])
+
+
+def test_get_first_match_rand_single_match(sample_quotes):
+    """rand=True with only one matching quote still returns that quote."""
+    result = api.get_first_match(sample_quotes, tags="nature", rand=True)
+    assert result == sample_quotes[2]
+
+
+def test_get_first_match_empty_list():
+    """Empty quote list returns None for any criteria."""
+    assert api.get_first_match([]) is None
+    assert api.get_first_match([], keyword="anything") is None

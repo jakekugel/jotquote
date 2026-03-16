@@ -70,16 +70,50 @@ $ uv run waitress-serve --host 127.0.0.1 --port 5544 jotquote.web:app
 ## Running lint
 
 ```bash
-$ uv run python -m flake8 jotquote/
+$ uv run ruff check jotquote/
 ```
-
-On Windows, using `python -m flake8` avoids Application Control policy
-restrictions that may block the `flake8` wrapper executable directly.
 
 ## Multi-version CI
 
 Multi-version testing (Python 3.9–3.14 on Linux, Mac, and Windows) is
 handled automatically by GitHub Actions on push and pull request.
+
+## Testing the built artifact
+
+Before uploading to PyPI, you can build the package and install it directly
+into a Python installation to verify it works end-to-end:
+
+1. Build the wheel and sdist:
+
+```bash
+$ uv build
+```
+
+This produces files in the `dist/` directory, e.g. `dist/jotquote-1.2.3-py3-none-any.whl`.
+
+2. Install the wheel into a Python environment with pip:
+
+```bash
+$ pip install dist/jotquote-1.2.3-py3-none-any.whl
+```
+
+To reinstall over an existing version, add `--force-reinstall`:
+
+```bash
+$ pip install --force-reinstall dist/jotquote-1.2.3-py3-none-any.whl
+```
+
+3. Verify the installed version:
+
+```bash
+$ jotquote --version
+```
+
+4. When done testing, uninstall with:
+
+```bash
+$ pip uninstall jotquote
+```
 
 ## Submitting changes
 
