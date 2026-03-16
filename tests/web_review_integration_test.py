@@ -18,18 +18,6 @@ import pytest
 TEST_PORT = 15545
 TEST_URL = "http://127.0.0.1:{}/".format(TEST_PORT)
 
-# Derive script paths from the running Python's venv (avoids nested `uv run` buffering).
-_SCRIPTS_DIR = os.path.dirname(sys.executable)
-
-
-def _script(name):
-    """Return the absolute path to a script in the current venv's Scripts/bin directory."""
-    candidates = [name + ".exe", name] if sys.platform == "win32" else [name]
-    for candidate in candidates:
-        path = os.path.join(_SCRIPTS_DIR, candidate)
-        if os.path.exists(path):
-            return path
-    return name  # fall back to PATH lookup
 
 
 SETTINGS_CONF_TEMPLATE = """\
@@ -98,11 +86,11 @@ def wait_for_log_line(lines, expected, timeout=5):
 
 def _start_review_server(tmp_path, quote_file, env):
     """Launch the Flask dev server for web_review.py and return (proc, stderr_lines)."""
-    flask_script = _script("flask")
     review_module = os.path.join(
         os.path.dirname(os.path.dirname(__file__)), "jotquote", "web_review.py"
     )
-    cmd = [flask_script, "--app", review_module, "run", "--port", str(TEST_PORT), "--no-reload"]
+    cmd = [sys.executable, "-m", "flask", "--app", review_module, "run",
+           "--port", str(TEST_PORT), "--no-reload"]
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
