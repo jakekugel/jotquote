@@ -22,8 +22,6 @@ def index():
     show_stars = config[api.APP_NAME].get("web_show_stars", "false").lower() == "true"
 
     quotes = api.read_quotes(quotefile)
-    for q in quotes[:3]:
-        print(q)
     quote = api.get_first_match(quotes, excluded_tags=",".join(STAR_TAGS), rand=False)
 
     if quote is None:

@@ -203,3 +203,20 @@ def test_post_settags(tmp_path):
     finally:
         proc.terminate()
         proc.wait(timeout=10)
+
+
+def test_no_matching_quote(tmp_path):
+    """GET / with an empty quote file returns 200 with 'No matching quote found'."""
+    quote_file = tmp_path / "empty_quotes.txt"
+    quote_file.write_text("", encoding="utf-8")
+    env = _make_env(tmp_path, quote_file)
+    proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
+    try:
+        _assert_server_started(proc, stderr_lines)
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            assert resp.status == 200
+            body = resp.read().decode("utf-8")
+        assert "No matching quote found" in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
