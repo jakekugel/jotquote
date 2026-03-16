@@ -89,6 +89,13 @@ class Quote:
         m.update(self.quote.encode('utf-8'))
         return m.hexdigest()[0:16]
 
+    def get_num_stars(self):
+        """Return the star rating (0-5) derived from star tags (1star, 2stars, etc.)."""
+        for i, label in enumerate(['1star', '2stars', '3stars', '4stars', '5stars'], 1):
+            if self.has_tag(label):
+                return i
+        return 0
+
 
 def read_quotes(filename):
     """Given a path to quote file, this function returns a list of Quote objects containing
@@ -116,6 +123,63 @@ def read_tags(quotefile):
             alltags.add(tag)
 
     return sorted(list(alltags))
+
+
+def get_first_match(quotes, tags=None, keyword=None, number=None, hash_arg=None, rand=False,
+                    excluded_tags=None):
+    """Return the first Quote from quotes that matches all provided criteria, or None.
+
+    tags          - comma-separated tag string; quote must have all listed tags
+    keyword       - substring match against quote text, author, and publication
+    number        - 1-based position in the list
+    hash_arg      - MD5 hash prefix (first 16 chars) of the quote text
+    rand          - if True, return a random match instead of the first one
+    excluded_tags - comma-separated tag string; quote must not contain any of these tags
+    """
+    taglist = parse_tags(tags) if tags is not None else []
+    excluded_taglist = parse_tags(excluded_tags) if excluded_tags is not None else []
+
+    matched = [
+        quote for index, quote in enumerate(quotes)
+        if (keyword is None or quote.has_keyword(keyword))
+        and (tags is None or quote.has_tags(taglist))
+        and (number is None or number == index + 1)
+        and (hash_arg is None or hash_arg == quote.get_hash())
+        and not any(t in quote.tags for t in excluded_taglist)
+    ]
+
+    if not matched:
+        return None
+    if rand:
+        return randomlib.choice(matched)
+    return matched[0]
+
+
+def settags(quotefile, n, hash, newtags):
+    """Set tags on a quote identified by number (1-based) or hash.
+
+    Exactly one of n or hash must be provided.  newtags is a list of tag strings
+    (already parsed); pass [] to clear all tags.
+    """
+    if n is not None and hash is not None:
+        raise click.ClickException("both the -s and -n option were included, but only one allowed.")
+    if n is None and hash is None:
+        raise click.ClickException("either the -n or the -s argument must be included.")
+
+    quotes = read_quotes(quotefile)
+
+    if n is not None:
+        if n < 1 or n > len(quotes):
+            raise click.ClickException("quote number {0} is out of range (1-{1}).".format(n, len(quotes)))
+        quote = quotes[n - 1]
+    else:
+        matched = [q for q in quotes if q.get_hash() == hash]
+        if not matched:
+            raise click.ClickException("no quote found with hash '{0}'.".format(hash))
+        quote = matched[0]
+
+    quote.set_tags(newtags)
+    write_quotes(quotefile, quotes)
 
 
 def parse_quotes(rawlines, filename, encoding=None, simple_format=True):
