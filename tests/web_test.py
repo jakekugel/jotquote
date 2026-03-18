@@ -100,7 +100,7 @@ def test_io_errors(flask_client):
 
         # Restore the test file (use the same directory as the original quote_file)
         quote_dir = os.path.dirname(quote_file)
-        quote_file = tests.test_util.init_quotefile(quote_dir, "quotes5.txt")
+        quote_file = tests.test_util.init_quotefile(quote_dir, 'quotes5.txt')
 
         rv = client.get('/')
         assert b'The quotes are not yet available; please try again later.' not in rv.data
@@ -176,6 +176,14 @@ def test_stars_hidden_when_show_stars_false(flask_client, config, monkeypatch):
     web.app.config['QUOTE_FILE'] = quote_file
     rv = client.get('/')
     assert '\u2605'.encode('utf-8') not in rv.data
+
+
+def test_static_asset_cache_control(flask_client):
+    """Static assets have a long Cache-Control max-age."""
+    client, quote_file = flask_client
+    rv = client.get('/static/fonts/OpenSans-Regular.ttf')
+    cc = rv.headers.get('Cache-Control', '')
+    assert 'max-age=86400' in cc
 
 
 def test_no_stars_when_untagged(flask_client, config):

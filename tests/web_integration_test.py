@@ -8,14 +8,13 @@ import subprocess
 import sys
 import threading
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 
 import pytest
 
-
 TEST_PORT = 15544
-TEST_URL = "http://127.0.0.1:{}/".format(TEST_PORT)
+TEST_URL = 'http://127.0.0.1:{}/'.format(TEST_PORT)
 
 # Derive script paths from the running Python's venv (avoids nested `uv run` buffering).
 _SCRIPTS_DIR = os.path.dirname(sys.executable)
@@ -23,7 +22,7 @@ _SCRIPTS_DIR = os.path.dirname(sys.executable)
 
 def _script(name):
     """Return the absolute path to a script in the current venv's Scripts/bin directory."""
-    candidates = [name + ".exe", name] if sys.platform == "win32" else [name]
+    candidates = [name + '.exe', name] if sys.platform == 'win32' else [name]
     for candidate in candidates:
         path = os.path.join(_SCRIPTS_DIR, candidate)
         if os.path.exists(path):
@@ -40,25 +39,25 @@ web_ip = 127.0.0.1
 
 def _make_env(tmp_path, quote_file, **extra_props):
     """Build a settings.conf in tmp_path and return a subprocess env dict."""
-    extra = "\n".join("{} = {}".format(k, v) for k, v in extra_props.items())
-    jotquote_dir = tmp_path / ".jotquote"
+    extra = '\n'.join('{} = {}'.format(k, v) for k, v in extra_props.items())
+    jotquote_dir = tmp_path / '.jotquote'
     jotquote_dir.mkdir()
-    conf_path = jotquote_dir / "settings.conf"
+    conf_path = jotquote_dir / 'settings.conf'
     conf_path.write_text(
         SETTINGS_CONF_TEMPLATE.format(quote_file=str(quote_file), port=TEST_PORT, extra=extra),
-        encoding="utf-8",
+        encoding='utf-8',
     )
     env = os.environ.copy()
-    env["HOME"] = str(tmp_path)
-    env["USERPROFILE"] = str(tmp_path)
-    env["PYTHONUNBUFFERED"] = "1"
+    env['HOME'] = str(tmp_path)
+    env['USERPROFILE'] = str(tmp_path)
+    env['PYTHONUNBUFFERED'] = '1'
     return env
 
 
 def _copy_quotes(tmp_path):
     """Copy a test quote fixture into tmp_path and return the path."""
-    src = os.path.join(os.path.dirname(__file__), "testdata", "quotes1.txt")
-    dst = tmp_path / "quotes1.txt"
+    src = os.path.join(os.path.dirname(__file__), 'testdata', 'quotes1.txt')
+    dst = tmp_path / 'quotes1.txt'
     shutil.copy(src, dst)
     return dst
 
@@ -66,7 +65,7 @@ def _copy_quotes(tmp_path):
 def _collect_stderr(proc, lines):
     """Read lines from proc.stderr into lines list (runs in a background thread)."""
     for line in proc.stderr:
-        lines.append(line.decode("utf-8", errors="replace").rstrip())
+        lines.append(line.decode('utf-8', errors='replace').rstrip())
 
 
 def wait_for_server(url, timeout=15):
@@ -96,8 +95,8 @@ def wait_for_log_line(lines, expected, timeout=5):
 def _assert_response(url):
     with urllib.request.urlopen(url, timeout=5) as resp:
         assert resp.status == 200
-        body = resp.read().decode("utf-8")
-    assert "<title>jotquote</title>" in body
+        body = resp.read().decode('utf-8')
+    assert '<title>jotquote</title>' in body
 
 
 def _run_server_test(tmp_path, cmd, startup_log):
@@ -112,12 +111,12 @@ def _run_server_test(tmp_path, cmd, startup_log):
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
     reader.start()
     try:
-        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
         _assert_response(TEST_URL)
         assert wait_for_log_line(stderr_lines, startup_log), \
-            "Expected startup message in stderr; got: {}".format(stderr_lines)
-        assert wait_for_log_line(stderr_lines, "GET / 200"), \
-            "Expected access log entry in stderr; got: {}".format(stderr_lines)
+            'Expected startup message in stderr; got: {}'.format(stderr_lines)
+        assert wait_for_log_line(stderr_lines, 'GET / 200'), \
+            'Expected access log entry in stderr; got: {}'.format(stderr_lines)
     finally:
         proc.terminate()
         proc.wait(timeout=10)
@@ -127,8 +126,8 @@ def test_webserver_command(tmp_path):
     """jotquote webserver starts, serves a valid HTML page, and logs to stderr."""
     _run_server_test(
         tmp_path,
-        cmd=[_script("jotquote"), "webserver"],
-        startup_log="Serving on http://127.0.0.1:{}".format(TEST_PORT),
+        cmd=[_script('jotquote'), 'webserver'],
+        startup_log='Serving on http://127.0.0.1:{}'.format(TEST_PORT),
     )
 
 
@@ -137,31 +136,31 @@ def test_waitress_serve_command(tmp_path):
     _run_server_test(
         tmp_path,
         cmd=[
-            _script("waitress-serve"),
-            "--host", "127.0.0.1",
-            "--port", str(TEST_PORT),
-            "jotquote.web:app",
+            _script('waitress-serve'),
+            '--host', '127.0.0.1',
+            '--port', str(TEST_PORT),
+            'jotquote.web:app',
         ],
-        startup_log="Serving on http://127.0.0.1:{}".format(TEST_PORT),
+        startup_log='Serving on http://127.0.0.1:{}'.format(TEST_PORT),
     )
 
 
 def test_web_page_title(tmp_path):
     """jotquote webserver uses web_page_title from config as the HTML page title."""
     quote_file = _copy_quotes(tmp_path)
-    env = _make_env(tmp_path, quote_file, web_page_title="My Quotes")
+    env = _make_env(tmp_path, quote_file, web_page_title='My Quotes')
 
     proc = subprocess.Popen(
-        [_script("jotquote"), "webserver"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
     )
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
     reader.start()
     try:
-        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
-            body = resp.read().decode("utf-8")
-        assert "<title>My Quotes</title>" in body
+            body = resp.read().decode('utf-8')
+        assert '<title>My Quotes</title>' in body
     finally:
         proc.terminate()
         proc.wait(timeout=10)
@@ -169,35 +168,59 @@ def test_web_page_title(tmp_path):
 
 def test_stars_displayed(tmp_path):
     """Stars are rendered in the HTML when the daily quote has a star tag."""
-    quote_file = tmp_path / "quotes_stars.txt"
-    quote_file.write_text("A great quote | Famous Author | | 3stars\n", encoding="utf-8")
+    quote_file = tmp_path / 'quotes_stars.txt'
+    quote_file.write_text('A great quote | Famous Author | | 3stars\n', encoding='utf-8')
     env = _make_env(tmp_path, quote_file, web_show_stars='true')
 
     proc = subprocess.Popen(
-        [_script("jotquote"), "webserver"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
     )
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
     reader.start()
     try:
-        assert wait_for_server(TEST_URL), "Server did not start within timeout"
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
-            body = resp.read().decode("utf-8")
-        assert "\u2605\u2605\u2605\u2606\u2606" in body  # ★★★☆☆
+            body = resp.read().decode('utf-8')
+        assert '\u2605\u2605\u2605\u2606\u2606' in body  # ★★★☆☆
     finally:
         proc.terminate()
         proc.wait(timeout=10)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="gunicorn not supported on Windows")
+def test_static_asset_cache_header(tmp_path):
+    """Static assets served by the webserver include a long Cache-Control max-age."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        url = TEST_URL.rstrip('/') + '/static/fonts/OpenSans-Regular.ttf'
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            assert resp.status == 200
+            cc = resp.headers.get('Cache-Control', '')
+        assert 'max-age=86400' in cc
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+@pytest.mark.skipif(sys.platform == 'win32', reason='gunicorn not supported on Windows')
 def test_gunicorn_launch(tmp_path):
     """gunicorn starts, serves the jotquote WSGI app, and logs to stderr (Linux/Mac only)."""
     _run_server_test(
         tmp_path,
         cmd=[
-            _script("gunicorn"),
-            "--bind", "127.0.0.1:{}".format(TEST_PORT),
-            "jotquote.web:app",
+            _script('gunicorn'),
+            '--bind', '127.0.0.1:{}'.format(TEST_PORT),
+            'jotquote.web:app',
         ],
-        startup_log="Listening at: http://127.0.0.1:{}".format(TEST_PORT),
+        startup_log='Listening at: http://127.0.0.1:{}'.format(TEST_PORT),
     )

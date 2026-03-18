@@ -11,6 +11,7 @@ from flask import Flask, g, make_response, render_template, request
 from jotquote import api
 
 app = Flask(__name__)
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 86400  # 24 hours
 
 _access_logger = logging.getLogger('jotquote.access')
 _access_logger.setLevel(logging.INFO)
