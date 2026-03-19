@@ -161,6 +161,11 @@ def read_quotemap(filename):
                 raise click.ClickException(
                     "quotemap line {0}: invalid hash '{1}'".format(lineno, hash_part))
 
+            # Check for duplicate date
+            if date_part in quotemap:
+                raise click.ClickException(
+                    "quotemap line {0}: duplicate date '{1}'".format(lineno, date_part))
+
             quotemap[date_part] = hash_part
 
     return quotemap
