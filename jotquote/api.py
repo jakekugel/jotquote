@@ -138,18 +138,18 @@ def read_quotemap(filename):
             if not line or line.startswith('#'):
                 continue
 
+            # Strip inline comment (everything after '#')
+            if '#' in line:
+                line = line[:line.index('#')].strip()
+
             # Must contain a colon separator
             if ':' not in line:
                 raise click.ClickException(
                     "quotemap line {0}: missing ':' separator in '{1}'".format(lineno, line))
 
-            date_part, rest = line.split(':', 1)
+            date_part, hash_part = line.split(':', 1)
             date_part = date_part.strip()
-
-            # Strip inline comment from the rest (everything after '#')
-            if '#' in rest:
-                rest = rest[:rest.index('#')]
-            hash_part = rest.strip()
+            hash_part = hash_part.strip()
 
             # Validate date: exactly 8 digits
             if len(date_part) != 8 or not date_part.isdigit():
