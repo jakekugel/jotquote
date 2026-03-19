@@ -2,6 +2,7 @@
 # This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
+import datetime
 import os
 
 from flask import g
@@ -30,15 +31,11 @@ def test_page_basics(flask_client, config):
     assert b'<div class="author">Ben Franklin</div>' in rv.data
 
 
-def test_page_tags(flask_client, config):
-    """A few sanity tests on web page"""
+def test_tags_route_removed(flask_client):
+    """/tags route no longer exists and returns 404."""
     client, quote_file = flask_client
     rv = client.get('/tags')
-    assert b'<!DOCTYPE html>' in rv.data
-    assert b'<title>jotquote</title>' in rv.data
-    assert b'<div class="quote">They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.</div>' in rv.data
-    assert b'<div class="author">Ben Franklin</div>' in rv.data
-    assert b'<div id=\'settag\' class="command" style="display:none;">$ jotquote settags -s 25382c2519fb23bd U</div>' in rv.data
+    assert rv.status_code == 404
 
 
 def test_quote_caching(flask_client):
@@ -192,3 +189,78 @@ def test_no_stars_when_untagged(flask_client, config):
     client, quote_file = flask_client
     rv = client.get('/')
     assert '\u2605'.encode('utf-8') not in rv.data
+
+
+def test_date_route_with_quotemap(flask_client, config, tmp_path):
+    """/<date> with quotemap entry returns the mapped quote."""
+    client, quote_file = flask_client
+    quotemap_file = tmp_path / 'quotemap.txt'
+    quotemap_file.write_text('20260319: 25382c2519fb23bd\n', encoding='utf-8')
+    config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
+    rv = client.get('/20260319')
+    assert rv.status_code == 200
+    assert b'Ben Franklin' in rv.data
+    assert b'March 19, 2026' in rv.data
+
+
+def test_date_route_without_quotemap(flask_client, config):
+    """/<date> with no quotemap configured still returns 200 (falls back to RNG)."""
+    client, quote_file = flask_client
+    rv = client.get('/20260319')
+    assert rv.status_code == 200
+
+
+def test_date_route_invalid_format(flask_client):
+    """Non-8-digit date returns 404."""
+    client, quote_file = flask_client
+    rv = client.get('/not-a-date')
+    assert rv.status_code == 404
+    rv = client.get('/1234567')
+    assert rv.status_code == 404
+    rv = client.get('/123456789')
+    assert rv.status_code == 404
+
+
+def test_root_with_quotemap_today(flask_client, config, tmp_path, monkeypatch):
+    """/ with today in quotemap returns mapped quote and permalink."""
+    client, quote_file = flask_client
+    today = datetime.datetime.now().strftime('%Y%m%d')
+    quotemap_file = tmp_path / 'quotemap.txt'
+    quotemap_file.write_text(f'{today}: 25382c2519fb23bd\n', encoding='utf-8')
+    config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'Ben Franklin' in rv.data
+    assert f'href="/{today}"'.encode() in rv.data
+    assert b'permalink' in rv.data
+
+
+def test_root_without_quotemap(flask_client, config):
+    """/ without quotemap returns RNG quote, no permalink link."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'>permalink</a>' not in rv.data
+
+
+def test_date_route_no_permalink(flask_client, config, tmp_path):
+    """/<date> does not show permalink link (already on permalink)."""
+    client, quote_file = flask_client
+    quotemap_file = tmp_path / 'quotemap.txt'
+    quotemap_file.write_text('20260319: 25382c2519fb23bd\n', encoding='utf-8')
+    config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
+    rv = client.get('/20260319')
+    assert rv.status_code == 200
+    assert b'>permalink</a>' not in rv.data
+
+
+def test_quotemap_hash_not_found(flask_client, config, tmp_path):
+    """Quotemap entry with hash that doesn't match any quote falls back to RNG."""
+    client, quote_file = flask_client
+    quotemap_file = tmp_path / 'quotemap.txt'
+    quotemap_file.write_text('20260319: aaaaaaaaaaaaaaaa\n', encoding='utf-8')
+    config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
+    rv = client.get('/20260319')
+    assert rv.status_code == 200
+    # Still renders a quote (the RNG fallback)
+    assert b'<!DOCTYPE html>' in rv.data

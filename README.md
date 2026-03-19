@@ -61,6 +61,38 @@ $ waitress-serve --host 0.0.0.0 --port 5544 jotquote.web:app
 This method is useful when hosting jotquote on a cloud platform such as
 [Render](https://render.com) where the WSGI server is configured separately.
 
+## Quotemap
+
+By default, the web server selects a quote of the day using a deterministic
+algorithm.  If you want to control which quote is shown on a specific date,
+you can create a **quotemap file** that maps dates to specific quotes.
+
+First, add the `quotemap_file` property to your settings.conf:
+
+```
+quotemap_file = ~/.jotquote/quotemap.txt
+```
+
+Then create the quotemap file with one mapping per line.  Each line has the
+format `YYYYMMDD: <16-char hash>`.  You can add comments after the hash
+with `#`:
+
+```
+# My quote schedule
+20260319: a1b2c3d4e5f67890  # "The only way to do great work..." - Steve Jobs
+20260320: 25382c2519fb23bd  # "Be yourself..." - Oscar Wilde
+```
+
+You can find a quote's 16-character hash using `jotquote list -s <hash>` or by
+viewing a quote with the CLI.
+
+When a quotemap is configured:
+- Visiting `http://host:port/` shows today's mapped quote (if today is in the
+  quotemap), with a small **permalink** link beneath the quote.
+- Visiting `http://host:port/YYYYMMDD` shows the mapped quote for that
+  specific date.
+- Dates not in the quotemap fall back to the default daily quote algorithm.
+
 ## The quote file
 
 jotquote stores the quotes in a text file that uses a human-friendly syntax

@@ -113,6 +113,59 @@ def read_quotes(filename):
     return quotes
 
 
+def read_quotemap(filename):
+    """Given a path to a quotemap file, this function returns a dict mapping
+    date strings (YYYYMMDD) to 16-character quote hashes.
+
+    Each non-blank, non-comment line must have the format:
+        YYYYMMDD: <16-char-hex-hash>  # optional comment
+
+    Raises click.ClickException if the file does not exist or any line
+    fails validation.
+    """
+    if not filename:
+        return {}
+
+    if not os.path.exists(filename):
+        raise click.ClickException("The quotemap file '{0}' was not found.".format(filename))
+
+    quotemap = {}
+    with open(filename, mode='r', encoding='utf-8') as infile:
+        for lineno, raw_line in enumerate(infile, start=1):
+            line = raw_line.strip()
+
+            # Skip blank lines and full-line comments
+            if not line or line.startswith('#'):
+                continue
+
+            # Must contain a colon separator
+            if ':' not in line:
+                raise click.ClickException(
+                    "quotemap line {0}: missing ':' separator in '{1}'".format(lineno, line))
+
+            date_part, rest = line.split(':', 1)
+            date_part = date_part.strip()
+
+            # Strip inline comment from the rest (everything after '#')
+            if '#' in rest:
+                rest = rest[:rest.index('#')]
+            hash_part = rest.strip()
+
+            # Validate date: exactly 8 digits
+            if len(date_part) != 8 or not date_part.isdigit():
+                raise click.ClickException(
+                    "quotemap line {0}: invalid date '{1}'".format(lineno, date_part))
+
+            # Validate hash: exactly 16 lowercase hex characters
+            if len(hash_part) != 16 or not re.fullmatch(r'[0-9a-f]{16}', hash_part):
+                raise click.ClickException(
+                    "quotemap line {0}: invalid hash '{1}'".format(lineno, hash_part))
+
+            quotemap[date_part] = hash_part
+
+    return quotemap
+
+
 def read_tags(quotefile):
     """Returns a list of all unique tags in use in the given quote file."""
 
@@ -381,6 +434,7 @@ def get_config():
         config[APP_NAME]['show_author_count'] = 'false'
         config[APP_NAME]['web_page_title'] = 'jotquote'
         config[APP_NAME]['web_show_stars'] = 'false'
+        config[APP_NAME]['quotemap_file'] = ''
         with open(CONFIG_FILE, 'w') as configfile:
             config.write(configfile)
 

@@ -95,21 +95,18 @@
     margin-right: auto;
 }
 
-.button {
-    background-color: #CCCCCC; # Light gray
-    border: 1px;
-    border-style: solid;
-    border-radius: 4px;
-    color: black;
+.permalink {
     font-family: "Open Sans", Palatino, serif;
     font-size: 75%;
-    font-weight: bold;
-    text-align: center;
+}
+
+.permalink a {
+    color: #999999;
     text-decoration: none;
-    display: inline-block;
-    margin: 2px 2px;
-    padding: 2px 6px;
-    cursor: pointer;
+}
+
+.permalink a:hover {
+    text-decoration: underline;
 }
 
 /* Modify CSS for small screens */
@@ -137,11 +134,6 @@
 
 
 </style>
-    <script>
-        function setDisplay (target, str) {
-            document.getElementById(target).style.display = str;
-        }
-    </script>
 </head>
 <body style="background-color:white;">
     <div class="container">
@@ -155,18 +147,12 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <span class="stars">{% if show_stars and stars > 0 %}{{ '★' * stars }}{{ '☆' * (5 - stars) }}{% endif %}</span>
             <span>
-              {% if show_tags %}
-                tags: {{space_tags}}
-                  {% if hash is not none %}
-                    <button id="edit-button" class="button" onclick="setDisplay('settag', 'block'); setDisplay('edit-button', 'none');">EDIT TAGS</button>
-                  {% endif %}
+              {% if permalink %}
+                <span class="permalink"><a href="{{ permalink }}">permalink</a></span>
               {% endif %}
             </span>
             <span class="date">{{ date1 }}</span>
         </div>
-        {% if hash is not none %}
-            <div id='settag' class="command" style="display:none;">$ jotquote settags -s {{hash}} {{comma_tags}}</div>
-        {% endif %}
     </div>
 </body>
 </html>

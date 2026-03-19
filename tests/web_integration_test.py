@@ -2,6 +2,7 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
+import datetime
 import os
 import shutil
 import subprocess
@@ -224,3 +225,57 @@ def test_gunicorn_launch(tmp_path):
         ],
         startup_log='Listening at: http://127.0.0.1:{}'.format(TEST_PORT),
     )
+
+
+def test_quotemap_date_route(tmp_path):
+    """Webserver with quotemap configured serves the mapped quote for /<date>."""
+    quote_file = _copy_quotes(tmp_path)
+    quotemap_file = tmp_path / 'quotemap.txt'
+    # 25382c2519fb23bd is the hash for the Ben Franklin quote in quotes1.txt
+    quotemap_file.write_text('20260319: 25382c2519fb23bd\n', encoding='utf-8')
+    env = _make_env(tmp_path, quote_file, quotemap_file=str(quotemap_file))
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        url = TEST_URL.rstrip('/') + '/20260319'
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            assert resp.status == 200
+            body = resp.read().decode('utf-8')
+        assert 'Ben Franklin' in body
+        assert 'March 19, 2026' in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_quotemap_root_permalink(tmp_path):
+    """Webserver with quotemap containing today's date shows permalink on /."""
+    quote_file = _copy_quotes(tmp_path)
+    today = datetime.datetime.now().strftime('%Y%m%d')
+    quotemap_file = tmp_path / 'quotemap.txt'
+    quotemap_file.write_text('{}: 25382c2519fb23bd\n'.format(today), encoding='utf-8')
+    env = _make_env(tmp_path, quote_file, quotemap_file=str(quotemap_file))
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            assert resp.status == 200
+            body = resp.read().decode('utf-8')
+        assert 'Ben Franklin' in body
+        assert 'permalink' in body
+        assert '/{}'.format(today) in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
