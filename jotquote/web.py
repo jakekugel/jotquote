@@ -96,7 +96,7 @@ def showpage(date_path_param=None):
     lookup_date = date_path_param if date_path_param else now.strftime('%Y%m%d')
     mapped_quote = None
     if lookup_date in quotemap:
-        hash_value = quotemap[lookup_date]
+        hash_value = quotemap[lookup_date]['hash']
         mapped_quote = api.get_first_match(quotes, hash_arg=hash_value)
         if mapped_quote is None:
             app.logger.warning("quotemap hash '%s' for date %s not found in quotes", hash_value, lookup_date)

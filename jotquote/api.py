@@ -115,10 +115,16 @@ def read_quotes(filename):
 
 def read_quotemap(filename):
     """Given a path to a quotemap file, this function returns a dict mapping
-    date strings (YYYYMMDD) to 16-character quote hashes.
+    date strings (YYYYMMDD) to entry dicts.
 
     Each non-blank, non-comment line must have the format:
         YYYYMMDD: <16-char-hex-hash>  # optional comment
+
+    Returns a dict where each key is a date string (YYYYMMDD) and each value
+    is a dict with keys:
+        - 'hash': the 16-char hex hash (str)
+        - 'sticky': whether the inline comment contains '# Sticky:' (bool)
+        - 'raw_line': the original line from the file, stripped (str)
 
     Raises click.ClickException if the file does not exist or any line
     fails validation.
@@ -138,16 +144,20 @@ def read_quotemap(filename):
             if not line or line.startswith('#'):
                 continue
 
+            # Detect sticky marker before stripping inline comment
+            sticky = '# Sticky:' in raw_line
+
             # Strip inline comment (everything after '#')
-            if '#' in line:
-                line = line[:line.index('#')].strip()
+            data_line = line
+            if '#' in data_line:
+                data_line = data_line[:data_line.index('#')].strip()
 
             # Must contain a colon separator
-            if ':' not in line:
+            if ':' not in data_line:
                 raise click.ClickException(
-                    "quotemap line {0}: missing ':' separator in '{1}'".format(lineno, line))
+                    "quotemap line {0}: missing ':' separator in '{1}'".format(lineno, data_line))
 
-            date_part, hash_part = line.split(':', 1)
+            date_part, hash_part = data_line.split(':', 1)
             date_part = date_part.strip()
             hash_part = hash_part.strip()
 
@@ -166,9 +176,135 @@ def read_quotemap(filename):
                 raise click.ClickException(
                     "quotemap line {0}: duplicate date '{1}'".format(lineno, date_part))
 
-            quotemap[date_part] = hash_part
+            quotemap[date_part] = {
+                'hash': hash_part,
+                'sticky': sticky,
+                'raw_line': line,
+            }
 
     return quotemap
+
+
+def rebuild_quotemap(quotefile, old_quotemapfile):
+    """Rebuild a quotemap file, generating entries for the next 10 years.
+
+    Reads quotes from quotefile and existing entries from old_quotemapfile.
+    Preserves past/today entries and future sticky entries. Regenerates all
+    other future entries using an even-distribution algorithm.
+
+    Returns a list of output lines (strings) suitable for printing to stdout.
+    """
+    quotes = read_quotes(quotefile)
+    if not quotes:
+        raise click.ClickException('the quote file contains no quotes.')
+
+    # Build hash-to-quote lookup
+    hash_to_quote = {}
+    for q in quotes:
+        hash_to_quote[q.get_hash()] = q
+
+    all_hashes = [q.get_hash() for q in quotes]
+
+    # Read existing quotemap if it exists
+    today_str = datetime.datetime.now().strftime('%Y%m%d')
+    old_quotemap = {}
+    if old_quotemapfile and os.path.exists(old_quotemapfile):
+        old_quotemap = read_quotemap(old_quotemapfile)
+
+    # Separate preserved entries (past/today + future sticky) from discarded
+    preserved = {}  # date_str -> hash
+    preserved_raw = {}  # date_str -> raw_line (for past/today entries)
+    for date_str, entry in old_quotemap.items():
+        if date_str <= today_str:
+            # Past or today: preserve verbatim
+            preserved[date_str] = entry['hash']
+            preserved_raw[date_str] = entry['raw_line']
+        elif entry['sticky']:
+            # Future sticky: preserve
+            preserved[date_str] = entry['hash']
+
+    # Validate all preserved hashes resolve to a quote
+    for date_str, hash_val in preserved.items():
+        if hash_val not in hash_to_quote:
+            raise click.ClickException(
+                "quotemap date {0}: hash '{1}' does not match any quote in the quote file.".format(
+                    date_str, hash_val))
+
+    # Build hash-to-count from preserved entries
+    hash_to_count = {h: 0 for h in all_hashes}
+    for hash_val in preserved.values():
+        if hash_val in hash_to_count:
+            hash_to_count[hash_val] += 1
+
+    # Generate future dates: tomorrow through 10 years out
+    today = datetime.datetime.now().date()
+    tomorrow = today + datetime.timedelta(days=1)
+    end_date = today + datetime.timedelta(days=3652)
+
+    future_dates = []
+    d = tomorrow
+    while d <= end_date:
+        future_dates.append(d.strftime('%Y%m%d'))
+        d += datetime.timedelta(days=1)
+
+    # Assign quotes to non-sticky future dates
+    randomlib.seed(0)
+    future_assignments = {}  # date_str -> hash
+    for date_str in future_dates:
+        if date_str in preserved:
+            # Sticky entry — already assigned
+            future_assignments[date_str] = preserved[date_str]
+            continue
+        # Find minimum count and select from those hashes
+        min_count = min(hash_to_count.values())
+        candidates = [h for h, c in hash_to_count.items() if c == min_count]
+        chosen = randomlib.choice(candidates)
+        future_assignments[date_str] = chosen
+        hash_to_count[chosen] += 1
+
+    # Build output lines
+    output = []
+
+    # Past/today entries: raw lines preserved verbatim
+    past_dates = sorted(d for d in preserved if d <= today_str)
+    if past_dates:
+        current_month = None
+        for date_str in past_dates:
+            dt = datetime.datetime.strptime(date_str, '%Y%m%d')
+            month_key = (dt.year, dt.month)
+            if month_key != current_month:
+                if current_month is not None:
+                    output.append('')
+                output.append('# Quotes for {}'.format(dt.strftime('%B %Y')))
+                current_month = month_key
+            output.append(preserved_raw[date_str])
+        output.append('')
+
+    # Future entries with monthly headers
+    current_month = None
+    for date_str in future_dates:
+        dt = datetime.datetime.strptime(date_str, '%Y%m%d')
+        month_key = (dt.year, dt.month)
+        if month_key != current_month:
+            if current_month is not None:
+                output.append('')
+            output.append('# Quotes for {}'.format(dt.strftime('%B %Y')))
+            current_month = month_key
+
+        hash_val = future_assignments[date_str]
+        q = hash_to_quote[hash_val]
+        snippet = q.quote[:60]
+        if len(q.quote) > 60:
+            snippet += '...'
+        snippet = '{} - {}'.format(snippet, q.author)
+
+        if date_str in preserved and preserved.get(date_str) == hash_val and date_str > today_str:
+            # Sticky entry
+            output.append('{}: {}  # Sticky: {}'.format(date_str, hash_val, snippet))
+        else:
+            output.append('{}: {}  # {}'.format(date_str, hash_val, snippet))
+
+    return output
 
 
 def read_tags(quotefile):

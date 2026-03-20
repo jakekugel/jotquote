@@ -60,7 +60,7 @@ def jotquote(ctx, quotefile):
 
         # All subcommands except webserver require quotefile to exist.  The
         # webserver subcommand lazy-loads when user views page.
-        if ctx.invoked_subcommand != 'webserver' and not os.path.exists(quotefile):
+        if ctx.invoked_subcommand not in ('webserver', 'quotemap') and not os.path.exists(quotefile):
             config_dir = click.get_app_dir(api.APP_NAME, roaming=True, force_posix=False)
             config_path = os.path.join(config_dir, 'settings.conf')
             print("The quote file '{0}' does not exist.  Either create an empty file with this name, or edit "
@@ -206,6 +206,29 @@ def info(ctx):
         quotes = api.read_quotes(quotefile)
         print('Number of quotes: {}'.format(str(len(quotes))))
         print('Time quote file last modified: {}'.format(time.ctime(os.path.getmtime(quotefile))))
+
+
+@jotquote.group()
+def quotemap():
+    """Manage the quotemap file."""
+    pass
+
+
+@quotemap.command()
+@click.argument('quotefile', type=click.Path(exists=True))
+@click.argument('old_quotemapfile', type=click.Path())
+def rebuild(quotefile, old_quotemapfile):
+    """Rebuild a quotemap file for the next 10 years.
+
+    Reads quotes from QUOTEFILE and existing entries from OLD_QUOTEMAPFILE.
+    Preserves past/today entries and future sticky entries. Regenerates all
+    other future entries using an even-distribution algorithm.
+
+    Output is printed to stdout. Redirect to a file with > quotemap.txt.
+    """
+    lines = api.rebuild_quotemap(quotefile, old_quotemapfile)
+    for line in lines:
+        click.echo(line)
 
 
 def _add_quotes(quotefile, newquote_str, extended):

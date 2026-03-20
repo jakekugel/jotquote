@@ -137,6 +137,27 @@ def test_show_author_count(tmp_path):
     assert 'quotes by Ben Franklin' in output
 
 
+def test_quotemap_rebuild(tmp_path):
+    """jotquote quotemap rebuild produces quotemap output on stdout."""
+    quote_file = _copy_quotes(tmp_path)
+    quotemap_file = str(tmp_path / 'quotemap.txt')
+    env = _make_env(tmp_path, quote_file)
+
+    result = subprocess.run(
+        [_script('jotquote'), 'quotemap', 'rebuild', str(quote_file), quotemap_file],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode == 0
+    output = result.stdout.decode('utf-8', errors='replace')
+    # Should contain quotemap data lines
+    assert '# Quotes for ' in output
+    lines = [l for l in output.splitlines() if l and not l.startswith('#')]
+    assert len(lines) == 3652
+
+
 def test_default_settings_conf_written(tmp_path):
     """jotquote writes a new settings.conf with all four new properties on first run."""
     # Use a fresh home dir with no .jotquote directory

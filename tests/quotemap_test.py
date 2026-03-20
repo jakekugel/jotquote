@@ -15,7 +15,10 @@ def test_read_quotemap_valid(tmp_path):
     f = tmp_path / 'quotemap.txt'
     f.write_text('20260319: a1b2c3d4e5f67890\n20260320: 25382c2519fb23bd\n', encoding='utf-8')
     result = api.read_quotemap(str(f))
-    assert result == {'20260319': 'a1b2c3d4e5f67890', '20260320': '25382c2519fb23bd'}
+    assert result['20260319']['hash'] == 'a1b2c3d4e5f67890'
+    assert result['20260320']['hash'] == '25382c2519fb23bd'
+    assert result['20260319']['sticky'] is False
+    assert result['20260320']['sticky'] is False
 
 
 def test_read_quotemap_empty_file(tmp_path):
@@ -31,7 +34,8 @@ def test_read_quotemap_comments_and_blanks(tmp_path):
     f = tmp_path / 'quotemap.txt'
     f.write_text('# A comment\n\n# Another comment\n20260319: a1b2c3d4e5f67890\n\n', encoding='utf-8')
     result = api.read_quotemap(str(f))
-    assert result == {'20260319': 'a1b2c3d4e5f67890'}
+    assert result['20260319']['hash'] == 'a1b2c3d4e5f67890'
+    assert len(result) == 1
 
 
 def test_read_quotemap_missing_file(tmp_path):
@@ -95,7 +99,29 @@ def test_read_quotemap_inline_comments(tmp_path):
         encoding='utf-8',
     )
     result = api.read_quotemap(str(f))
-    assert result == {'20260319': 'a1b2c3d4e5f67890', '20260320': '25382c2519fb23bd'}
+    assert result['20260319']['hash'] == 'a1b2c3d4e5f67890'
+    assert result['20260320']['hash'] == '25382c2519fb23bd'
+
+
+def test_read_quotemap_sticky(tmp_path):
+    """Lines with '# Sticky:' inline comment are flagged as sticky."""
+    f = tmp_path / 'quotemap.txt'
+    f.write_text(
+        '20260319: a1b2c3d4e5f67890  # Sticky: some quote\n'
+        '20260320: 25382c2519fb23bd  # regular comment\n',
+        encoding='utf-8',
+    )
+    result = api.read_quotemap(str(f))
+    assert result['20260319']['sticky'] is True
+    assert result['20260320']['sticky'] is False
+
+
+def test_read_quotemap_raw_line(tmp_path):
+    """Each entry includes the raw_line from the file."""
+    f = tmp_path / 'quotemap.txt'
+    f.write_text('20260319: a1b2c3d4e5f67890  # a comment\n', encoding='utf-8')
+    result = api.read_quotemap(str(f))
+    assert result['20260319']['raw_line'] == '20260319: a1b2c3d4e5f67890  # a comment'
 
 
 def test_read_quotemap_mixed_valid_invalid(tmp_path):
