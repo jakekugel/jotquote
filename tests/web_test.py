@@ -204,10 +204,10 @@ def test_date_route_with_quotemap(flask_client, config, tmp_path):
 
 
 def test_date_route_without_quotemap(flask_client, config):
-    """/<date> with no quotemap configured still returns 200 (falls back to RNG)."""
+    """/<date> with no quotemap configured returns 404."""
     client, quote_file = flask_client
     rv = client.get('/20260319')
-    assert rv.status_code == 200
+    assert rv.status_code == 404
 
 
 def test_date_route_invalid_format(flask_client):
@@ -218,6 +218,15 @@ def test_date_route_invalid_format(flask_client):
     rv = client.get('/1234567')
     assert rv.status_code == 404
     rv = client.get('/123456789')
+    assert rv.status_code == 404
+
+
+def test_date_route_invalid_calendar_date(flask_client):
+    """8-digit string that isn't a valid calendar date returns 404, not 500."""
+    client, quote_file = flask_client
+    rv = client.get('/99991399')  # month 13
+    assert rv.status_code == 404
+    rv = client.get('/20260230')  # Feb 30
     assert rv.status_code == 404
 
 
@@ -254,13 +263,23 @@ def test_date_route_no_permalink(flask_client, config, tmp_path):
     assert b'>permalink</a>' not in rv.data
 
 
-def test_quotemap_hash_not_found(flask_client, config, tmp_path):
-    """Quotemap entry with hash that doesn't match any quote falls back to RNG."""
+def test_quotemap_hash_not_found_date_route(flask_client, config, tmp_path):
+    """Quotemap entry with hash that doesn't match any quote returns 404 on date route."""
     client, quote_file = flask_client
     quotemap_file = tmp_path / 'quotemap.txt'
     quotemap_file.write_text('20260319: aaaaaaaaaaaaaaaa\n', encoding='utf-8')
     config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
     rv = client.get('/20260319')
+    assert rv.status_code == 404
+
+
+def test_quotemap_hash_not_found_root(flask_client, config, tmp_path, monkeypatch):
+    """Quotemap entry with hash that doesn't match any quote falls back to RNG on root."""
+    client, quote_file = flask_client
+    today = datetime.datetime.now().strftime('%Y%m%d')
+    quotemap_file = tmp_path / 'quotemap.txt'
+    quotemap_file.write_text(f'{today}: aaaaaaaaaaaaaaaa\n', encoding='utf-8')
+    config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
+    rv = client.get('/')
     assert rv.status_code == 200
-    # Still renders a quote (the RNG fallback)
     assert b'<!DOCTYPE html>' in rv.data

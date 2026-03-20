@@ -67,7 +67,10 @@ def showpage(date_path_param=None):
 
     # Determine display date
     if date_path_param:
-        display_date = datetime.datetime.strptime(date_path_param, '%Y%m%d')
+        try:
+            display_date = datetime.datetime.strptime(date_path_param, '%Y%m%d')
+        except ValueError:
+            abort(404)
         date1 = display_date.strftime('%A, %B %d, %Y')
     else:
         date1 = now.strftime('%A, %B %d, %Y')
@@ -87,6 +90,8 @@ def showpage(date_path_param=None):
             quotemap = api.read_quotemap(quotemap_file)
         except click.ClickException as e:
             app.logger.error('quotemap error: %s', e.format_message())
+            if date_path_param:
+                abort(404)
 
     lookup_date = date_path_param if date_path_param else now.strftime('%Y%m%d')
     mapped_quote = None
@@ -95,6 +100,8 @@ def showpage(date_path_param=None):
         mapped_quote = api.get_first_match(quotes, hash_arg=hash_value)
         if mapped_quote is None:
             app.logger.warning("quotemap hash '%s' for date %s not found in quotes", hash_value, lookup_date)
+            if date_path_param:
+                abort(404)
 
     if mapped_quote:
         quote = mapped_quote
@@ -105,8 +112,11 @@ def showpage(date_path_param=None):
         # For date URLs, content is static — use full cache cap
         if date_path_param:
             max_age = cap_minutes * 60
+    elif date_path_param:
+        # Date route requested but date not in quotemap — 404
+        abort(404)
     else:
-        # Fall back to seeded RNG
+        # Root route, fall back to seeded RNG
         index = api.get_random_choice(len(quotes))
         quote = quotes[index]
 
