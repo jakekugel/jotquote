@@ -168,3 +168,64 @@ def test_rebuild_output_format(tmp_path):
     data_lines = [l for l in lines if l and not l.startswith('#')]
     for line in data_lines[:10]:
         assert re.match(r'^\d{8}: [0-9a-f]{16}  # .+', line), f'Bad format: {line}'
+
+
+def _copy_quotes9(tmp_path):
+    """Copy quotes9.txt (8 quotes) into tmp_path and return the path."""
+    return _copy_quotes(tmp_path, fixture='quotes9.txt')
+
+
+def test_rebuild_new_quote_first_use_sticky(tmp_path):
+    """Hashes not in the old quotemap get exactly one Sticky entry (their debut)."""
+    quote_file = _copy_quotes9(tmp_path)
+    quotes = api.read_quotes(quote_file)
+    all_hashes = [q.get_hash() for q in quotes]
+    assert len(all_hashes) == 8
+
+    # Old quotemap uses only the first 5 hashes
+    yesterday = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y%m%d')
+    qm_file = tmp_path / 'quotemap.txt'
+    qm_file.write_text('{}: {}\n'.format(yesterday, all_hashes[0]), encoding='utf-8')
+
+    old_hashes = {all_hashes[0]}
+    new_hashes = set(all_hashes[1:])
+
+    lines = api.rebuild_quotemap(quote_file, str(qm_file))
+    data_lines = [l for l in lines if l and not l.startswith('#')]
+
+    for h in new_hashes:
+        sticky_lines = [l for l in data_lines if h in l and '# Sticky:' in l]
+        assert len(sticky_lines) == 1, \
+            'Expected exactly 1 Sticky line for new hash {}, got {}'.format(h, len(sticky_lines))
+
+    for h in old_hashes:
+        # Exclude the preserved past entry
+        future_sticky = [l for l in data_lines
+                         if h in l and '# Sticky:' in l
+                         and not l.startswith(yesterday)]
+        assert len(future_sticky) == 0, \
+            'Old hash {} should not be auto-Sticky, got {}'.format(h, len(future_sticky))
+
+
+def test_rebuild_new_quote_only_first_sticky(tmp_path):
+    """Second and later occurrences of a new-quote hash are not Sticky."""
+    quote_file = _copy_quotes9(tmp_path)
+    quotes = api.read_quotes(quote_file)
+    all_hashes = [q.get_hash() for q in quotes]
+
+    # Old quotemap uses only first hash — the other 7 are new
+    yesterday = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y%m%d')
+    qm_file = tmp_path / 'quotemap.txt'
+    qm_file.write_text('{}: {}\n'.format(yesterday, all_hashes[0]), encoding='utf-8')
+
+    lines = api.rebuild_quotemap(quote_file, str(qm_file))
+    data_lines = [l for l in lines if l and not l.startswith('#')]
+
+    for h in all_hashes[1:]:
+        all_occurrences = [l for l in data_lines if h in l]
+        sticky_occurrences = [l for l in all_occurrences if '# Sticky:' in l]
+        non_sticky_occurrences = [l for l in all_occurrences if '# Sticky:' not in l]
+        assert len(sticky_occurrences) == 1, \
+            'Hash {} should have exactly 1 Sticky occurrence'.format(h)
+        assert len(non_sticky_occurrences) >= 1, \
+            'Hash {} should have non-Sticky occurrences too'.format(h)

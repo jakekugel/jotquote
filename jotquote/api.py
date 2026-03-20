@@ -185,12 +185,15 @@ def read_quotemap(filename):
     return quotemap
 
 
-def rebuild_quotemap(quotefile, old_quotemapfile):
-    """Rebuild a quotemap file, generating entries for the next 10 years.
+def rebuild_quotemap(quotefile, old_quotemapfile, days=3652):
+    """Rebuild a quotemap file, generating entries for the given number of future days.
 
     Reads quotes from quotefile and existing entries from old_quotemapfile.
     Preserves past/today entries and future sticky entries. Regenerates all
     other future entries using an even-distribution algorithm.
+
+    Quotes that never appeared in the old quotemap are auto-marked Sticky on
+    their first occurrence so that their debut date is preserved across rebuilds.
 
     Returns a list of output lines (strings) suitable for printing to stdout.
     """
@@ -210,6 +213,9 @@ def rebuild_quotemap(quotefile, old_quotemapfile):
     old_quotemap = {}
     if old_quotemapfile and os.path.exists(old_quotemapfile):
         old_quotemap = read_quotemap(old_quotemapfile)
+
+    # Track all hashes that appear anywhere in the old quotemap (for auto-sticky detection)
+    old_hashes = {entry['hash'] for entry in old_quotemap.values()}
 
     # Separate preserved entries (past/today + future sticky) from discarded
     preserved = {}  # date_str -> hash
@@ -239,7 +245,7 @@ def rebuild_quotemap(quotefile, old_quotemapfile):
     # Generate future dates: tomorrow through 10 years out
     today = datetime.datetime.now().date()
     tomorrow = today + datetime.timedelta(days=1)
-    end_date = today + datetime.timedelta(days=3652)
+    end_date = today + datetime.timedelta(days=days)
 
     future_dates = []
     d = tomorrow
@@ -250,6 +256,8 @@ def rebuild_quotemap(quotefile, old_quotemapfile):
     # Assign quotes to non-sticky future dates
     randomlib.seed(0)
     future_assignments = {}  # date_str -> hash
+    newly_stickied = set()  # hashes that have been auto-stickied (first debut)
+    auto_sticky_dates = set()  # dates where a new hash makes its debut
     for date_str in future_dates:
         if date_str in preserved:
             # Sticky entry — already assigned
@@ -261,6 +269,10 @@ def rebuild_quotemap(quotefile, old_quotemapfile):
         chosen = randomlib.choice(candidates)
         future_assignments[date_str] = chosen
         hash_to_count[chosen] += 1
+        # Auto-sticky: first occurrence of a hash never seen in the old quotemap
+        if chosen not in old_hashes and chosen not in newly_stickied:
+            newly_stickied.add(chosen)
+            auto_sticky_dates.add(date_str)
 
     # Build output lines
     output = []
@@ -298,8 +310,9 @@ def rebuild_quotemap(quotefile, old_quotemapfile):
             snippet += '...'
         snippet = '{} - {}'.format(snippet, q.author)
 
-        if date_str in preserved and preserved.get(date_str) == hash_val and date_str > today_str:
-            # Sticky entry
+        if (date_str in preserved and preserved.get(date_str) == hash_val and date_str > today_str) \
+                or date_str in auto_sticky_dates:
+            # Sticky entry (either user-marked or auto-sticky for new quote debut)
             output.append('{}: {}  # Sticky: {}'.format(date_str, hash_val, snippet))
         else:
             output.append('{}: {}  # {}'.format(date_str, hash_val, snippet))

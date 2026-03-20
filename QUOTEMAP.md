@@ -55,6 +55,12 @@ jotquote quotemap rebuild <quotefile> <old_quotemapfile> > quotemap.txt
 
 The command prints the rebuilt quotemap to stdout. Redirect to a file to save it.
 
+Use `--days` to control how many days into the future are generated (default: 3652, about 10 years):
+
+```bash
+jotquote quotemap rebuild --days 365 quotes.txt quotemap.txt > quotemap_new.txt
+```
+
 ### How It Works
 
 1. Reads all quotes from the quote file
@@ -75,6 +81,8 @@ To mark an entry as sticky (so it won't be overwritten during a rebuild), add `#
 ```
 20260401: 9f8e7d6c5b4a3210  # Sticky: April Fools quote
 ```
+
+**Auto-sticky for new quotes:** When a quote's hash has never appeared in the old quotemap file, the rebuild automatically marks its first occurrence as Sticky. This preserves the debut date for newly added quotes across future rebuilds. Only the first occurrence is marked; subsequent assignments of the same hash are normal.
 
 ### Example Workflow
 

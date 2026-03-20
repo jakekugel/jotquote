@@ -217,7 +217,8 @@ def quotemap():
 @quotemap.command()
 @click.argument('quotefile', type=click.Path(exists=True))
 @click.argument('old_quotemapfile', type=click.Path())
-def rebuild(quotefile, old_quotemapfile):
+@click.option('--days', default=3652, type=int, help='Number of days into the future to generate (default: 3652).')
+def rebuild(quotefile, old_quotemapfile, days):
     """Rebuild a quotemap file for the next 10 years.
 
     Reads quotes from QUOTEFILE and existing entries from OLD_QUOTEMAPFILE.
@@ -226,7 +227,7 @@ def rebuild(quotefile, old_quotemapfile):
 
     Output is printed to stdout. Redirect to a file with > quotemap.txt.
     """
-    lines = api.rebuild_quotemap(quotefile, old_quotemapfile)
+    lines = api.rebuild_quotemap(quotefile, old_quotemapfile, days=days)
     for line in lines:
         click.echo(line)
 
