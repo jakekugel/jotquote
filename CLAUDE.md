@@ -61,6 +61,7 @@ There are two input formats for the `add` command:
 - **Atomic writes**: `write_quotes()` writes to a randomly-named temp file, sanity-checks it against the backup size, creates a backup, then uses `os.replace()` to atomically swap it in.
 - **Duplicate detection**: `add_quotes()` compares quote text (not hash) against existing quotes before appending.
 - **Config auto-creation**: First run creates `~/.jotquote/settings.conf` and copies the template quote file from `jotquote/templates/quotes.txt`.
+- **Quotemap**: Optional `quotemap_file` config property pointing to a date-to-hash mapping file. Format: `YYYYMMDD: <16-char-hash>  # optional comment`, one per line. When configured, the web server checks this file before falling back to the seeded RNG. The `/<date>` route serves a specific date's mapped quote. Parsed by `read_quotemap()` in `api.py`; raises `ClickException` on any validation failure.
 - **Version**: Defined in `pyproject.toml` as `version`. `jotquote/__init__.py` exposes it as `__version__` via `importlib.metadata`. Convention is `X.Y.Z.dev0` between releases; strip `.dev0` when releasing and tag the commit.
 
 ### Test infrastructure
