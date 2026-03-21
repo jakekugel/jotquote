@@ -58,11 +58,14 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 120
-exclude = [".git", "tests", "__pycache__", ".venv"]
+exclude = [".git", "__pycache__", ".venv"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "N", "I", "Q"]
 ignore = ["E501", "E722"]
+
+[tool.ruff.format]
+quote-style = "single"
 
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = "single"

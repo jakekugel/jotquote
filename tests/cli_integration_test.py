@@ -137,6 +137,112 @@ def test_show_author_count(tmp_path):
     assert 'quotes by Ben Franklin' in output
 
 
+def _get_hashes(quote_file, env):
+    """Use `jotquote list -l` to obtain quote hashes from the given quote file."""
+    result = subprocess.run(
+        [_script('jotquote'), 'list', '-l'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert result.returncode == 0
+    list_output = result.stdout.decode('utf-8', errors='replace')
+    hashes = []
+    for line in list_output.splitlines():
+        stripped = line.strip()
+        if stripped.startswith('hash:'):
+            hashes.append(stripped.split(':')[1].strip())
+    return hashes
+
+
+def _rebuild(tmp_path, quote_file, new_quotemap, oldquotemap=None, days=None, env=None):
+    """Run `jotquote quotemap rebuild` and return the CompletedProcess."""
+    if env is None:
+        env = _make_env(tmp_path, quote_file)
+    cmd = [_script('jotquote'), 'quotemap', 'rebuild', str(quote_file), str(new_quotemap)]
+    if oldquotemap is not None:
+        cmd += ['--oldquotemap', str(oldquotemap)]
+    if days is not None:
+        cmd += ['--days', str(days)]
+    return subprocess.run(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+def _read_data_lines_from_file(path):
+    """Return non-blank, non-comment lines from a file."""
+    with open(path, encoding='utf-8') as f:
+        return [line for line in f.read().splitlines() if line and not line.startswith('#')]
+
+
+def test_quotemap_rebuild_no_oldquotemap(tmp_path):
+    """Rebuild without --oldquotemap generates entries from scratch."""
+    quote_file = _copy_quotes(tmp_path)
+    new_qm = tmp_path / 'new_quotemap.txt'
+    result = _rebuild(tmp_path, quote_file, new_qm, days=10)
+    assert result.returncode == 0
+    assert new_qm.exists()
+    data_lines = _read_data_lines_from_file(new_qm)
+    assert len(data_lines) == 11  # today + 10 future days
+
+
+def test_quotemap_rebuild_with_oldquotemap(tmp_path):
+    """Rebuild with --oldquotemap preserves existing entries."""
+    import datetime
+    quote_file = _copy_quotes(tmp_path)
+    quotes = _get_hashes(str(quote_file), _make_env(tmp_path, quote_file))
+    yesterday = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y%m%d')
+    old_qm = tmp_path / 'old_quotemap.txt'
+    old_qm.write_text('{}: {}  # preserved entry\n'.format(yesterday, quotes[0]), encoding='utf-8')
+    new_qm = tmp_path / 'new_quotemap.txt'
+    result = _rebuild(tmp_path, quote_file, new_qm, oldquotemap=old_qm, days=5)
+    assert result.returncode == 0
+    data_lines = _read_data_lines_from_file(new_qm)
+    # Yesterday's entry should be preserved verbatim
+    assert any(yesterday in line and quotes[0] in line for line in data_lines)
+
+
+def test_quotemap_rebuild_days_option(tmp_path):
+    """--days controls the number of future entries generated."""
+    quote_file = _copy_quotes(tmp_path)
+    new_qm = tmp_path / 'new_quotemap.txt'
+    result = _rebuild(tmp_path, quote_file, new_qm, days=30)
+    assert result.returncode == 0
+    data_lines = _read_data_lines_from_file(new_qm)
+    assert len(data_lines) == 31  # today + 30 future days
+
+
+def test_quotemap_rebuild_newquotemap_already_exists(tmp_path):
+    """NEWQUOTEMAP that already exists produces an error."""
+    quote_file = _copy_quotes(tmp_path)
+    existing = tmp_path / 'existing.txt'
+    existing.write_text('', encoding='utf-8')
+    result = _rebuild(tmp_path, quote_file, existing, days=5)
+    assert result.returncode != 0
+    assert b'already exists' in result.stderr
+
+
+def test_quotemap_rebuild_oldquotemap_not_found(tmp_path):
+    """--oldquotemap pointing to a missing file produces an error."""
+    quote_file = _copy_quotes(tmp_path)
+    new_qm = tmp_path / 'new_quotemap.txt'
+    result = _rebuild(tmp_path, quote_file, new_qm,
+                      oldquotemap=tmp_path / 'does_not_exist.txt', days=5)
+    assert result.returncode != 0
+    assert b'not found' in result.stderr
+
+
+def test_quotemap_rebuild_newquotemap_required(tmp_path):
+    """Omitting NEWQUOTEMAP produces a usage error."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+    result = subprocess.run(
+        [_script('jotquote'), 'quotemap', 'rebuild', str(quote_file)],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert result.returncode != 0
+
+
 def test_default_settings_conf_written(tmp_path):
     """jotquote writes a new settings.conf with all four new properties on first run."""
     # Use a fresh home dir with no .jotquote directory

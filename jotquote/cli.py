@@ -60,7 +60,7 @@ def jotquote(ctx, quotefile):
 
         # All subcommands except webserver require quotefile to exist.  The
         # webserver subcommand lazy-loads when user views page.
-        if ctx.invoked_subcommand != 'webserver' and not os.path.exists(quotefile):
+        if ctx.invoked_subcommand not in ('webserver', 'quotemap') and not os.path.exists(quotefile):
             config_dir = click.get_app_dir(api.APP_NAME, roaming=True, force_posix=False)
             config_path = os.path.join(config_dir, 'settings.conf')
             print("The quote file '{0}' does not exist.  Either create an empty file with this name, or edit "
@@ -206,6 +206,29 @@ def info(ctx):
         quotes = api.read_quotes(quotefile)
         print('Number of quotes: {}'.format(str(len(quotes))))
         print('Time quote file last modified: {}'.format(time.ctime(os.path.getmtime(quotefile))))
+
+
+@jotquote.group()
+def quotemap():
+    """Manage the quotemap file."""
+    pass
+
+
+@quotemap.command()
+@click.argument('quotefile', type=click.Path(exists=True))
+@click.argument('newquotemap', type=click.Path())
+@click.option('--oldquotemap', type=click.Path(), default=None, help='Path to existing quotemap file to read from.')
+@click.option('--days', default=3652, type=int, help='Number of days into the future to generate (default: 3652).')
+def rebuild(quotefile, newquotemap, oldquotemap, days):
+    """Rebuild a quotemap file for the given number of days.
+
+    NEWQUOTEMAP is the path to write the rebuilt quotemap; must not already exist.
+    """
+    if oldquotemap and not os.path.exists(oldquotemap):
+        raise click.ClickException("the quotemap file '{}' was not found.".format(oldquotemap))
+    if os.path.exists(newquotemap):
+        raise click.ClickException("the output file '{}' already exists.".format(newquotemap))
+    api.rebuild_quotemap(quotefile, oldquotemap, newquotemap, days=days)
 
 
 def _add_quotes(quotefile, newquote_str, extended):

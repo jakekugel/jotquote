@@ -21,11 +21,12 @@ INVALID_CHARS = re.compile('[|\n\r]')
 
 class Quote:
     """A quote with these properties:
-         quote: string with actual quote text.
-         author: to whom quote is attributed
-         publication: optional, the publication containing the quote
-         tags: list of tags (strings)
+    quote: string with actual quote text.
+    author: to whom quote is attributed
+    publication: optional, the publication containing the quote
+    tags: list of tags (strings)
     """
+
     def __init__(self, quote, author, publication, tags):
         self.quote = quote.strip()
         self.author = author.strip()
@@ -44,10 +45,12 @@ class Quote:
         self.set_tags(tags)
 
     def __eq__(self, other):
-        if ((self.quote == other.quote)
-                and (self.author == other.author)
-                and (self.publication == other.publication)
-                and (self.tags == other.tags)):
+        if (
+            (self.quote == other.quote)
+            and (self.author == other.author)
+            and (self.publication == other.publication)
+            and (self.tags == other.tags)
+        ):
             return True
         else:
             return False
@@ -67,10 +70,7 @@ class Quote:
         return True
 
     def has_keyword(self, keyword):
-        if keyword in self.quote or \
-                keyword in self.author or \
-                keyword in self.publication or \
-                self.has_tag(keyword):
+        if keyword in self.quote or keyword in self.author or keyword in self.publication or self.has_tag(keyword):
             return True
         return False
 
@@ -113,18 +113,27 @@ def read_quotes(filename):
     return quotes
 
 
-def read_quotemap(filename):
+def read_quotemap(filename, include_future=True):
     """Given a path to a quotemap file, this function returns a dict mapping
     date strings (YYYYMMDD) to 16-character quote hashes.
 
     Each non-blank, non-comment line must have the format:
         YYYYMMDD: <16-char-hex-hash>  # optional comment
 
+    If include_future is True (default), all entries are returned. If False,
+    future entries that are not sticky are omitted.
+
+    Returns a dict where each key is a date string (YYYYMMDD) and each value
+    is a dict with keys:
+        - 'hash': the 16-char hex hash (str)
+        - 'sticky': whether the inline comment contains '# Sticky:' (bool)
+        - 'raw_line': the original line from the file, stripped (str)
+
     Raises click.ClickException if the file does not exist or any line
     fails validation.
     """
     if not filename:
-        return {}
+        raise click.ClickException('No quotemap file was specified.')
 
     if not os.path.exists(filename):
         raise click.ClickException("The quotemap file '{0}' was not found.".format(filename))
@@ -138,37 +147,167 @@ def read_quotemap(filename):
             if not line or line.startswith('#'):
                 continue
 
-            # Strip inline comment (everything after '#')
-            if '#' in line:
-                line = line[:line.index('#')].strip()
+            # Strip inline comment at the first '#' and detect sticky marker
+            data_line = line
+            sticky = False
+            if '#' in data_line:
+                comment_pos = data_line.index('#')
+                comment_text = data_line[comment_pos + 1 :]
+                sticky = bool(re.match(r'\s*sticky\b', comment_text, re.IGNORECASE))
+                data_line = data_line[:comment_pos].strip()
 
             # Must contain a colon separator
-            if ':' not in line:
+            if ':' not in data_line:
                 raise click.ClickException(
-                    "quotemap line {0}: missing ':' separator in '{1}'".format(lineno, line))
+                    "quotemap line {0}: missing ':' separator in '{1}'".format(lineno, data_line)
+                )
 
-            date_part, hash_part = line.split(':', 1)
+            date_part, hash_part = data_line.split(':', 1)
             date_part = date_part.strip()
             hash_part = hash_part.strip()
 
-            # Validate date: exactly 8 digits
+            # Validate date: exactly 8 digits and a real calendar date
             if len(date_part) != 8 or not date_part.isdigit():
-                raise click.ClickException(
-                    "quotemap line {0}: invalid date '{1}'".format(lineno, date_part))
+                raise click.ClickException("quotemap line {0}: invalid date '{1}'".format(lineno, date_part))
+            try:
+                parsed_date = datetime.datetime.strptime(date_part, '%Y%m%d')
+                if parsed_date.year < 2000:
+                    raise ValueError('year before 2000')
+            except ValueError:
+                raise click.ClickException("quotemap line {0}: invalid date '{1}'".format(lineno, date_part))
 
             # Validate hash: exactly 16 lowercase hex characters
             if len(hash_part) != 16 or not re.fullmatch(r'[0-9a-f]{16}', hash_part):
-                raise click.ClickException(
-                    "quotemap line {0}: invalid hash '{1}'".format(lineno, hash_part))
+                raise click.ClickException("quotemap line {0}: invalid hash '{1}'".format(lineno, hash_part))
 
             # Check for duplicate date
             if date_part in quotemap:
-                raise click.ClickException(
-                    "quotemap line {0}: duplicate date '{1}'".format(lineno, date_part))
+                raise click.ClickException("quotemap line {0}: duplicate date '{1}'".format(lineno, date_part))
 
-            quotemap[date_part] = hash_part
+            quotemap[date_part] = {
+                'hash': hash_part,
+                'sticky': sticky,
+                'raw_line': line,
+            }
+
+    # If include_future is False, drop future non-sticky entries
+    if not include_future:
+        today_str = datetime.datetime.now().strftime('%Y%m%d')
+        quotemap = {d: e for d, e in quotemap.items() if d <= today_str or e['sticky']}
 
     return quotemap
+
+
+def rebuild_quotemap(quotefile, quotemapfile, newquotemapfile, days=3652):
+    """Rebuild a quotemap file, generating entries for the given number of future days.
+
+    Args:
+        quotefile (str): Path to the quote file.
+        quotemapfile (str): Path to the existing quotemap file to read from, may be None.
+        newquotemapfile (str): Path to write the rebuilt quotemap, filename must be provided but not file may exist with that name.
+        days (int): Number of future days to generate entries for (default: 3652).
+    """
+    quotes = read_quotes(quotefile)
+    if not quotes:
+        raise click.ClickException('the quote file contains no quotes.')
+
+    if quotemapfile:
+        quotemap = read_quotemap(quotemapfile)
+        isprior = True
+    else:
+        quotemap = {}
+        isprior = False
+
+    # Build hash_to_quote and hash_to_count lookups
+    hash_to_quote = {q.get_hash(): q for q in quotes}
+    hash_to_count = {q.get_hash(): 0 for q in quotes}
+    for entry in quotemap.values():
+        if entry['hash'] in hash_to_count:
+            hash_to_count[entry['hash']] += 1
+        else:
+            raise click.ClickException(
+                "the existing quotemap contains hash '{}' which does not match any quote in the quote file.".format(
+                    entry['hash']
+                )
+            )
+
+    # Fill in missing future dates
+    randomlib.seed(0)
+    today = datetime.date.today()
+    for day_offset in range(days + 1):
+        # Generate date string in format YYYYMMDD
+        date_str = (today + datetime.timedelta(days=day_offset)).strftime('%Y%m%d')
+        if date_str in quotemap:
+            continue
+
+        # Choose random quote hash using even distribution.
+        selected_hash = _select_quote(hash_to_count)
+
+        # If rebuilding an existing quotemap, make sticky if this is first use of the quote
+        sticky = isprior and hash_to_count[selected_hash] == 0
+        hash_to_count[selected_hash] += 1
+        quote = hash_to_quote[selected_hash]
+
+        # Insert the quote into the quotemap dictionary
+        raw_line = _format_quotemap_line(date_str, selected_hash, quote, sticky)
+        quotemap[date_str] = {'hash': selected_hash, 'sticky': sticky, 'raw_line': raw_line}
+
+    write_quotemap(newquotemapfile, quotemap)
+
+
+def write_quotemap(filename, quotemap):
+    """Write quotemap dict to filename, sorted by date.
+
+    Args:
+        filename (str): Output file path. Must not already exist.
+        quotemap (dict): Maps date string (YYYYMMDD) to entry dict with keys 'hash' and 'raw_line'.
+
+    Raises click.ClickException if filename already exists.
+    """
+    if os.path.exists(filename):
+        raise click.ClickException("the quotemap file '{}' already exists.".format(filename))
+    newline = _get_newline()
+    with open(filename, mode='wb') as f:
+        for date_str in sorted(quotemap.keys()):
+            f.write((quotemap[date_str]['raw_line'] + newline).encode('utf-8'))
+
+
+def _select_quote(hash_to_count):
+    """Select a quote hash using even distribution.
+
+    Picks a random hash from those with the minimum usage count,
+    ensuring no hash is used N+1 times before all hashes are used N times.
+
+    Args:
+        hash_to_count (dict): Maps quote hash (str) to usage count (int).
+
+    Returns:
+        str: Selected quote hash.
+    """
+    min_count = min(hash_to_count.values())
+    candidates = [h for h, count in hash_to_count.items() if count == min_count]
+    return randomlib.choice(candidates)
+
+
+def _format_quotemap_line(date_str, hash_val, quote, sticky):
+    """Format a single quotemap line for output.
+
+    Args:
+        date_str (str): Date in YYYYMMDD format.
+        hash_val (str): 16-char quote hash.
+        quote (Quote): The Quote object for the snippet.
+        sticky (bool): Whether to mark this entry as Sticky.
+
+    Returns:
+        str: Formatted line, e.g. '20260321: abc123...  # Snippet - Author'
+    """
+    snippet = quote.quote[:60]
+    if len(quote.quote) > 60:
+        snippet += '...'
+    snippet = '{} - {}'.format(snippet, quote.author)
+    if sticky:
+        return '{}: {}  # Sticky: {}'.format(date_str, hash_val, snippet)
+    return '{}: {}  # {}'.format(date_str, hash_val, snippet)
 
 
 def read_tags(quotefile):
@@ -183,8 +322,7 @@ def read_tags(quotefile):
     return sorted(list(alltags))
 
 
-def get_first_match(quotes, tags=None, keyword=None, number=None, hash_arg=None, rand=False,
-                    excluded_tags=None):
+def get_first_match(quotes, tags=None, keyword=None, number=None, hash_arg=None, rand=False, excluded_tags=None):
     """Return the first Quote from quotes that matches all provided criteria, or None.
 
     tags          - comma-separated tag string; quote must have all listed tags
@@ -198,7 +336,8 @@ def get_first_match(quotes, tags=None, keyword=None, number=None, hash_arg=None,
     excluded_taglist = parse_tags(excluded_tags) if excluded_tags is not None else []
 
     matched = [
-        quote for index, quote in enumerate(quotes)
+        quote
+        for index, quote in enumerate(quotes)
         if (keyword is None or quote.has_keyword(keyword))
         and (tags is None or quote.has_tags(taglist))
         and (number is None or number == index + 1)
@@ -268,8 +407,11 @@ def parse_quotes(rawlines, filename, encoding=None, simple_format=True):
             quote = _parse_quote(line, simple_format=simple_format)
             quotes.append(quote)
         except Exception as exception:
-            raise click.ClickException('syntax error on line {0} of {1}: {2}.  Line with error: '
-                                       '"{3}"'.format(str(linenum), filename, str(exception), line))
+            raise click.ClickException(
+                'syntax error on line {0} of {1}: {2}.  Line with error: "{3}"'.format(
+                    str(linenum), filename, str(exception), line
+                )
+            )
 
     return quotes
 
@@ -317,8 +459,9 @@ def _parse_quote(raw_line, simple_format=True):
         raise click.ClickException('a quote was not found')
 
     if len(author) == 0:
-        raise click.ClickException('an author was not included with the quote.  '
-                                   + 'Expecting quote in the format "<quote> - <author>".')
+        raise click.ClickException(
+            'an author was not included with the quote.  ' + 'Expecting quote in the format "<quote> - <author>".'
+        )
 
     quote = Quote(quotestring, author, publication, tags)
     return quote
@@ -342,11 +485,10 @@ def _parse_quote_simple(line):
     elif len(hyphen_w_space) == 0 and len(hyphen_wo_space) == 1:
         selected_matcher = hyphen_wo_space[0]
     else:
-        raise click.ClickException(
-            'unable to determine which hyphen separates the quote from the author.')
+        raise click.ClickException('unable to determine which hyphen separates the quote from the author.')
 
-    quote = line[:selected_matcher.start()]
-    author = line[selected_matcher.end():]
+    quote = line[: selected_matcher.start()]
+    author = line[selected_matcher.end() :]
 
     # Check if publication exists using parentheses
     regexes = [
@@ -367,7 +509,8 @@ def _parse_quote_simple(line):
         publication = match.group(2).strip()
     else:
         raise click.ClickException(
-            "unable to parse the author and publication.  Try 'Quote - Author (Publication)', or 'Quote - Author, Publication'")
+            "unable to parse the author and publication.  Try 'Quote - Author (Publication)', or 'Quote - Author, Publication'"
+        )
 
     if publication == '':
         publication = None
@@ -393,8 +536,7 @@ def _parse_quote_extended(quote_line):
 
 
 def parse_tags(tag_string):
-    """Public function that parses tags and returns list of tags.
-    """
+    """Public function that parses tags and returns list of tags."""
 
     return _parse_tags(tag_string)
 
@@ -406,8 +548,9 @@ def _parse_tags(tag_string):
     for rawtag in rawtags:
         tag = rawtag.strip()
         if not all(c in ascii_letters + '0123456789_' for c in tag):
-            raise click.ClickException("invalid tag '{0}': only numbers, letters, and commas are "
-                                       "allowed in tags".format(tag))
+            raise click.ClickException(
+                "invalid tag '{0}': only numbers, letters, and commas are allowed in tags".format(tag)
+            )
         if tag != '':
             tagset.add(tag)
 
@@ -507,7 +650,8 @@ def add_quotes(filename, newquotes):
         for new_quote in newquotes:
             if new_quote.quote == existing_quote.quote:
                 raise click.ClickException(
-                    'the quote "{}" is already in the quote file {}.'.format(new_quote.quote, filename))
+                    'the quote "{}" is already in the quote file {}.'.format(new_quote.quote, filename)
+                )
 
     # Rewrite quote file with any additional quotes
     quotes.extend(newquotes)
@@ -524,20 +668,7 @@ def write_quotes(quote_path, quotes):
     if not os.path.exists(quote_path):
         raise click.ClickException("the quote file '{0}' was not found.".format(quote_path))
 
-    config = get_config()
-    linesep_property = config.get(APP_NAME, 'line_separator')
-    if not linesep_property:
-        newline = os.linesep
-    elif linesep_property == 'unix':
-        newline = '\n'
-    elif linesep_property == 'windows':
-        newline = '\r\n'
-    elif linesep_property == 'platform':
-        newline = os.linesep
-    else:
-        raise click.ClickException(
-            "the value '{0}' is not valid value for the line_separator property."
-            "  Valid values are 'platform', 'windows', or 'unix'.".format(linesep_property))
+    newline = _get_newline()
 
     parent_path = os.path.abspath(os.path.join(quote_path, os.pardir))
     quote_file = os.path.basename(quote_path)
@@ -568,8 +699,9 @@ def write_quotes(quote_path, quotes):
                 os.remove(temp_path)
                 raise click.ClickException(
                     "the backup file '{0}' is larger than the quote file '{1}' would be after this operation.  "
-                    "This is suspicious, the quote file was not modified.  If this was expected, "
-                    "delete the backup file and try again.".format(backup_file, quote_file))
+                    'This is suspicious, the quote file was not modified.  If this was expected, '
+                    'delete the backup file and try again.'.format(backup_file, quote_file)
+                )
 
         # Create a backup (overwriting existing backup)
         shutil.copy(quote_path, backup_path)
@@ -578,8 +710,8 @@ def write_quotes(quote_path, quotes):
     except:
         os.remove(temp_path)
         raise click.ClickException(
-            "an error occurred writing the quotes.  The file '{0}' was not modified."
-            .format(quote_path))
+            "an error occurred writing the quotes.  The file '{0}' was not modified.".format(quote_path)
+        )
 
     try:
         os.replace(temp_path, quote_path)
@@ -640,8 +772,8 @@ def _check_ascii(quote):
         for char in value:
             if ord(char) > 127:
                 raise click.ClickException(
-                    "the {0} included a non-ASCII character (U+{1:04X}): '{2}'".format(
-                        field_name, ord(char), char))
+                    "the {0} included a non-ASCII character (U+{1:04X}): '{2}'".format(field_name, ord(char), char)
+                )
 
 
 def _check_for_duplicates(quotes, source):
@@ -652,8 +784,9 @@ def _check_for_duplicates(quotes, source):
         if quote.quote not in quoteset:
             quoteset.add(quote.quote)
         else:
-            raise click.ClickException("a duplicate quote was found on line {} of '{}'.  "
-                                       "Quote: \"{}\".".format(index + 1, source, quote.quote))
+            raise click.ClickException(
+                'a duplicate quote was found on line {} of \'{}\'.  Quote: "{}".'.format(index + 1, source, quote.quote)
+            )
 
 
 def _assert_does_not_contain(text, char, component_name):
@@ -667,15 +800,32 @@ def _assert_does_not_contain(text, char, component_name):
 def _assert_no_invalid_chars_quote(text, component_name):
     match = INVALID_CHARS_QUOTE.search(text)
     if match is not None:
-        char = text[match.span()[0]:match.span()[1]]
+        char = text[match.span()[0] : match.span()[1]]
         _raise_invalid_char_exception(char, component_name)
 
 
 def _assert_no_invalid_chars(text, component_name):
     match = INVALID_CHARS.search(text)
     if match is not None:
-        char = text[match.span()[0]:match.span()[1]]
+        char = text[match.span()[0] : match.span()[1]]
         _raise_invalid_char_exception(char, component_name)
+
+
+def _get_newline():
+    """Return the newline string based on the line_separator config property."""
+    config = get_config()
+    linesep_property = config.get(APP_NAME, 'line_separator')
+    if not linesep_property or linesep_property == 'platform':
+        return os.linesep
+    elif linesep_property == 'unix':
+        return '\n'
+    elif linesep_property == 'windows':
+        return '\r\n'
+    else:
+        raise click.ClickException(
+            "the value '{0}' is not valid value for the line_separator property."
+            "  Valid values are 'platform', 'windows', or 'unix'.".format(linesep_property)
+        )
 
 
 def _raise_invalid_char_exception(char, component_name):
