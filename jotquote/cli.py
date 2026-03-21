@@ -216,11 +216,14 @@ def quotemap():
 
 @quotemap.command()
 @click.argument('quotefile', type=click.Path(exists=True))
+@click.argument('newquotemap', type=click.Path())
 @click.option('--oldquotemap', type=click.Path(), default=None, help='Path to existing quotemap file to read from.')
-@click.option('--newquotemap', type=click.Path(), required=True, help='Path to write the rebuilt quotemap file.')
 @click.option('--days', default=3652, type=int, help='Number of days into the future to generate (default: 3652).')
-def rebuild(quotefile, oldquotemap, newquotemap, days):
-    """Rebuild a quotemap file for the given number of days."""
+def rebuild(quotefile, newquotemap, oldquotemap, days):
+    """Rebuild a quotemap file for the given number of days.
+
+    NEWQUOTEMAP is the path to write the rebuilt quotemap; must not already exist.
+    """
     if oldquotemap and not os.path.exists(oldquotemap):
         raise click.ClickException("the quotemap file '{}' was not found.".format(oldquotemap))
     if os.path.exists(newquotemap):

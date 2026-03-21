@@ -159,8 +159,7 @@ def _rebuild(tmp_path, quote_file, new_quotemap, oldquotemap=None, days=None, en
     """Run `jotquote quotemap rebuild` and return the CompletedProcess."""
     if env is None:
         env = _make_env(tmp_path, quote_file)
-    cmd = [_script('jotquote'), 'quotemap', 'rebuild', str(quote_file),
-           '--newquotemap', str(new_quotemap)]
+    cmd = [_script('jotquote'), 'quotemap', 'rebuild', str(quote_file), str(new_quotemap)]
     if oldquotemap is not None:
         cmd += ['--oldquotemap', str(oldquotemap)]
     if days is not None:
@@ -212,7 +211,7 @@ def test_quotemap_rebuild_days_option(tmp_path):
 
 
 def test_quotemap_rebuild_newquotemap_already_exists(tmp_path):
-    """--newquotemap that already exists produces an error."""
+    """NEWQUOTEMAP that already exists produces an error."""
     quote_file = _copy_quotes(tmp_path)
     existing = tmp_path / 'existing.txt'
     existing.write_text('', encoding='utf-8')
@@ -232,7 +231,7 @@ def test_quotemap_rebuild_oldquotemap_not_found(tmp_path):
 
 
 def test_quotemap_rebuild_newquotemap_required(tmp_path):
-    """Omitting --newquotemap produces a usage error."""
+    """Omitting NEWQUOTEMAP produces a usage error."""
     quote_file = _copy_quotes(tmp_path)
     env = _make_env(tmp_path, quote_file)
     result = subprocess.run(
