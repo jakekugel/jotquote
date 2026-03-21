@@ -73,6 +73,23 @@ $ uv run waitress-serve --host 127.0.0.1 --port 5544 jotquote.web:app
 $ uv run ruff check jotquote/
 ```
 
+## VS Code integration
+
+Install the [Ruff extension](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) (`charliermarsh.ruff`), then add the following to your `settings.json` to enable format-on-save and lint auto-fixes:
+
+```json
+"[python]": {
+  "editor.defaultFormatter": "charliermarsh.ruff",
+  "editor.formatOnSave": true
+},
+"editor.codeActionsOnSave": {
+  "source.fixAll.ruff": "explicit",
+  "source.organizeImports.ruff": "explicit"
+}
+```
+
+This runs the Ruff formatter (style/quotes/spacing) and linter auto-fixes each time a Python file is saved. Quote style and other rules are read from `pyproject.toml` automatically.
+
 ## Multi-version CI
 
 Multi-version testing (Python 3.9–3.14 on Linux, Mac, and Windows) is

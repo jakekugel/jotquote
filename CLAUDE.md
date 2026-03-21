@@ -73,4 +73,4 @@ There are two input formats for the `add` command:
 
 ### Ruff rules
 
-Config is in `pyproject.toml` under `[tool.ruff]`: line length max 120; E501 and E722 are ignored; `tests/` directory is excluded.
+Config is in `pyproject.toml` under `[tool.ruff]`: line length max 120; E501 and E722 are ignored; `tests/` directory is excluded. Single quotes are preferred over double quotes.

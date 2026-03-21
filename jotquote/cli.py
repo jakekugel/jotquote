@@ -216,20 +216,16 @@ def quotemap():
 
 @quotemap.command()
 @click.argument('quotefile', type=click.Path(exists=True))
-@click.argument('old_quotemapfile', type=click.Path())
+@click.option('--oldquotemap', type=click.Path(), default=None, help='Path to existing quotemap file to read from.')
+@click.option('--newquotemap', type=click.Path(), required=True, help='Path to write the rebuilt quotemap file.')
 @click.option('--days', default=3652, type=int, help='Number of days into the future to generate (default: 3652).')
-def rebuild(quotefile, old_quotemapfile, days):
-    """Rebuild a quotemap file for the next 10 years.
-
-    Reads quotes from QUOTEFILE and existing entries from OLD_QUOTEMAPFILE.
-    Preserves past/today entries and future sticky entries. Regenerates all
-    other future entries using an even-distribution algorithm.
-
-    Output is printed to stdout. Redirect to a file with > quotemap.txt.
-    """
-    lines = api.rebuild_quotemap(quotefile, old_quotemapfile, days=days)
-    for line in lines:
-        click.echo(line)
+def rebuild(quotefile, oldquotemap, newquotemap, days):
+    """Rebuild a quotemap file for the given number of days."""
+    if oldquotemap and not os.path.exists(oldquotemap):
+        raise click.ClickException("the quotemap file '{}' was not found.".format(oldquotemap))
+    if os.path.exists(newquotemap):
+        raise click.ClickException("the output file '{}' already exists.".format(newquotemap))
+    api.rebuild_quotemap(quotefile, oldquotemap, newquotemap, days=days)
 
 
 def _add_quotes(quotefile, newquote_str, extended):
