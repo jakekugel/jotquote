@@ -212,7 +212,7 @@ def test_write_quotemap_sorted_by_date(config, tmp_path):
     }
     out = tmp_path / 'out.txt'
     api.write_quotemap(str(out), quotemap)
-    lines = [l for l in out.read_text(encoding='utf-8').splitlines() if l]
+    lines = [line for line in out.read_text(encoding='utf-8').splitlines() if line]
     assert lines[0].startswith('20260321')
     assert lines[1].startswith('20260323')
     assert lines[2].startswith('20260325')
