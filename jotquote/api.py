@@ -133,7 +133,7 @@ def read_quotemap(filename, include_future=True):
     fails validation.
     """
     if not filename:
-        raise click.ClickException("No quotemap file was specified.")
+        raise click.ClickException('No quotemap file was specified.')
 
     if not os.path.exists(filename):
         raise click.ClickException("The quotemap file '{0}' was not found.".format(filename))
