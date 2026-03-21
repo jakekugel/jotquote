@@ -29,10 +29,17 @@ def _tomorrow():
     return (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y%m%d')
 
 
+def _empty_quotemap(tmp_path):
+    """Create an empty quotemap file and return its path."""
+    f = tmp_path / 'quotemap.txt'
+    f.write_text('', encoding='utf-8')
+    return str(f)
+
+
 def test_rebuild_generates_entries(tmp_path):
     """Rebuild generates entries for ~10 years (~3652 days)."""
     quote_file = _copy_quotes(tmp_path)
-    quotemap_file = str(tmp_path / 'quotemap.txt')
+    quotemap_file = _empty_quotemap(tmp_path)
     lines = api.rebuild_quotemap(quote_file, quotemap_file)
     # Count data lines (non-blank, non-comment)
     data_lines = [l for l in lines if l and not l.startswith('#')]
@@ -96,7 +103,7 @@ def test_rebuild_regenerates_non_sticky_future(tmp_path):
 def test_rebuild_even_distribution(tmp_path):
     """No hash is used N+1 times until all are used N times."""
     quote_file = _copy_quotes(tmp_path)
-    quotemap_file = str(tmp_path / 'quotemap.txt')
+    quotemap_file = _empty_quotemap(tmp_path)
     lines = api.rebuild_quotemap(quote_file, quotemap_file)
 
     # Count hash usage
@@ -113,7 +120,7 @@ def test_rebuild_even_distribution(tmp_path):
 def test_rebuild_monthly_headers(tmp_path):
     """Output includes monthly comment headers."""
     quote_file = _copy_quotes(tmp_path)
-    quotemap_file = str(tmp_path / 'quotemap.txt')
+    quotemap_file = _empty_quotemap(tmp_path)
     lines = api.rebuild_quotemap(quote_file, quotemap_file)
     headers = [l for l in lines if l.startswith('# Quotes for ')]
     # At least 12 months of headers (10 years = ~120 months)
@@ -123,19 +130,18 @@ def test_rebuild_monthly_headers(tmp_path):
 def test_rebuild_deterministic(tmp_path):
     """Same input produces same output."""
     quote_file = _copy_quotes(tmp_path)
-    quotemap_file = str(tmp_path / 'quotemap.txt')
+    quotemap_file = _empty_quotemap(tmp_path)
     lines1 = api.rebuild_quotemap(quote_file, quotemap_file)
     lines2 = api.rebuild_quotemap(quote_file, quotemap_file)
     assert lines1 == lines2
 
 
 def test_rebuild_nonexistent_quotemap(tmp_path):
-    """Works with a nonexistent quotemap file (fresh generation)."""
+    """Nonexistent quotemap file raises ClickException."""
     quote_file = _copy_quotes(tmp_path)
     quotemap_file = str(tmp_path / 'does_not_exist.txt')
-    lines = api.rebuild_quotemap(quote_file, quotemap_file)
-    data_lines = [l for l in lines if l and not l.startswith('#')]
-    assert len(data_lines) == 3652
+    with pytest.raises(click.ClickException, match='not found'):
+        api.rebuild_quotemap(quote_file, quotemap_file)
 
 
 def test_rebuild_unresolvable_hash(tmp_path):
@@ -163,7 +169,7 @@ def test_rebuild_empty_quotefile(tmp_path):
 def test_rebuild_output_format(tmp_path):
     """Data lines match expected format: YYYYMMDD: <hash>  # <snippet>."""
     quote_file = _copy_quotes(tmp_path)
-    quotemap_file = str(tmp_path / 'quotemap.txt')
+    quotemap_file = _empty_quotemap(tmp_path)
     lines = api.rebuild_quotemap(quote_file, quotemap_file)
     data_lines = [l for l in lines if l and not l.startswith('#')]
     for line in data_lines[:10]:

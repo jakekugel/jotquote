@@ -158,7 +158,9 @@ def _get_hashes(quote_file, env):
 def test_quotemap_rebuild(tmp_path):
     """jotquote quotemap rebuild produces quotemap output on stdout."""
     quote_file = _copy_quotes(tmp_path)
-    quotemap_file = str(tmp_path / 'quotemap.txt')
+    qm = tmp_path / 'quotemap.txt'
+    qm.write_text('', encoding='utf-8')
+    quotemap_file = str(qm)
     env = _make_env(tmp_path, quote_file)
 
     result = subprocess.run(
@@ -220,8 +222,11 @@ def test_quotemap_rebuild_new_quote_sticky(tmp_path):
     output = result.stdout.decode('utf-8', errors='replace')
     data_lines = [l for l in output.splitlines() if l and not l.startswith('#')]
 
-    old_hashes = set(hashes[0:5])
-    new_hashes = set(hashes[5:8])
+    # hashes[0..3] are preserved (past/today/future-sticky); hashes[4] was
+    # non-sticky future so it gets discarded by include_future=False and is
+    # treated as a new hash alongside hashes[5..7].
+    old_hashes = set(hashes[0:4])
+    new_hashes = set(hashes[4:8])
 
     # (1) The 3 past/today entries are preserved with correct hashes
     past_today_lines = {l.split(':')[0]: l for l in data_lines if l.split(':')[0] in dates[:3]}

@@ -113,12 +113,15 @@ def read_quotes(filename):
     return quotes
 
 
-def read_quotemap(filename):
+def read_quotemap(filename, include_future=True):
     """Given a path to a quotemap file, this function returns a dict mapping
-    date strings (YYYYMMDD) to entry dicts.
+    date strings (YYYYMMDD) to 16-character quote hashes.
 
     Each non-blank, non-comment line must have the format:
         YYYYMMDD: <16-char-hex-hash>  # optional comment
+
+    If include_future is True (default), all entries are returned. If False,
+    future entries that are not sticky are omitted.
 
     Returns a dict where each key is a date string (YYYYMMDD) and each value
     is a dict with keys:
@@ -130,7 +133,7 @@ def read_quotemap(filename):
     fails validation.
     """
     if not filename:
-        return {}
+        raise click.ClickException("No quotemap file was specified.")
 
     if not os.path.exists(filename):
         raise click.ClickException("The quotemap file '{0}' was not found.".format(filename))
@@ -144,13 +147,14 @@ def read_quotemap(filename):
             if not line or line.startswith('#'):
                 continue
 
-            # Detect sticky marker before stripping inline comment
-            sticky = '# Sticky:' in raw_line
-
-            # Strip inline comment (everything after '#')
+            # Strip inline comment at the first '#' and detect sticky marker
             data_line = line
+            sticky = False
             if '#' in data_line:
-                data_line = data_line[:data_line.index('#')].strip()
+                comment_pos = data_line.index('#')
+                comment_text = data_line[comment_pos + 1:]
+                sticky = bool(re.match(r'\s*sticky\b', comment_text, re.IGNORECASE))
+                data_line = data_line[:comment_pos].strip()
 
             # Must contain a colon separator
             if ':' not in data_line:
@@ -161,8 +165,15 @@ def read_quotemap(filename):
             date_part = date_part.strip()
             hash_part = hash_part.strip()
 
-            # Validate date: exactly 8 digits
+            # Validate date: exactly 8 digits and a real calendar date
             if len(date_part) != 8 or not date_part.isdigit():
+                raise click.ClickException(
+                    "quotemap line {0}: invalid date '{1}'".format(lineno, date_part))
+            try:
+                parsed_date = datetime.datetime.strptime(date_part, '%Y%m%d')
+                if parsed_date.year < 2000:
+                    raise ValueError('year before 2000')
+            except ValueError:
                 raise click.ClickException(
                     "quotemap line {0}: invalid date '{1}'".format(lineno, date_part))
 
@@ -181,6 +192,12 @@ def read_quotemap(filename):
                 'sticky': sticky,
                 'raw_line': line,
             }
+
+    # If include_future is False, drop future non-sticky entries
+    if not include_future:
+        today_str = datetime.datetime.now().strftime('%Y%m%d')
+        quotemap = {d: e for d, e in quotemap.items()
+                    if d <= today_str or e['sticky']}
 
     return quotemap
 
@@ -206,35 +223,26 @@ def rebuild_quotemap(quotefile, old_quotemapfile, days=3652):
     for q in quotes:
         hash_to_quote[q.get_hash()] = q
 
-    all_hashes = [q.get_hash() for q in quotes]
+    all_hashes = list(hash_to_quote.keys())
 
-    # Read existing quotemap if it exists
+    # Read existing quotemap (include_future=False drops non-sticky future entries)
     today_str = datetime.datetime.now().strftime('%Y%m%d')
-    old_quotemap = {}
-    if old_quotemapfile and os.path.exists(old_quotemapfile):
-        old_quotemap = read_quotemap(old_quotemapfile)
+    old_quotemap = read_quotemap(old_quotemapfile, include_future=False)
 
     # Track all hashes that appear anywhere in the old quotemap (for auto-sticky detection)
     old_hashes = {entry['hash'] for entry in old_quotemap.values()}
 
-    # Separate preserved entries (past/today + future sticky) from discarded
-    preserved = {}  # date_str -> hash
-    preserved_raw = {}  # date_str -> raw_line (for past/today entries)
-    for date_str, entry in old_quotemap.items():
-        if date_str <= today_str:
-            # Past or today: preserve verbatim
-            preserved[date_str] = entry['hash']
-            preserved_raw[date_str] = entry['raw_line']
-        elif entry['sticky']:
-            # Future sticky: preserve
-            preserved[date_str] = entry['hash']
+    # Build preserved entries from old quotemap (already filtered by read_quotemap)
+    preserved = {d: e['hash'] for d, e in old_quotemap.items()}
+    preserved_raw = {d: e['raw_line'] for d, e in old_quotemap.items() if d <= today_str}
 
     # Validate all preserved hashes resolve to a quote
     for date_str, hash_val in preserved.items():
         if hash_val not in hash_to_quote:
+            raw_line = old_quotemap[date_str]['raw_line']
             raise click.ClickException(
-                "quotemap date {0}: hash '{1}' does not match any quote in the quote file.".format(
-                    date_str, hash_val))
+                "quotemap date {0}: hash '{1}' does not match any quote in the quote file. "
+                "Line: '{2}'".format(date_str, hash_val, raw_line))
 
     # Build hash-to-count from preserved entries
     hash_to_count = {h: 0 for h in all_hashes}
@@ -242,7 +250,7 @@ def rebuild_quotemap(quotefile, old_quotemapfile, days=3652):
         if hash_val in hash_to_count:
             hash_to_count[hash_val] += 1
 
-    # Generate future dates: tomorrow through 10 years out
+    # Generate future dates: tomorrow through the specified number of days
     today = datetime.datetime.now().date()
     tomorrow = today + datetime.timedelta(days=1)
     end_date = today + datetime.timedelta(days=days)

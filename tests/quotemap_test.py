@@ -45,9 +45,9 @@ def test_read_quotemap_missing_file(tmp_path):
 
 
 def test_read_quotemap_empty_path():
-    """Empty string path returns empty dict."""
-    result = api.read_quotemap('')
-    assert result == {}
+    """Empty string path raises ClickException."""
+    with pytest.raises(click.ClickException, match='No quotemap file was specified'):
+        api.read_quotemap('')
 
 
 def test_read_quotemap_invalid_date(tmp_path):
@@ -116,6 +116,19 @@ def test_read_quotemap_sticky(tmp_path):
     assert result['20260320']['sticky'] is False
 
 
+def test_read_quotemap_sticky_case_insensitive(tmp_path):
+    """Sticky detection is case-insensitive and allows extra whitespace."""
+    f = tmp_path / 'quotemap.txt'
+    f.write_text(
+        '20260319: a1b2c3d4e5f67890  #   STICKY: some quote\n'
+        '20260320: 25382c2519fb23bd  #sticky: another\n',
+        encoding='utf-8',
+    )
+    result = api.read_quotemap(str(f))
+    assert result['20260319']['sticky'] is True
+    assert result['20260320']['sticky'] is True
+
+
 def test_read_quotemap_raw_line(tmp_path):
     """Each entry includes the raw_line from the file."""
     f = tmp_path / 'quotemap.txt'
@@ -134,3 +147,40 @@ def test_read_quotemap_mixed_valid_invalid(tmp_path):
     )
     with pytest.raises(click.ClickException):
         api.read_quotemap(str(f))
+
+
+def test_read_quotemap_invalid_calendar_date(tmp_path):
+    """February 32nd is not a real date and raises ClickException."""
+    f = tmp_path / 'quotemap.txt'
+    f.write_text('20260232: a1b2c3d4e5f67890\n', encoding='utf-8')
+    with pytest.raises(click.ClickException, match='invalid date'):
+        api.read_quotemap(str(f))
+
+
+def test_read_quotemap_year_before_2000(tmp_path):
+    """Dates with year before 2000 raise ClickException."""
+    f = tmp_path / 'quotemap.txt'
+    f.write_text('19990101: a1b2c3d4e5f67890\n', encoding='utf-8')
+    with pytest.raises(click.ClickException, match='invalid date'):
+        api.read_quotemap(str(f))
+
+
+def test_read_quotemap_include_future_false(tmp_path, monkeypatch):
+    """include_future=False omits future non-sticky entries."""
+    import datetime as dt
+    monkeypatch.setattr(dt, 'datetime', type('MockDT', (dt.datetime,), {
+        'now': staticmethod(lambda: dt.datetime(2026, 3, 20)),
+    }))
+    f = tmp_path / 'quotemap.txt'
+    f.write_text(
+        '20260319: a1b2c3d4e5f67890\n'                     # past
+        '20260320: 25382c2519fb23bd\n'                      # today
+        '20260321: a1b2c3d4e5f67890  # sticky: keep\n'     # future sticky
+        '20260322: 25382c2519fb23bd  # drop this\n',        # future non-sticky
+        encoding='utf-8',
+    )
+    result = api.read_quotemap(str(f), include_future=False)
+    assert '20260319' in result
+    assert '20260320' in result
+    assert '20260321' in result
+    assert '20260322' not in result
