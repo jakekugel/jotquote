@@ -114,18 +114,6 @@ body {
     font-style: italic;
 }
 
-.command {
-    font-family: Consolas, Monaco, 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Courier New', monospace;
-    font-size: 100%;
-    border: 2px;
-    color: var(--cmd-fg);
-    border-style: solid;
-    background-color: var(--cmd-bg);
-    border-radius: 8px;
-    padding: 5px;
-    margin-top: 5px;
-}
-
 .horiz-line {
     height: 2px;
     background: var(--horiz-line);
@@ -198,6 +186,7 @@ body {
             var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', next);
             localStorage.setItem('jotquote-theme', next);
+            // \u2600 = ☀ (sun, light mode icon); \uD83C\uDF19 = 🌙 (crescent moon, dark mode icon)
             document.getElementById('theme-toggle').textContent = next === 'dark' ? '\u2600' : '\uD83C\uDF19';
         }
 
@@ -207,6 +196,7 @@ body {
 
         document.addEventListener('DOMContentLoaded', function() {
             var theme = document.documentElement.getAttribute('data-theme') || 'dark';
+            // \u2600 = ☀ (sun, light mode icon); \uD83C\uDF19 = 🌙 (crescent moon, dark mode icon)
             document.getElementById('theme-toggle').textContent = theme === 'dark' ? '\u2600' : '\uD83C\uDF19';
         });
     </script>
