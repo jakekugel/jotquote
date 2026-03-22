@@ -63,6 +63,10 @@ def showpage(date_path_param=None):
     cap_minutes = int(config[api.APP_NAME].get('web_cache_minutes', '240'))
     page_title = config[api.APP_NAME].get('web_page_title', 'jotquote')
     show_stars = config[api.APP_NAME].get('web_show_stars', 'false').lower() == 'true'
+    light_fg = config[api.APP_NAME].get('web_light_foreground_color', '#000000')
+    light_bg = config[api.APP_NAME].get('web_light_background_color', '#ffffff')
+    dark_fg = config[api.APP_NAME].get('web_dark_foreground_color', '#ffffff')
+    dark_bg = config[api.APP_NAME].get('web_dark_background_color', '#000000')
     max_age = min(cap_minutes * 60, seconds_until_midnight)
 
     # Determine display date
@@ -77,7 +81,9 @@ def showpage(date_path_param=None):
 
     quotes = get_quotes()
     if quotes is None:
-        response = make_response(render_template('unavailable.html', date1=date1, page_title=page_title))
+        response = make_response(render_template('unavailable.html', date1=date1, page_title=page_title,
+                                                 light_fg=light_fg, light_bg=light_bg,
+                                                 dark_fg=dark_fg, dark_bg=dark_bg))
         response.headers['Cache-Control'] = f'public, max-age={max_age}'
         return response
 
@@ -124,7 +130,9 @@ def showpage(date_path_param=None):
     response = make_response(render_template('quote.html', quote=quote.quote, author=quote.author, date1=date1,
                                              publication=quote.publication, quotenum=(index + 1),
                                              totalquotes=len(quotes), page_title=page_title, stars=stars,
-                                             show_stars=show_stars, permalink=permalink))
+                                             show_stars=show_stars, permalink=permalink,
+                                             light_fg=light_fg, light_bg=light_bg,
+                                             dark_fg=dark_fg, dark_bg=dark_bg))
     response.headers['Cache-Control'] = f'public, max-age={max_age}'
     return response
 

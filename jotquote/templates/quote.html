@@ -1,11 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ page_title }}</title>
 
-<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<script>
+  document.documentElement.setAttribute(
+    'data-theme',
+    localStorage.getItem('jotquote-theme') || 'dark'
+  );
+</script>
 <style>
 
 @font-face {
@@ -29,6 +35,43 @@
     src: url("{{ url_for('static', filename='fonts/OpenSans-Italic.ttf') }}") format('truetype');
 }
 
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    src: url("{{ url_for('static', filename='fonts/Inter-VariableFont_opsz,wght.ttf') }}") format('truetype');
+}
+
+@font-face {
+    font-family: 'Inter';
+    font-style: italic;
+    font-weight: 100 900;
+    src: url("{{ url_for('static', filename='fonts/Inter-Italic-VariableFont_opsz,wght.ttf') }}") format('truetype');
+}
+
+[data-theme="dark"] {
+    --fg:           {{ dark_fg }};
+    --bg:           {{ dark_bg }};
+    --horiz-line:   #555555;
+    --cmd-bg:       #505050;
+    --cmd-fg:       #e8e8e8;
+    --muted-fg:     #999999;
+}
+
+[data-theme="light"] {
+    --fg:           {{ light_fg }};
+    --bg:           {{ light_bg }};
+    --horiz-line:   #aaaaaa;
+    --cmd-bg:       #e4e4e4;
+    --cmd-fg:       #111111;
+    --muted-fg:     #555555;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--fg);
+}
+
 /* Centering CSS from here: https://stackoverflow.com/a/36717369 */
 .container {
     width: 40em;
@@ -36,21 +79,16 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    -webkit-transform: translate(-50%, -50%);
-    -moz-transform: translate(-50%, -50%);
-    -o-transform: translate(-50%, -50%);
-    -ms-transform: translate(-50%, -50%);
-
 }
 
 .quote {
-    font-family: "Open Sans", Palatino, serif;
+    font-family: "Inter", sans-serif;
     font-size: 175%;
 
 }
 
 .author {
-    font-family: "Open Sans", Palatino, serif;
+    font-family: "Inter", sans-serif;
     font-size: 175%;
     font-variant: small-caps;
     font-weight: bold;
@@ -66,7 +104,7 @@
 
 .stars {
     font-size: 131%;
-    color: black;
+    color: var(--fg);
     margin-top: -6px;
 }
 
@@ -77,37 +115,35 @@
 }
 
 .command {
-    font-family:Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New,monospace;
+    font-family: Consolas, Monaco, 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Courier New', monospace;
     font-size: 100%;
     border: 2px;
-    color: white;
+    color: var(--cmd-fg);
     border-style: solid;
-    background-color: #505050;
+    background-color: var(--cmd-bg);
     border-radius: 8px;
     padding: 5px;
     margin-top: 5px;
 }
 
 .horiz-line {
-    height:2px;
-    background:black;
+    height: 2px;
+    background: var(--horiz-line);
     margin-left: auto;
     margin-right: auto;
 }
 
-.permalink {
-    font-family: "Open Sans", Palatino, serif;
-    font-size: 75%;
+.icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted-fg);
+    font-size: 100%;
+    padding: 0;
+    line-height: 1;
 }
 
-.permalink a {
-    color: #999999;
-    text-decoration: none;
-}
-
-.permalink a:hover {
-    text-decoration: underline;
-}
+.icon-btn:hover { opacity: 0.7; }
 
 /* Modify CSS for small screens */
 @media screen and (max-width: 700px) {
@@ -135,7 +171,7 @@
 
 </style>
 </head>
-<body style="background-color:white;">
+<body>
     <div class="container">
         <div class="horiz-line"></div>
         <div class="quote">{{ quote }}</div>
@@ -148,11 +184,31 @@
             <span class="stars">{% if show_stars and stars > 0 %}{{ '★' * stars }}{{ '☆' * (5 - stars) }}{% endif %}</span>
             <span>
               {% if permalink %}
-                <span class="permalink"><a href="{{ permalink }}">permalink</a></span>
+                <button class="icon-btn" id="permalink-btn" onclick="copyPermalink('{{ permalink }}')"
+                        title="Copy permalink" aria-label="Copy permalink">&#x1F517;</button>
               {% endif %}
+              <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()"
+                      title="Toggle light/dark mode" aria-label="Toggle light/dark mode"></button>
             </span>
             <span class="date">{{ date1 }}</span>
         </div>
     </div>
+    <script>
+        function toggleTheme() {
+            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('jotquote-theme', next);
+            document.getElementById('theme-toggle').textContent = next === 'dark' ? '\u2600' : '\uD83C\uDF19';
+        }
+
+        function copyPermalink(path) {
+            navigator.clipboard.writeText(window.location.origin + path);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var theme = document.documentElement.getAttribute('data-theme') || 'dark';
+            document.getElementById('theme-toggle').textContent = theme === 'dark' ? '\u2600' : '\uD83C\uDF19';
+        });
+    </script>
 </body>
 </html>

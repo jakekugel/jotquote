@@ -1,11 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ page_title }}</title>
 
-<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<script>
+  document.documentElement.setAttribute(
+    'data-theme',
+    localStorage.getItem('jotquote-theme') || 'dark'
+  );
+</script>
 <style>
 
 @font-face {
@@ -29,6 +35,45 @@
     src: url("{{ url_for('static', filename='fonts/OpenSans-Italic.ttf') }}") format('truetype');
 }
 
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    src: url("{{ url_for('static', filename='fonts/Inter-VariableFont_opsz,wght.ttf') }}") format('truetype');
+}
+
+@font-face {
+    font-family: 'Inter';
+    font-style: italic;
+    font-weight: 100 900;
+    src: url("{{ url_for('static', filename='fonts/Inter-Italic-VariableFont_opsz,wght.ttf') }}") format('truetype');
+}
+
+[data-theme="dark"] {
+    --fg:           {{ dark_fg }};
+    --bg:           {{ dark_bg }};
+    --horiz-line:   #555555;
+    --input-bg:     #2a2a2a;
+    --border-color: #555555;
+    --btn-bg:       #444444;
+    --muted-fg:     #999999;
+}
+
+[data-theme="light"] {
+    --fg:           {{ light_fg }};
+    --bg:           {{ light_bg }};
+    --horiz-line:   #aaaaaa;
+    --input-bg:     #f4f4f4;
+    --border-color: #bbbbbb;
+    --btn-bg:       #dddddd;
+    --muted-fg:     #555555;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--fg);
+}
+
 .container {
     width: 40em;
     margin: 2em auto;
@@ -36,13 +81,13 @@
 }
 
 .quote {
-    font-family: "Open Sans", Palatino, serif;
+    font-family: "Inter", sans-serif;
     font-size: 175%;
 
 }
 
 .author {
-    font-family: "Open Sans", Palatino, serif;
+    font-family: "Inter", sans-serif;
     font-size: 175%;
     font-variant: small-caps;
     font-weight: bold;
@@ -58,7 +103,7 @@
 
 .stars {
     font-size: 131%;
-    color: black;
+    color: var(--fg);
     margin-top: -6px;
 }
 
@@ -69,8 +114,8 @@
 }
 
 .horiz-line {
-    height:2px;
-    background:black;
+    height: 2px;
+    background: var(--horiz-line);
     margin-left: auto;
     margin-right: auto;
 }
@@ -106,14 +151,17 @@
     margin-top: 0.3em;
     padding: 4px 6px;
     resize: vertical;
+    background-color: var(--input-bg);
+    color: var(--fg);
+    border: 1px solid var(--border-color);
 }
 
 .save-button {
-    background-color: #CCCCCC;
+    background-color: var(--btn-bg);
     border: 1px;
     border-style: solid;
     border-radius: 4px;
-    color: black;
+    color: var(--fg);
     font-family: "Open Sans", Palatino, serif;
     font-size: 90%;
     font-weight: bold;
@@ -121,6 +169,18 @@
     margin-top: 0.8em;
     padding: 4px 10px;
 }
+
+.icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted-fg);
+    font-size: 100%;
+    padding: 0;
+    line-height: 1;
+}
+
+.icon-btn:hover { opacity: 0.7; }
 
 /* Modify CSS for small screens */
 @media screen and (max-width: 700px) {
@@ -148,7 +208,7 @@
 
 </style>
 </head>
-<body style="background-color:white;">
+<body>
     <div class="container">
         <div class="horiz-line"></div>
         <div class="quote">{{ quote }}</div>
@@ -159,6 +219,8 @@
         <div class="horiz-line"></div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <span class="stars">{% if show_stars and stars > 0 %}{{ '★' * stars }}{{ '☆' * (5 - stars) }}{% endif %}</span>
+            <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()"
+                    title="Toggle light/dark mode" aria-label="Toggle light/dark mode"></button>
             <span class="date">{{ date1 }}</span>
         </div>
         <form method="POST" action="/settags">
@@ -190,5 +252,18 @@
             <button type="submit" class="save-button">Save Tags</button>
         </form>
     </div>
+    <script>
+        function toggleTheme() {
+            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('jotquote-theme', next);
+            document.getElementById('theme-toggle').textContent = next === 'dark' ? '\u2600' : '\uD83C\uDF19';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var theme = document.documentElement.getAttribute('data-theme') || 'dark';
+            document.getElementById('theme-toggle').textContent = theme === 'dark' ? '\u2600' : '\uD83C\uDF19';
+        });
+    </script>
 </body>
 </html>

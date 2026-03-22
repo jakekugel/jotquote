@@ -20,6 +20,10 @@ def index():
     quotefile = config.get(api.APP_NAME, 'quote_file')
     page_title = config.get(api.APP_NAME, 'web_page_title', fallback='jotquote')
     show_stars = config[api.APP_NAME].get('web_show_stars', 'false').lower() == 'true'
+    light_fg = config[api.APP_NAME].get('web_light_foreground_color', '#000000')
+    light_bg = config[api.APP_NAME].get('web_light_background_color', '#ffffff')
+    dark_fg = config[api.APP_NAME].get('web_dark_foreground_color', '#ffffff')
+    dark_bg = config[api.APP_NAME].get('web_dark_background_color', '#000000')
 
     quotes = api.read_quotes(quotefile)
     quote = api.get_first_match(quotes, excluded_tags=','.join(STAR_TAGS), rand=False)
@@ -48,6 +52,10 @@ def index():
         star_tag=star_tag,
         visibility_tag=visibility_tag,
         other_tags='\n'.join(other_tags),
+        light_fg=light_fg,
+        light_bg=light_bg,
+        dark_fg=dark_fg,
+        dark_bg=dark_bg,
     )
 
 
