@@ -7,15 +7,15 @@ from dataclasses import dataclass
 from typing import Optional
 
 ALL_CHECKS = frozenset({
-    'ascii',
-    'smart-quotes',
-    'spelling',
-    'no-tags',
-    'no-author',
-    'author-antipatterns',
-    'multiple-stars',
-    'no-star',
-    'no-visibility',
+    'ascii',             # Flag non-ASCII characters in quote, author, or publication
+    'smart-quotes',      # Flag (and fix) typographic/smart quote characters
+    'spelling',          # Flag possible misspellings in the quote text (requires pyspellchecker)
+    'no-tags',           # Flag quotes with no tags
+    'no-author',         # Flag quotes with no author
+    'author-antipatterns',  # Flag author fields matching known bad patterns (anonymous, trailing punctuation, all-caps)
+    'multiple-stars',    # Flag quotes with more than one star-rating tag
+    'no-star',           # Flag quotes with no star-rating tag
+    'no-visibility',     # Flag quotes missing a configured visibility tag
 })
 
 # Smart/typographic quote characters and their ASCII replacements
@@ -44,7 +44,7 @@ class LintIssue:
 
 def lint_quotes(quotes, checks, config):
     """Run enabled checks against all quotes. Returns a list of LintIssue."""
-    lint_cfg = config['jotquote.lint']
+    lint_cfg = config['jotquote']
     issues = []
     for quote in quotes:
         if 'ascii' in checks:

@@ -250,22 +250,7 @@ def lint(ctx, fix, select_checks, ignore_checks, output_format, quiet):
     quotefile = ctx.obj['QUOTEFILE']
     config = api.get_config()
 
-    # Determine active check set
-    all_checks = lintmod.ALL_CHECKS
-    if select_checks:
-        checks = {c.strip() for c in select_checks.split(',') if c.strip()}
-        invalid = checks - all_checks
-        if invalid:
-            raise click.ClickException('Unknown check(s): {}'.format(', '.join(sorted(invalid))))
-    elif ignore_checks:
-        ignore = {c.strip() for c in ignore_checks.split(',') if c.strip()}
-        invalid = ignore - all_checks
-        if invalid:
-            raise click.ClickException('Unknown check(s): {}'.format(', '.join(sorted(invalid))))
-        checks = all_checks - ignore
-    else:
-        raw = config.get('jotquote.lint', 'enabled_checks', fallback='')
-        checks = {c.strip() for c in raw.split(',') if c.strip()} if raw.strip() else all_checks
+    checks = _get_active_checks(select_checks, ignore_checks, config)
 
     quotes = api.read_quotes(quotefile)
     issues = lintmod.lint_quotes(quotes, checks, config)
@@ -304,6 +289,27 @@ def lint(ctx, fix, select_checks, ignore_checks, output_format, quiet):
             click.echo('{} issue{} found.'.format(issue_count, 's' if issue_count != 1 else ''))
 
     sys.exit(1 if issues else 0)
+
+
+def _get_active_checks(select_checks, ignore_checks, config):
+    """Determine the set of lint checks to run based on CLI flags and config."""
+    from jotquote import lint as lintmod
+    all_checks = lintmod.ALL_CHECKS
+    if select_checks:
+        checks = {c.strip() for c in select_checks.split(',') if c.strip()}
+        invalid = checks - all_checks
+        if invalid:
+            raise click.ClickException('Unknown check(s): {}'.format(', '.join(sorted(invalid))))
+    elif ignore_checks:
+        ignore = {c.strip() for c in ignore_checks.split(',') if c.strip()}
+        invalid = ignore - all_checks
+        if invalid:
+            raise click.ClickException('Unknown check(s): {}'.format(', '.join(sorted(invalid))))
+        checks = all_checks - ignore
+    else:
+        raw = config.get('jotquote', 'enabled_checks', fallback='')
+        checks = {c.strip() for c in raw.split(',') if c.strip()} if raw.strip() else all_checks
+    return checks
 
 
 def _add_quotes(quotefile, newquote_str, extended):

@@ -97,6 +97,10 @@ class Quote:
                 return i
         return 0
 
+    def get_line_number(self):
+        """Return the line number of this quote in the quote file."""
+        return self.line_number
+
 
 def read_quotes(filename):
     """Given a path to quote file, this function returns a list of Quote objects containing
@@ -596,16 +600,15 @@ def get_config():
     config = ConfigParser()
     config.read(CONFIG_FILE)
 
-    # Add lint section defaults in memory if not present in the config file
-    if not config.has_section('jotquote.lint'):
-        config.add_section('jotquote.lint')
-        config['jotquote.lint']['enabled_checks'] = (
+    # Add lint defaults in memory to the jotquote section if not present
+    if not config.has_option(APP_NAME, 'enabled_checks'):
+        config[APP_NAME]['enabled_checks'] = (
             'ascii, smart-quotes, spelling, no-tags, no-author, '
             'author-antipatterns, multiple-stars, no-star, no-visibility'
         )
-        config['jotquote.lint']['visibility_tags'] = ''
-        config['jotquote.lint']['spell_ignore'] = ''
-        config['jotquote.lint']['author_antipattern_regex'] = ''
+        config[APP_NAME]['visibility_tags'] = ''
+        config[APP_NAME]['spell_ignore'] = ''
+        config[APP_NAME]['author_antipattern_regex'] = ''
 
     # If we made it here, the settings.conf file exists
     return config
