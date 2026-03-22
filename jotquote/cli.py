@@ -231,6 +231,81 @@ def rebuild(quotefile, newquotemap, oldquotemap, days):
     api.rebuild_quotemap(quotefile, oldquotemap, newquotemap, days=days)
 
 
+@jotquote.command()
+@click.option('--fix', is_flag=True, help='Auto-fix issues that can be corrected safely.')
+@click.option('--select', 'select_checks', default='', help='Comma-separated list of checks to run (disables all others).')
+@click.option('--ignore', 'ignore_checks', default='', help='Comma-separated list of checks to skip.')
+@click.option('--format', 'output_format', type=click.Choice(['text', 'json']), default='text', help='Output format.')
+@click.option('--quiet', '-q', is_flag=True, help='Suppress per-issue output; only show summary.')
+@click.pass_context
+def lint(ctx, fix, select_checks, ignore_checks, output_format, quiet):
+    """Check the quote file for quality issues."""
+    import json as jsonmod
+
+    from jotquote import lint as lintmod
+
+    if select_checks and ignore_checks:
+        raise click.ClickException('--select and --ignore are mutually exclusive.')
+
+    quotefile = ctx.obj['QUOTEFILE']
+    config = api.get_config()
+
+    # Determine active check set
+    all_checks = lintmod.ALL_CHECKS
+    if select_checks:
+        checks = {c.strip() for c in select_checks.split(',') if c.strip()}
+        invalid = checks - all_checks
+        if invalid:
+            raise click.ClickException('Unknown check(s): {}'.format(', '.join(sorted(invalid))))
+    elif ignore_checks:
+        ignore = {c.strip() for c in ignore_checks.split(',') if c.strip()}
+        invalid = ignore - all_checks
+        if invalid:
+            raise click.ClickException('Unknown check(s): {}'.format(', '.join(sorted(invalid))))
+        checks = all_checks - ignore
+    else:
+        raw = config.get('jotquote.lint', 'enabled_checks', fallback='')
+        checks = {c.strip() for c in raw.split(',') if c.strip()} if raw.strip() else all_checks
+
+    quotes = api.read_quotes(quotefile)
+    issues = lintmod.lint_quotes(quotes, checks, config)
+
+    fix_count = 0
+    if fix:
+        quotes, fix_count = lintmod.apply_fixes(quotes, issues)
+        if fix_count > 0:
+            api.write_quotes(quotefile, quotes)
+            quotes = api.read_quotes(quotefile)
+            issues = lintmod.lint_quotes(quotes, checks, config)
+
+    if output_format == 'json':
+        result = [
+            {
+                'line': i.line_number,
+                'check': i.check,
+                'field': i.field,
+                'message': i.message,
+                'fixable': i.fixable,
+            }
+            for i in issues
+        ]
+        click.echo(jsonmod.dumps(result, indent=2))
+    else:
+        if not quiet:
+            for issue in issues:
+                fixable_str = ' (fixable)' if issue.fixable else ''
+                click.echo('line {}: [{}] {}{}'.format(issue.line_number, issue.check, issue.message, fixable_str))
+        issue_count = len(issues)
+        if fix and fix_count > 0:
+            click.echo('{} fix{} applied.'.format(fix_count, 'es' if fix_count != 1 else ''))
+        if issue_count == 0:
+            click.echo('No issues found.')
+        else:
+            click.echo('{} issue{} found.'.format(issue_count, 's' if issue_count != 1 else ''))
+
+    sys.exit(1 if issues else 0)
+
+
 def _add_quotes(quotefile, newquote_str, extended):
     """Adds the new quote(s) to the quote file."""
 

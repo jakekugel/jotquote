@@ -43,6 +43,7 @@ class Quote:
 
         self.tags = []
         self.set_tags(tags)
+        self.line_number = 0
 
     def __eq__(self, other):
         if (
@@ -405,6 +406,7 @@ def parse_quotes(rawlines, filename, encoding=None, simple_format=True):
 
         try:
             quote = _parse_quote(line, simple_format=simple_format)
+            quote.line_number = linenum
             quotes.append(quote)
         except Exception as exception:
             raise click.ClickException(
@@ -593,6 +595,17 @@ def get_config():
 
     config = ConfigParser()
     config.read(CONFIG_FILE)
+
+    # Add lint section defaults in memory if not present in the config file
+    if not config.has_section('jotquote.lint'):
+        config.add_section('jotquote.lint')
+        config['jotquote.lint']['enabled_checks'] = (
+            'ascii, smart-quotes, spelling, no-tags, no-author, '
+            'author-antipatterns, multiple-stars, no-star, no-visibility'
+        )
+        config['jotquote.lint']['visibility_tags'] = ''
+        config['jotquote.lint']['spell_ignore'] = ''
+        config['jotquote.lint']['author_antipattern_regex'] = ''
 
     # If we made it here, the settings.conf file exists
     return config

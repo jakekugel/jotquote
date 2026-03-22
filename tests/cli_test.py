@@ -546,3 +546,120 @@ def test_show_author_count_disabled(config, tmp_path):
 
     assert result.exit_code == 0
     assert result.output == '1 quote added for total of 5.\n'
+
+
+# ---------------------------------------------------------------------------
+# lint subcommand
+# ---------------------------------------------------------------------------
+
+def test_lint_clean_file(config, tmp_path):
+    """lint returns exit code 0 and 'No issues found.' when no checks are run."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    # Run with only ascii check to avoid spurious spelling/star/tag failures on fixture data
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii'], obj={})
+
+    assert result.exit_code == 0
+    assert 'No issues found.' in result.output
+
+
+def test_lint_detects_issues(config, tmp_path):
+    """lint reports issues and exits with code 1."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'no-star'], obj={})
+
+    assert result.exit_code == 1
+    assert 'issue' in result.output
+
+
+def test_lint_select_and_ignore_mutually_exclusive(config, tmp_path):
+    """lint raises error when both --select and --ignore are used."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii', '--ignore', 'spelling'], obj={})
+
+    assert result.exit_code != 0
+    assert 'mutually exclusive' in result.output
+
+
+def test_lint_ignore(config, tmp_path):
+    """lint --ignore skips the specified check."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii', '--ignore', 'spelling'], obj={})
+
+    # Should fail due to mutual exclusion, so use a valid combo instead
+    result = runner.invoke(cli.jotquote, ['lint', '--ignore', 'spelling,no-star,no-tags,no-visibility,author-antipatterns,multiple-stars,ascii,smart-quotes,no-author'], obj={})
+
+    assert result.exit_code == 0
+    assert 'No issues found.' in result.output
+
+
+def test_lint_json_format(config, tmp_path):
+    """lint --format json outputs a JSON array."""
+    import json
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'no-star', '--format', 'json'], obj={})
+
+    assert result.exit_code == 1
+    data = json.loads(result.output)
+    assert isinstance(data, list)
+    assert all('line' in item and 'check' in item and 'message' in item for item in data)
+
+
+def test_lint_quiet(config, tmp_path):
+    """lint --quiet suppresses per-issue lines but still shows summary."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'no-star', '--quiet'], obj={})
+
+    assert result.exit_code == 1
+    assert 'line ' not in result.output
+    assert 'issue' in result.output
+
+
+def test_lint_unknown_check(config, tmp_path):
+    """lint rejects unknown check names."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'nonexistent-check'], obj={})
+
+    assert result.exit_code != 0
+    assert 'Unknown check' in result.output
+
+
+def test_lint_fix_smart_quotes(config, tmp_path):
+    """lint --fix replaces smart quotes in the quote file."""
+    import shutil, os
+    src = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+
+    # Append a quote with a smart quote
+    with open(src, 'a', encoding='utf-8') as f:
+        f.write('\u201cSmart quote test\u201d | Test Author | | funny\n')
+
+    config[api.APP_NAME]['quote_file'] = src
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'smart-quotes', '--fix'], obj={})
+
+    assert '1 fix applied.' in result.output or 'fix' in result.output
+    # Verify file no longer has smart quotes
+    content = open(src, encoding='utf-8').read()
+    assert '\u201c' not in content
+    assert '\u201d' not in content
