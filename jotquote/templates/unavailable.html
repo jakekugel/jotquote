@@ -52,8 +52,6 @@
 [data-theme="dark"] {
     --fg:           {{ dark_fg }};
     --bg:           {{ dark_bg }};
-    --cmd-bg:       #505050;
-    --cmd-fg:       #e8e8e8;
     --btn-bg:       #444444;
     --muted-fg:     #999999;
 }
@@ -61,8 +59,6 @@
 [data-theme="light"] {
     --fg:           {{ light_fg }};
     --bg:           {{ light_bg }};
-    --cmd-bg:       #e4e4e4;
-    --cmd-fg:       #111111;
     --btn-bg:       #dddddd;
     --muted-fg:     #555555;
 }
@@ -105,18 +101,6 @@ body {
     font-style: italic;
 }
 
-.command {
-    font-family: Consolas, Monaco, 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Courier New', monospace;
-    font-size: 100%;
-    border: 2px;
-    color: var(--cmd-fg);
-    border-style: solid;
-    background-color: var(--cmd-bg);
-    border-radius: 8px;
-    padding: 5px;
-    margin-top: 5px;
-}
-
 .quotenum {
     float: right;
 }
@@ -138,11 +122,6 @@ body {
     cursor: pointer;
 }
 </style>
-    <script>
-        function setDisplay (target, str) {
-            document.getElementById(target).style.display = str;
-        }
-    </script>
 </head>
 <body>
     <div class="container">
@@ -152,9 +131,6 @@ body {
             </span>
             <span class="footer quotenum">{{ date1 }}</span>
         </div>
-        {% if hash is not none %}
-            <div id='settag' class="command" style="display:none;">$ jotquote settags -s {{hash}} {{comma_tags}}</div>
-        {% endif %}
     </div>
 </body>
 </html>

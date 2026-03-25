@@ -158,21 +158,16 @@ body {
     height: 1.25em;
     vertical-align: middle;
     background-color: var(--fg);
-    -webkit-mask-size: contain;
     mask-size: contain;
-    -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
-    -webkit-mask-position: center;
     mask-position: center;
 }
 
 .theme-icon {
-    -webkit-mask-image: url("{{ url_for('static', filename='icons/night-mode.svg') }}");
     mask-image: url("{{ url_for('static', filename='icons/night-mode.svg') }}");
 }
 
 .copy-link-icon {
-    -webkit-mask-image: url("{{ url_for('static', filename='icons/copy-link.svg') }}");
     mask-image: url("{{ url_for('static', filename='icons/copy-link.svg') }}");
 }
 
