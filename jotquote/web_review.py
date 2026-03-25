@@ -3,6 +3,7 @@
 # file in the root of this repository for complete details.
 
 import datetime
+import logging
 
 from flask import Flask, redirect, render_template, request
 
@@ -10,8 +11,34 @@ from jotquote import api
 
 app = Flask(__name__)
 
+_LOG_FORMAT = '%(levelname)s %(name)s:%(message)s'
+
+# Configure the root logger at module load time so the format applies regardless
+# of whether the app is launched via 'jotquote webserver' or a WSGI server directly.
+logging.basicConfig(level=logging.INFO, format=_LOG_FORMAT)
+
+# Named logger for HTTP access lines; propagates to the root handler configured above.
+_access_logger = logging.getLogger('jotquote.access')
+_access_logger.setLevel(logging.INFO)
+
 STAR_TAGS = ['1star', '2stars', '3stars', '4stars', '5stars']
 VISIBILITY_TAGS = ['personal', 'family', 'public']
+
+
+def _sanitize_for_log(value):
+    """Remove newline and carriage return characters to prevent log injection."""
+    return value.replace('\r', '').replace('\n', '')
+
+
+@app.after_request
+def log_request(response):
+    _access_logger.info(
+        '%s %s %s',
+        request.method,
+        _sanitize_for_log(request.full_path.rstrip('?')),
+        response.status_code,
+    )
+    return response
 
 
 @app.route('/')

@@ -103,14 +103,14 @@ body {
 }
 
 .stars {
-    font-size: 131%;
+    font-size: 120%;
     color: var(--fg);
-    margin-top: -6px;
+
 }
 
 .date {
     font-family: "Open Sans", Palatino, serif;
-    font-size: 100%;
+    font-size: 120%;
     font-style: italic;
 }
 
@@ -122,16 +122,59 @@ body {
 }
 
 .icon-btn {
-    background: none;
+    display: flex;
+    align-items: center;
+    background: transparent;
     border: none;
     cursor: pointer;
-    color: var(--muted-fg);
-    font-size: 100%;
+    font-size: 102%;
     padding: 0;
-    line-height: 1;
+    border-radius: 4px;
 }
 
 .icon-btn:hover { opacity: 0.7; }
+
+.icon-btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--fg);
+    color: var(--fg);
+}
+
+.footer-row {
+    display: flex;
+    flex: 1;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-group {
+    display: flex;
+    align-items: center;
+}
+
+.theme-icon, .copy-link-icon {
+    display: inline-block;
+    width: 1.25em;
+    height: 1.25em;
+    vertical-align: middle;
+    background-color: var(--fg);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+}
+
+.theme-icon {
+    -webkit-mask-image: url("{{ url_for('static', filename='icons/night-mode.svg') }}");
+    mask-image: url("{{ url_for('static', filename='icons/night-mode.svg') }}");
+}
+
+.copy-link-icon {
+    -webkit-mask-image: url("{{ url_for('static', filename='icons/copy-link.svg') }}");
+    mask-image: url("{{ url_for('static', filename='icons/copy-link.svg') }}");
+}
 
 /* Modify CSS for small screens */
 @media screen and (max-width: 700px) {
@@ -168,17 +211,17 @@ body {
    	        <div class="publication">{{ publication }}</div>
    	    {% endif %}
         <div class="horiz-line"></div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span class="stars">{% if show_stars and stars > 0 %}{{ '★' * stars }}{{ '☆' * (5 - stars) }}{% endif %}</span>
-            <span>
+        <div class="footer-row">
+            <div class="btn-group">
               {% if permalink %}
                 <button class="icon-btn" id="permalink-btn" onclick="copyPermalink('{{ permalink }}')"
-                        title="Copy permalink" aria-label="Copy permalink">&#x1F517;</button>
+                        title="Copy permalink" aria-label="Copy permalink"><span class="copy-link-icon"></span></button>
               {% endif %}
               <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()"
-                      title="Toggle light/dark mode" aria-label="Toggle light/dark mode"></button>
-            </span>
-            <span class="date">{{ date1 }}</span>
+                      title="Toggle light/dark mode" aria-label="Toggle light/dark mode" style="margin-left: 1.25em;"><span class="theme-icon"></span></button>
+            </div>
+            <div class="stars">{% if show_stars and stars > 0 %}{{ '★' * stars }}{{ '☆' * (5 - stars) }}{% endif %}</div>
+            <div class="date">{{ date1 }}</div>
         </div>
     </div>
     <script>
@@ -186,19 +229,16 @@ body {
             var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', next);
             localStorage.setItem('jotquote-theme', next);
-            // \u2600 = ☀ (sun, light mode icon); \uD83C\uDF19 = 🌙 (crescent moon, dark mode icon)
-            document.getElementById('theme-toggle').textContent = next === 'dark' ? '\u2600' : '\uD83C\uDF19';
         }
 
         function copyPermalink(path) {
             navigator.clipboard.writeText(window.location.origin + path);
+            var btn = document.getElementById('permalink-btn');
+            btn.classList.add('icon-btn-outline');
+            setTimeout(function() {
+                btn.classList.remove('icon-btn-outline');
+            }, 2000);
         }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            var theme = document.documentElement.getAttribute('data-theme') || 'dark';
-            // \u2600 = ☀ (sun, light mode icon); \uD83C\uDF19 = 🌙 (crescent moon, dark mode icon)
-            document.getElementById('theme-toggle').textContent = theme === 'dark' ? '\u2600' : '\uD83C\uDF19';
-        });
     </script>
 </body>
 </html>
