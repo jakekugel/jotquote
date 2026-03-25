@@ -231,7 +231,7 @@ def test_date_route_invalid_calendar_date(flask_client):
 
 
 def test_root_with_quotemap_today(flask_client, config, tmp_path, monkeypatch):
-    """/ with today in quotemap returns mapped quote and permalink."""
+    """/ with today in quotemap returns mapped quote and permalink button."""
     client, quote_file = flask_client
     today = datetime.datetime.now().strftime('%Y%m%d')
     quotemap_file = tmp_path / 'quotemap.txt'
@@ -240,8 +240,8 @@ def test_root_with_quotemap_today(flask_client, config, tmp_path, monkeypatch):
     rv = client.get('/')
     assert rv.status_code == 200
     assert b'Ben Franklin' in rv.data
-    assert f'href="/{today}"'.encode() in rv.data
-    assert b'permalink' in rv.data
+    assert f"copyPermalink('/{today}')".encode() in rv.data
+    assert b'permalink-btn' in rv.data
 
 
 def test_root_without_quotemap(flask_client, config):
@@ -283,3 +283,40 @@ def test_quotemap_hash_not_found_root(flask_client, config, tmp_path, monkeypatc
     rv = client.get('/')
     assert rv.status_code == 200
     assert b'<!DOCTYPE html>' in rv.data
+
+
+def test_web_theme_colors_default(flask_client, config):
+    """Default dark-mode color values appear in rendered HTML when no color config is set."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'--fg:           #ffffff' in rv.data
+    assert b'--bg:           #000000' in rv.data
+
+
+def test_web_theme_colors_custom(flask_client, config):
+    """Custom dark colors from config appear in rendered HTML."""
+    config[api.APP_NAME]['web_dark_foreground_color'] = '#cccccc'
+    config[api.APP_NAME]['web_dark_background_color'] = '#111111'
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'--fg:           #cccccc' in rv.data
+    assert b'--bg:           #111111' in rv.data
+
+
+def test_theme_toggle_button_present(flask_client):
+    """Theme toggle button is rendered in quote.html."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'id="theme-toggle"' in rv.data
+
+
+def test_permalink_button_present(flask_client, config, tmp_path):
+    """Permalink clipboard button appears when quotemap has an entry for today."""
+    client, quote_file = flask_client
+    today = datetime.datetime.now().strftime('%Y%m%d')
+    quotemap_file = tmp_path / 'quotemap.txt'
+    quotemap_file.write_text(f'{today}: 25382c2519fb23bd\n', encoding='utf-8')
+    config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
+    rv = client.get('/')
+    assert b'id="permalink-btn"' in rv.data
+    assert b'copyPermalink' in rv.data
