@@ -279,3 +279,35 @@ def test_quotemap_root_permalink(tmp_path):
     finally:
         proc.terminate()
         proc.wait(timeout=10)
+
+
+def test_web_theme_colors_config(tmp_path):
+    """Custom theme colors from settings.conf appear in the rendered HTML."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(
+        tmp_path,
+        quote_file,
+        web_dark_foreground_color='#aabbcc',
+        web_dark_background_color='#112233',
+        web_light_foreground_color='#334455',
+        web_light_background_color='#eeddcc',
+    )
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            assert resp.status == 200
+            body = resp.read().decode('utf-8')
+        assert '#aabbcc' in body
+        assert '#112233' in body
+        assert '#334455' in body
+        assert '#eeddcc' in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)

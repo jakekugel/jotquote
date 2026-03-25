@@ -1,0 +1,14 @@
+--------------------------------------------------------------------------------
+Night Mode Icon
+Source:    https://www.svgrepo.com/svg/348420/night-mode
+Collection: Ikonate Bold Interface Icons
+License:   MIT License
+           https://creativecommons.org/publicdomain/zero/1.0/
+Author:    Mikolaj Dobrucki
+--------------------------------------------------------------------------------
+Copy Link Icon
+Source:    https://www.svgrepo.com/svg/309484/copy-link
+Collection: Fluent UI Icons Outlined
+License:   MIT License
+Author:    Microsoft
+--------------------------------------------------------------------------------

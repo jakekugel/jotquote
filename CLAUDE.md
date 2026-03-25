@@ -8,6 +8,8 @@ The [plans/](plans/) folder stores implementation plans created by Claude for fu
 
 2026-03-14-migrate-tests-to-pytest.md
 
+All non-trivial implementation plans must include an appropriate number of new unit tests and at least one new integration test.
+
 ## Commands
 
 ```bash
@@ -74,3 +76,11 @@ There are two input formats for the `add` command:
 ### Ruff rules
 
 Config is in `pyproject.toml` under `[tool.ruff]`: line length max 120; E501 and E722 are ignored; `tests/` directory is excluded. Single quotes are preferred over double quotes.
+
+### Code style
+
+Prefer modern Python patterns and keep code as simple as possible. Favour the standard library and built-in language features over custom abstractions. When two approaches produce equivalent results, always choose the simpler one.
+
+### settings.conf
+
+If `settings.conf` properties are added, removed, or changed, the table in [DOCUMENTATION.md](DOCUMENTATION.md) must be updated.
