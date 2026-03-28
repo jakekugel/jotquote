@@ -49,7 +49,7 @@ _ANON_RE = re.compile(r'^\s*(unknown|anonymous|anon|n/a|none|\?)\s*$', re.IGNORE
 _ALLCAPS_WORD_RE = re.compile(r'\b[A-Z]{3,}\b')
 
 # Words always ignored by the spell checker regardless of user configuration.
-_SPELL_IGNORE_BUILTIN = frozenset({"uncared", "might've"})
+_SPELL_IGNORE_BUILTIN = frozenset({'uncared', "might've"})
 
 
 @dataclass

@@ -25,6 +25,12 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 | `lint_author_antipattern_regex` | _(empty)_ | Comma-separated list of regex patterns; authors matching any pattern are flagged by the `author-antipatterns` lint check |
 | `lint_required_group_<name>` | _(empty)_ | Defines a named group of required tags; a quote must have at least one tag from this group or it is flagged by the `required-tag-group` check. `<name>` is any identifier (e.g. `stars`, `visibility`). Add multiple properties with different names to define multiple groups. Example: `lint_required_group_stars = 1star, 2stars, 3stars, 4stars, 5stars` |
 
+## Environment Variables
+
+| Variable | Description |
+|---|---|
+| `JOTQUOTE_CONFIG` | Path to the `settings.conf` file. Overrides the default location (`~/.jotquote/settings.conf`). Useful for running jotquote with an alternate configuration, for example during development or in CI. Accepts absolute or relative paths; relative paths are interpreted relative to the current working directory. |
+
 **Example** — restore the original dark color scheme:
 
 ```ini

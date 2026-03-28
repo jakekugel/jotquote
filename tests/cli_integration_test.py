@@ -228,7 +228,7 @@ def test_quotemap_rebuild_newquotemap_required(tmp_path):
 
 
 def test_default_settings_conf_written(tmp_path):
-    """jotquote writes a new settings.conf with all four new properties on first run."""
+    """jotquote writes settings.conf from the template on first run."""
     # Use a fresh home dir with no .jotquote directory
     env = os.environ.copy()
     env['HOME'] = str(tmp_path)
@@ -246,7 +246,7 @@ def test_default_settings_conf_written(tmp_path):
     assert conf_path.exists(), 'settings.conf was not created'
     contents = conf_path.read_text(encoding='utf-8')
 
-    assert 'web_cache_minutes' in contents
+    assert 'quote_file' in contents
     assert 'show_author_count' in contents
     assert 'web_page_title' in contents
 
