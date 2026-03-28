@@ -676,7 +676,6 @@ def test_lint_unknown_check(config, tmp_path):
 
 def test_lint_fix_smart_quotes(config, tmp_path):
     """lint --fix replaces smart quotes in the quote file."""
-    import shutil, os
 
     src = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
 

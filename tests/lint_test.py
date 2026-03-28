@@ -9,18 +9,18 @@ import pytest
 from jotquote import api
 from jotquote.lint import (
     LintIssue,
+    _check_ascii,
+    _check_author_antipatterns,
+    _check_double_spaces,
+    _check_multiple_stars,
+    _check_no_author,
+    _check_no_tags,
+    _check_quote_length,
+    _check_required_tag_groups,
+    _check_smart_dashes,
+    _check_smart_quotes,
     apply_fixes,
     lint_quotes,
-    _check_ascii,
-    _check_smart_quotes,
-    _check_smart_dashes,
-    _check_double_spaces,
-    _check_quote_length,
-    _check_no_tags,
-    _check_no_author,
-    _check_author_antipatterns,
-    _check_multiple_stars,
-    _check_required_tag_groups,
 )
 
 
@@ -449,7 +449,7 @@ def test_apply_fixes_no_fixable_issues():
 def test_spelling_quote_field_still_checked():
     """Quote text misspellings should still be reported with field='quote'."""
     pytest.importorskip('spellchecker')
-    from jotquote.lint import _make_spellchecker, _check_spelling
+    from jotquote.lint import _check_spelling, _make_spellchecker
 
     cfg = _make_config()['jotquote.lint']
     spell, ignore_words = _make_spellchecker(cfg)
