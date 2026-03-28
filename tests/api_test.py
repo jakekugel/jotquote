@@ -599,46 +599,6 @@ def test_get_random_choice_uses_tomorrow_at_cutoff(monkeypatch):
     assert result == api._get_random_value(days, 100)
 
 
-def test_ascii_only_blocks_non_ascii(config, tmp_path):
-    """add_quote() should raise ClickException when ascii_only=true and quote has non-ASCII char."""
-    config[api.APP_NAME]['ascii_only'] = 'true'
-    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-
-    non_ascii_quote = api.Quote('Hello\u200aWorld', 'Author', None, [])
-    with pytest.raises(Exception, match='non-ASCII character'):
-        api.add_quote(path, non_ascii_quote)
-
-
-def test_ascii_only_blocks_non_ascii_in_author(config, tmp_path):
-    """add_quote() should raise ClickException when ascii_only=true and author has non-ASCII char."""
-    config[api.APP_NAME]['ascii_only'] = 'true'
-    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-
-    non_ascii_quote = api.Quote('A perfectly fine quote', 'Ren\u00e9 Author', None, [])
-    with pytest.raises(Exception, match='non-ASCII character'):
-        api.add_quote(path, non_ascii_quote)
-
-
-def test_ascii_only_allows_ascii(config, tmp_path):
-    """add_quote() should succeed when ascii_only=true and quote is pure ASCII."""
-    config[api.APP_NAME]['ascii_only'] = 'true'
-    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-
-    ascii_quote = api.Quote('A perfectly fine ASCII quote', 'Plain Author', None, [])
-    total = api.add_quote(path, ascii_quote)
-    assert total == 5
-
-
-def test_ascii_only_false_allows_non_ascii(config, tmp_path):
-    """add_quote() should succeed when ascii_only=false even if quote has non-ASCII chars."""
-    config[api.APP_NAME]['ascii_only'] = 'false'
-    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-
-    non_ascii_quote = api.Quote('Hello\u200aWorld', 'Author', None, [])
-    total = api.add_quote(path, non_ascii_quote)
-    assert total == 5
-
-
 # --- settags() tests ---
 
 def test_settags_by_hash(config, tmp_path):
@@ -838,3 +798,59 @@ def test_get_first_match_empty_list():
     """Empty quote list returns None for any criteria."""
     assert api.get_first_match([]) is None
     assert api.get_first_match([], keyword='anything') is None
+
+
+# ---------------------------------------------------------------------------
+# get_config()
+# ---------------------------------------------------------------------------
+
+def test_get_config_creates_from_template(tmp_path, monkeypatch):
+    """First run creates settings.conf from the template and copies quotes.txt."""
+    config_file = tmp_path / 'settings.conf'
+    monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
+
+    config = api.get_config()
+
+    assert config_file.exists()
+    contents = config_file.read_text(encoding='utf-8')
+    assert 'quote_file' in contents
+    assert 'line_separator' in contents
+    assert 'show_author_count' in contents
+    assert 'web_page_title' in contents
+    # quotes.txt should have been copied alongside settings.conf
+    assert (tmp_path / 'quotes.txt').exists()
+    # quote_file should be resolved to an absolute path in the returned config
+    quote_file = config.get(api.APP_NAME, 'quote_file')
+    assert os.path.isabs(quote_file)
+
+
+def test_get_config_env_var_overrides_default(tmp_path, monkeypatch):
+    """JOTQUOTE_CONFIG env var is used in preference to the default config location."""
+    config_file = tmp_path / 'custom.conf'
+    config_file.write_text(
+        '[jotquote]\nquote_file = /some/path/quotes.txt\nweb_page_title = Custom Title\n',
+        encoding='utf-8',
+    )
+    monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
+
+    config = api.get_config()
+
+    assert config.get(api.APP_NAME, 'web_page_title') == 'Custom Title'
+
+
+def test_get_config_resolves_relative_quote_file(tmp_path, monkeypatch):
+    """A relative quote_file path is resolved to an absolute path."""
+    quotes_file = tmp_path / 'myquotes.txt'
+    quotes_file.write_text('', encoding='utf-8')
+    config_file = tmp_path / 'settings.conf'
+    config_file.write_text(
+        '[jotquote]\nquote_file = ./myquotes.txt\n',
+        encoding='utf-8',
+    )
+    monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
+
+    config = api.get_config()
+
+    resolved = config.get(api.APP_NAME, 'quote_file')
+    assert os.path.isabs(resolved)
+    assert resolved == str(quotes_file)

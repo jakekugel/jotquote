@@ -236,7 +236,7 @@ def test_add(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', ' We accept the love we think we deserve.-Stephen Chbosky'],
+    result = runner.invoke(cli.jotquote, ['add', '--no-lint', ' We accept the love we think we deserve.-Stephen Chbosky'],
                            obj={})
 
     assert result.exit_code == 0
@@ -256,7 +256,7 @@ def test_add_when_quote_already_in_file(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', '  Ask for what you want and be prepared to get it.  - Maya Angelou'], obj={})
+    result = runner.invoke(cli.jotquote, ['add', '--no-lint', '  Ask for what you want and be prepared to get it.  - Maya Angelou'], obj={})
 
     assert result.exit_code == 1
     assert result.output == (
@@ -270,7 +270,7 @@ def test_add_stdin(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', '-'],
+    result = runner.invoke(cli.jotquote, ['add', '--no-lint', '-'],
                            input='Ask for what you want and be prepared to get it.-Maya Angelou\n',
                            obj={})
 
@@ -291,7 +291,7 @@ def test_add_with_no_author(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', '  We accept the love we think we deserve.-'], obj={})
+    result = runner.invoke(cli.jotquote, ['add', '--no-lint', '  We accept the love we think we deserve.-'], obj={})
 
     assert result.exit_code == 1
     assert result.output == ("Error: unable to parse the author and publication.  "
@@ -305,7 +305,7 @@ def test_add_with_publication(config, tmp_path):
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote,
-                           ['add', '  We accept the love we think we deserve.-Stephen Chbosky (Publication)'],
+                           ['add', '--no-lint', '  We accept the love we think we deserve.-Stephen Chbosky (Publication)'],
                            obj={})
 
     assert result.exit_code == 0
@@ -328,7 +328,7 @@ def test_bulk_add_from_stdin(config, tmp_path):
                   'Ask for what you want and be prepared to get it. - Maya Angelou' + os.linesep
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', '-'], input=stdin_input, obj={})
+    result = runner.invoke(cli.jotquote, ['add', '--no-lint', '-'], input=stdin_input, obj={})
 
     assert result.exit_code == 0
     assert result.output == '3 quotes added for total of 4.\n'
@@ -364,7 +364,7 @@ def test_add_extended_format(config, tmp_path):
     test_input = 'Ask for what you want and be prepared to get it. | Maya Angelou |  | \n'
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', '-e', '-'], input=test_input, obj={})
+    result = runner.invoke(cli.jotquote, ['add', '--no-lint', '-e', '-'], input=test_input, obj={})
 
     assert result.exit_code == 0
     assert result.output == '1 quote added for total of 2.\n'
@@ -383,7 +383,7 @@ def test_add_extended_format_with_error(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', '-e', '-'], input='This is not properly formatted', obj={})
+    result = runner.invoke(cli.jotquote, ['add', '--no-lint', '-e', '-'], input='This is not properly formatted', obj={})
 
     assert result.exit_code == 1
     expected = "Error: syntax error on line 1 of stdin: did not find 3 '|' characters.  " + \
@@ -426,7 +426,7 @@ def test_codepage_conversion(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', 'δηψ.-Greek Author'], obj={})
+    result = runner.invoke(cli.jotquote, ['add', '--no-lint', 'δηψ.-Greek Author'], obj={})
 
     assert result.exit_code == 0
     with open(path, 'rb') as quotefile:
@@ -516,7 +516,7 @@ def test_show_author_count(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', 'New wisdom quote - Ben Franklin'], obj={})
+    result = runner.invoke(cli.jotquote, ['add', '--no-lint', 'New wisdom quote - Ben Franklin'], obj={})
 
     assert result.exit_code == 0
     assert '1 quote added for total of 5.' in result.output
@@ -530,7 +530,7 @@ def test_show_author_count_singular(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', 'A brand new thought - New Author'], obj={})
+    result = runner.invoke(cli.jotquote, ['add', '--no-lint', 'A brand new thought - New Author'], obj={})
 
     assert result.exit_code == 0
     assert 'You now have 1 quote by New Author.' in result.output
@@ -542,7 +542,193 @@ def test_show_author_count_disabled(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', 'New wisdom quote - Ben Franklin'], obj={})
+    result = runner.invoke(cli.jotquote, ['add', '--no-lint', 'New wisdom quote - Ben Franklin'], obj={})
 
     assert result.exit_code == 0
     assert result.output == '1 quote added for total of 5.\n'
+
+
+# ---------------------------------------------------------------------------
+# lint subcommand
+# ---------------------------------------------------------------------------
+
+def test_lint_clean_file(config, tmp_path):
+    """lint returns exit code 0 and 'No issues found.' when no checks are run."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    # Run with only ascii check to avoid spurious spelling/star/tag failures on fixture data
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii'], obj={})
+
+    assert result.exit_code == 0
+    assert 'No issues found.' in result.output
+
+
+def test_lint_detects_issues(config, tmp_path):
+    """lint reports issues and exits with code 1."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'no-star'], obj={})
+
+    assert result.exit_code == 1
+    assert 'issue' in result.output
+
+
+def test_lint_select_and_ignore_mutually_exclusive(config, tmp_path):
+    """lint raises error when both --select and --ignore are used."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii', '--ignore', 'spelling'], obj={})
+
+    assert result.exit_code != 0
+    assert 'mutually exclusive' in result.output
+
+
+def test_lint_ignore(config, tmp_path):
+    """lint --ignore skips the specified check."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii', '--ignore', 'spelling'], obj={})
+
+    # Should fail due to mutual exclusion, so use a valid combo instead
+    result = runner.invoke(cli.jotquote, ['lint', '--ignore', 'spelling,no-star,no-tags,no-visibility,author-antipatterns,multiple-stars,ascii,smart-quotes,no-author'], obj={})
+
+    assert result.exit_code == 0
+    assert 'No issues found.' in result.output
+
+
+def test_lint_unknown_check(config, tmp_path):
+    """lint rejects unknown check names."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'nonexistent-check'], obj={})
+
+    assert result.exit_code != 0
+    assert 'Unknown check' in result.output
+
+
+def test_lint_fix_smart_quotes(config, tmp_path):
+    """lint --fix replaces smart quotes in the quote file."""
+    import shutil, os
+    src = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+
+    # Append a quote with a smart quote
+    with open(src, 'a', encoding='utf-8') as f:
+        f.write('\u201cSmart quote test\u201d | Test Author | | funny\n')
+
+    config[api.APP_NAME]['quote_file'] = src
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'smart-quotes', '--fix'], obj={})
+
+    assert '1 fix applied.' in result.output or 'fix' in result.output
+    # Verify file no longer has smart quotes
+    content = open(src, encoding='utf-8').read()
+    assert '\u201c' not in content
+    assert '\u201d' not in content
+
+
+# ---------------------------------------------------------------------------
+# lint-on-add
+# ---------------------------------------------------------------------------
+
+def test_add_lint_warnings_shown_and_confirmed(config, tmp_path):
+    """add shows lint warnings and adds quote when user confirms with 'y'."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote,
+                           ['add', '\u201cSmart quote test\u201d - Test Author'],
+                           input='y\n', obj={})
+
+    assert result.exit_code == 0
+    assert 'Warning:' in result.output
+    assert '1 quote added' in result.output
+
+
+def test_add_lint_warnings_declined(config, tmp_path):
+    """add shows lint warnings and aborts when user declines with 'N'."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote,
+                           ['add', '\u201cSmart quote test\u201d - Test Author'],
+                           input='N\n', obj={})
+
+    assert result.exit_code == 1
+    assert 'Warning:' in result.output
+    assert 'quote added' not in result.output
+
+
+def test_add_lint_no_warnings_when_clean(config, tmp_path):
+    """add does not show warnings or prompt when quote passes all checks."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.APP_NAME]['quote_file'] = path
+    config[api.APP_NAME]['lint_enabled_checks'] = 'smart-quotes, smart-dashes, double-spaces'
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote,
+                           ['add', 'A clean quote - Test Author'],
+                           obj={})
+
+    assert result.exit_code == 0
+    assert 'Warning:' not in result.output
+    assert '1 quote added' in result.output
+
+
+def test_add_lint_respects_enabled_checks(config, tmp_path):
+    """add only runs checks listed in lint_enabled_checks."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.APP_NAME]['quote_file'] = path
+    config[api.APP_NAME]['lint_enabled_checks'] = 'ascii'
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote,
+                           ['add', 'A plain quote without tags - Test Author'],
+                           obj={})
+
+    assert result.exit_code == 0
+    assert 'Warning:' not in result.output
+    assert '1 quote added' in result.output
+
+
+def test_add_no_lint_flag_skips_checks(config, tmp_path):
+    """add --no-lint skips lint checks entirely."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote,
+                           ['add', '--no-lint', '\u201cSmart quote test\u201d - Test Author'],
+                           obj={})
+
+    assert result.exit_code == 0
+    assert 'Warning:' not in result.output
+    assert '1 quote added' in result.output
+
+
+def test_add_lint_exception_propagates(config, tmp_path, monkeypatch):
+    """Exceptions from lint_quotes propagate to the caller."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.APP_NAME]['quote_file'] = path
+
+    from jotquote import lint as lintmod
+    monkeypatch.setattr(lintmod, 'lint_quotes', lambda *a, **kw: (_ for _ in ()).throw(RuntimeError('boom')))
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote,
+                           ['add', 'A plain quote - Test Author'],
+                           obj={})
+
+    assert result.exit_code != 0

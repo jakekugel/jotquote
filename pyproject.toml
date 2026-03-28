@@ -44,6 +44,11 @@ include = [
     "jotquote/static/**",
 ]
 
+[project.optional-dependencies]
+lint = [
+    "pyspellchecker>=0.7",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=7.0",
@@ -51,6 +56,7 @@ dev = [
     "ruff",
     "coverage>=7.0",
     "gunicorn>=23.0",
+    "pyspellchecker>=0.7",
 ]
 
 [tool.pytest.ini_options]
