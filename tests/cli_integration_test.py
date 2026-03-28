@@ -254,7 +254,7 @@ def test_default_settings_conf_written(tmp_path):
 def test_add_shows_lint_warnings_integration(tmp_path):
     """jotquote add shows lint warnings for a quote with smart quotes and adds after confirmation."""
     quote_file = _copy_quotes(tmp_path)
-    env = _make_env(tmp_path, quote_file)
+    env = _make_env(tmp_path, quote_file, lint_on_add='true')
 
     result = subprocess.run(
         [_script('jotquote'), 'add', '\u201cSmart quote test\u201d - Test Author'],
@@ -292,7 +292,7 @@ def test_lint_required_tag_group_integration(tmp_path):
 def test_add_stdin_multiple_quotes_with_lint_errors(tmp_path):
     """jotquote add - reads multiple quotes from stdin and shows lint warnings when errors are found."""
     quote_file = _copy_quotes(tmp_path)
-    env = _make_env(tmp_path, quote_file)
+    env = _make_env(tmp_path, quote_file, lint_on_add='true')
 
     # Two quotes with double-spaces (lint errors); stdin ends at EOF so the
     # confirmation prompt defaults to 'no', causing a non-zero exit.
@@ -315,3 +315,21 @@ def test_add_stdin_multiple_quotes_with_lint_errors(tmp_path):
     assert 'double-spaces' in stdout
     # Two quotes means at least two warnings (one per quote)
     assert stdout.count('Warning:') >= 2
+
+
+def test_lint_on_add_false_skips_lint_integration(tmp_path):
+    """jotquote add does not run lint when lint_on_add is false."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file, lint_on_add='false')
+
+    result = subprocess.run(
+        [_script('jotquote'), 'add', '\u201cSmart quote test\u201d - Test Author'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    output = result.stdout.decode('utf-8', errors='replace')
+    assert result.returncode == 0
+    assert 'Warning:' not in output
+    assert '1 quote added' in output

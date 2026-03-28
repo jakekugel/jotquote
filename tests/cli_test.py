@@ -567,11 +567,11 @@ def test_lint_clean_file(config, tmp_path):
 
 def test_lint_detects_issues(config, tmp_path):
     """lint reports issues and exits with code 1."""
-    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes9.txt')
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['lint', '--select', 'no-star'], obj={})
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'no-tags'], obj={})
 
     assert result.exit_code == 1
     assert 'issue' in result.output
@@ -598,7 +598,7 @@ def test_lint_ignore(config, tmp_path):
     result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii', '--ignore', 'spelling'], obj={})
 
     # Should fail due to mutual exclusion, so use a valid combo instead
-    result = runner.invoke(cli.jotquote, ['lint', '--ignore', 'spelling,no-star,no-tags,no-visibility,author-antipatterns,multiple-stars,ascii,smart-quotes,no-author'], obj={})
+    result = runner.invoke(cli.jotquote, ['lint', '--ignore', 'spelling,no-tags,author-antipatterns,multiple-stars,ascii,smart-quotes,no-author'], obj={})
 
     assert result.exit_code == 0
     assert 'No issues found.' in result.output
@@ -645,6 +645,7 @@ def test_add_lint_warnings_shown_and_confirmed(config, tmp_path):
     """add shows lint warnings and adds quote when user confirms with 'y'."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     config[api.APP_NAME]['quote_file'] = path
+    config[api.APP_NAME]['lint_on_add'] = 'true'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote,
@@ -660,6 +661,7 @@ def test_add_lint_warnings_declined(config, tmp_path):
     """add shows lint warnings and aborts when user declines with 'N'."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     config[api.APP_NAME]['quote_file'] = path
+    config[api.APP_NAME]['lint_on_add'] = 'true'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote,
@@ -722,6 +724,7 @@ def test_add_lint_exception_propagates(config, tmp_path, monkeypatch):
     """Exceptions from lint_quotes propagate to the caller."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     config[api.APP_NAME]['quote_file'] = path
+    config[api.APP_NAME]['lint_on_add'] = 'true'
 
     from jotquote import lint as lintmod
     monkeypatch.setattr(lintmod, 'lint_quotes', lambda *a, **kw: (_ for _ in ()).throw(RuntimeError('boom')))
@@ -732,3 +735,35 @@ def test_add_lint_exception_propagates(config, tmp_path, monkeypatch):
                            obj={})
 
     assert result.exit_code != 0
+
+
+def test_add_lint_on_add_false_skips_checks(config, tmp_path):
+    """add does not run lint checks when lint_on_add is false."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.APP_NAME]['quote_file'] = path
+    config[api.APP_NAME]['lint_on_add'] = 'false'
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote,
+                           ['add', '\u201cSmart quote test\u201d - Test Author'],
+                           obj={})
+
+    assert result.exit_code == 0
+    assert 'Warning:' not in result.output
+    assert '1 quote added' in result.output
+
+
+def test_add_lint_on_add_true_runs_checks(config, tmp_path):
+    """add runs lint checks when lint_on_add is true."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.APP_NAME]['quote_file'] = path
+    config[api.APP_NAME]['lint_on_add'] = 'true'
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote,
+                           ['add', '\u201cSmart quote test\u201d - Test Author'],
+                           input='y\n', obj={})
+
+    assert result.exit_code == 0
+    assert 'Warning:' in result.output
+    assert '1 quote added' in result.output

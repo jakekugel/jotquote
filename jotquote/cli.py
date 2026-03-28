@@ -325,13 +325,16 @@ def _lint_new_quotes(quotes):
 def _add_quotes(quotefile, newquote_str, extended, no_lint=False):
     """Adds the new quote(s) to the quote file."""
 
+    config = api.get_config()
+    lint_on_add = config[api.APP_NAME].getboolean('lint_on_add', fallback=False)
+
     if newquote_str == '-':
         if not extended:
             quotes = api.parse_quotes(sys.stdin, 'stdin', simple_format=True)
         else:
             quotes = api.parse_quotes(sys.stdin, 'stdin', simple_format=False)
 
-        if not no_lint:
+        if not no_lint and lint_on_add:
             for i, q in enumerate(quotes, 1):
                 q.line_number = i
             issues = _lint_new_quotes(quotes)
@@ -351,7 +354,7 @@ def _add_quotes(quotefile, newquote_str, extended, no_lint=False):
         else:
             quote = api.parse_quote(newquote_str, simple_format=False)
 
-        if not no_lint:
+        if not no_lint and lint_on_add:
             quote.line_number = 1
             issues = _lint_new_quotes([quote])
             if issues:
