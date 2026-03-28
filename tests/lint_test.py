@@ -31,8 +31,9 @@ def _make_quote(quote='Test quote', author='Test Author', publication=None, tags
     return q
 
 
-def _make_config(spell_ignore='', author_antipattern_regex='',
-                 enabled_checks='', max_quote_length='0', required_tag_groups=None):
+def _make_config(
+    spell_ignore='', author_antipattern_regex='', enabled_checks='', max_quote_length='0', required_tag_groups=None
+):
     """Helper to create a config with the jotquote.lint section populated."""
     cfg = ConfigParser()
     cfg.add_section(api.APP_NAME)
@@ -51,6 +52,7 @@ def _make_config(spell_ignore='', author_antipattern_regex='',
 # ---------------------------------------------------------------------------
 # _check_ascii
 # ---------------------------------------------------------------------------
+
 
 def test_check_ascii_clean():
     q = _make_quote(quote='Hello world', author='Jane Doe')
@@ -84,6 +86,7 @@ def test_check_ascii_in_publication():
 # _check_smart_quotes
 # ---------------------------------------------------------------------------
 
+
 def test_check_smart_quotes_clean():
     q = _make_quote(quote="It's a test")
     assert _check_smart_quotes(q) == []
@@ -115,6 +118,7 @@ def test_check_smart_quotes_multiple_fields():
 # ---------------------------------------------------------------------------
 # _check_smart_dashes
 # ---------------------------------------------------------------------------
+
 
 def test_check_smart_dashes_clean():
     q = _make_quote(quote='A regular - hyphen')
@@ -153,8 +157,7 @@ def test_check_smart_dashes_multiple_fields():
 def test_apply_fixes_smart_dashes():
     q = _make_quote(quote='10\u201320', line_number=1)
     issues = [
-        LintIssue(line_number=1, check='smart-dashes', field='quote',
-                  message='', fixable=True, fix_value='10-20'),
+        LintIssue(line_number=1, check='smart-dashes', field='quote', message='', fixable=True, fix_value='10-20'),
     ]
     quotes, count = apply_fixes([q], issues)
     assert count == 1
@@ -164,6 +167,7 @@ def test_apply_fixes_smart_dashes():
 # ---------------------------------------------------------------------------
 # _check_double_spaces
 # ---------------------------------------------------------------------------
+
 
 def test_check_double_spaces_clean():
     q = _make_quote(quote='No double spaces here.')
@@ -205,8 +209,9 @@ def test_check_double_spaces_three_spaces():
 def test_apply_fixes_double_spaces():
     q = _make_quote(quote='Hello.  World.', line_number=1)
     issues = [
-        LintIssue(line_number=1, check='double-spaces', field='quote',
-                  message='', fixable=True, fix_value='Hello. World.'),
+        LintIssue(
+            line_number=1, check='double-spaces', field='quote', message='', fixable=True, fix_value='Hello. World.'
+        ),
     ]
     quotes, count = apply_fixes([q], issues)
     assert count == 1
@@ -216,6 +221,7 @@ def test_apply_fixes_double_spaces():
 # ---------------------------------------------------------------------------
 # _check_quote_length
 # ---------------------------------------------------------------------------
+
 
 def test_check_quote_length_no_limit():
     """When lint_max_quote_length is 0 (default), no issues are raised."""
@@ -246,6 +252,7 @@ def test_check_quote_length_exceeds_limit():
 # _check_no_tags
 # ---------------------------------------------------------------------------
 
+
 def test_check_no_tags_has_tags():
     q = _make_quote(tags=['funny'])
     assert _check_no_tags(q) == []
@@ -262,6 +269,7 @@ def test_check_no_tags_empty():
 # ---------------------------------------------------------------------------
 # _check_no_author
 # ---------------------------------------------------------------------------
+
 
 def test_check_no_author_has_author():
     q = _make_quote(author='Jane Doe')
@@ -281,6 +289,7 @@ def test_check_no_author_empty():
 # ---------------------------------------------------------------------------
 # _check_author_antipatterns
 # ---------------------------------------------------------------------------
+
 
 def test_author_antipatterns_clean():
     cfg = _make_config()['jotquote.lint']
@@ -332,10 +341,10 @@ def test_author_antipatterns_custom_regex_no_match():
     assert not any('custom pattern' in i.message for i in issues)
 
 
-
 # ---------------------------------------------------------------------------
 # _check_multiple_stars
 # ---------------------------------------------------------------------------
+
 
 def test_multiple_stars_none():
     q = _make_quote(tags=['funny'])
@@ -357,6 +366,7 @@ def test_multiple_stars_two():
 # ---------------------------------------------------------------------------
 # _check_required_tag_groups
 # ---------------------------------------------------------------------------
+
 
 def test_required_tag_groups_not_configured():
     """When no lint_required_group_* keys exist, no issues are raised."""
@@ -383,19 +393,23 @@ def test_required_tag_groups_missing_tag():
 
 
 def test_required_tag_groups_multiple_groups_all_satisfied():
-    cfg = _make_config(required_tag_groups={
-        'stars': '1star, 2stars, 3stars, 4stars, 5stars',
-        'visibility': 'public, private',
-    })['jotquote.lint']
+    cfg = _make_config(
+        required_tag_groups={
+            'stars': '1star, 2stars, 3stars, 4stars, 5stars',
+            'visibility': 'public, private',
+        }
+    )['jotquote.lint']
     q = _make_quote(tags=['3stars', 'public', 'funny'])
     assert _check_required_tag_groups(q, cfg) == []
 
 
 def test_required_tag_groups_multiple_groups_one_missing():
-    cfg = _make_config(required_tag_groups={
-        'stars': '1star, 2stars, 3stars, 4stars, 5stars',
-        'visibility': 'public, private',
-    })['jotquote.lint']
+    cfg = _make_config(
+        required_tag_groups={
+            'stars': '1star, 2stars, 3stars, 4stars, 5stars',
+            'visibility': 'public, private',
+        }
+    )['jotquote.lint']
     q = _make_quote(tags=['3stars', 'funny'])
     issues = _check_required_tag_groups(q, cfg)
     assert len(issues) == 1
@@ -407,11 +421,11 @@ def test_required_tag_groups_multiple_groups_one_missing():
 # apply_fixes
 # ---------------------------------------------------------------------------
 
+
 def test_apply_fixes_smart_quotes():
     q = _make_quote(quote='\u201cHello\u201d', author='Jane Doe', line_number=1)
     issues = [
-        LintIssue(line_number=1, check='smart-quotes', field='quote',
-                  message='', fixable=True, fix_value='"Hello"'),
+        LintIssue(line_number=1, check='smart-quotes', field='quote', message='', fixable=True, fix_value='"Hello"'),
     ]
     quotes, count = apply_fixes([q], issues)
     assert count == 1
@@ -431,10 +445,12 @@ def test_apply_fixes_no_fixable_issues():
 # _check_spelling (author field extension)
 # ---------------------------------------------------------------------------
 
+
 def test_spelling_quote_field_still_checked():
     """Quote text misspellings should still be reported with field='quote'."""
     pytest.importorskip('spellchecker')
     from jotquote.lint import _make_spellchecker, _check_spelling
+
     cfg = _make_config()['jotquote.lint']
     spell, ignore_words = _make_spellchecker(cfg)
     if spell is None:
@@ -448,6 +464,7 @@ def test_spelling_quote_field_still_checked():
 # ---------------------------------------------------------------------------
 # lint_quotes integration
 # ---------------------------------------------------------------------------
+
 
 def test_lint_quotes_select_checks():
     """Only enabled checks should run."""

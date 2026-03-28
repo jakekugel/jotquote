@@ -80,7 +80,6 @@ def _collect_stderr(proc, lines):
         lines.append(line.decode('utf-8', errors='replace').rstrip())
 
 
-
 def test_web_cache_minutes(tmp_path):
     """jotquote webserver respects web_cache_minutes config: max-age capped at 1 minute."""
     url = 'http://127.0.0.1:{}/'.format(CLI_TEST_PORT)
@@ -88,7 +87,10 @@ def test_web_cache_minutes(tmp_path):
     env = _make_env(tmp_path, quote_file, web_cache_minutes='1')
 
     proc = subprocess.Popen(
-        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
     )
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
@@ -171,6 +173,7 @@ def test_quotemap_rebuild_no_oldquotemap(tmp_path):
 def test_quotemap_rebuild_with_oldquotemap(tmp_path):
     """Rebuild with --oldquotemap preserves existing entries."""
     import datetime
+
     quote_file = _copy_quotes(tmp_path)
     quotes = _get_hashes(str(quote_file), _make_env(tmp_path, quote_file))
     yesterday = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y%m%d')
@@ -208,8 +211,7 @@ def test_quotemap_rebuild_oldquotemap_not_found(tmp_path):
     """--oldquotemap pointing to a missing file produces an error."""
     quote_file = _copy_quotes(tmp_path)
     new_qm = tmp_path / 'new_quotemap.txt'
-    result = _rebuild(tmp_path, quote_file, new_qm,
-                      oldquotemap=tmp_path / 'does_not_exist.txt', days=5)
+    result = _rebuild(tmp_path, quote_file, new_qm, oldquotemap=tmp_path / 'does_not_exist.txt', days=5)
     assert result.returncode != 0
     assert b'not found' in result.stderr
 
@@ -273,8 +275,7 @@ def test_add_shows_lint_warnings_integration(tmp_path):
 def test_lint_required_tag_group_integration(tmp_path):
     """jotquote lint flags quotes missing a tag from a configured required-tag-group."""
     quote_file = _copy_quotes(tmp_path)
-    env = _make_env(tmp_path, quote_file,
-                    lint_required_group_stars='1star, 2stars, 3stars, 4stars, 5stars')
+    env = _make_env(tmp_path, quote_file, lint_required_group_stars='1star, 2stars, 3stars, 4stars, 5stars')
 
     result = subprocess.run(
         [_script('jotquote'), 'lint', '--select', 'required-tag-group'],
@@ -296,10 +297,9 @@ def test_add_stdin_multiple_quotes_with_lint_errors(tmp_path):
 
     # Two quotes with double-spaces (lint errors); stdin ends at EOF so the
     # confirmation prompt defaults to 'no', causing a non-zero exit.
-    stdin_input = (
-        'First  double  space quote - Author One\n'
-        'Second  double  space quote - Author Two\n'
-    ).encode('utf-8')
+    stdin_input = ('First  double  space quote - Author One\nSecond  double  space quote - Author Two\n').encode(
+        'utf-8'
+    )
 
     result = subprocess.run(
         [_script('jotquote'), 'add', '-'],

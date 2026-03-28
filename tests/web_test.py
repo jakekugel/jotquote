@@ -27,7 +27,10 @@ def test_page_basics(flask_client, config):
     rv = client.get('/')
     assert b'<!DOCTYPE html>' in rv.data
     assert b'<title>jotquote</title>' in rv.data
-    assert b'<div class="quote">They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.</div>' in rv.data
+    assert (
+        b'<div class="quote">They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.</div>'
+        in rv.data
+    )
     assert b'<div class="author">Ben Franklin</div>' in rv.data
 
 

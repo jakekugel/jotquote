@@ -21,10 +21,12 @@ def test_list(config, tmp_path):
     result = runner.invoke(cli.jotquote, ['list'], obj={})
 
     assert result.exit_code == 0
-    expected = "The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it.  - Linus Torvalds\n" + \
-               "The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall.  - Mitch Hedberg\n" + \
-               'Ask for what you want and be prepared to get it.  - Maya Angelou\n' + \
-               'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n'
+    expected = (
+        "The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it.  - Linus Torvalds\n"
+        + "The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall.  - Mitch Hedberg\n"
+        + 'Ask for what you want and be prepared to get it.  - Maya Angelou\n'
+        + 'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n'
+    )
     assert result.output == expected
 
 
@@ -129,8 +131,9 @@ def test_list_by_invalid_number(config, tmp_path):
     result = runner.invoke(cli.jotquote, ['list', '-n', 'notanumber'], obj={})
 
     assert result.exit_code == 1
-    expected = "Error: the value 'notanumber' is not a valid number, " + \
-               'the -n option requires an integer line number.\n'
+    expected = (
+        "Error: the value 'notanumber' is not a valid number, " + 'the -n option requires an integer line number.\n'
+    )
     assert result.output == expected
 
 
@@ -191,7 +194,10 @@ def test_random_with_tags(config, tmp_path):
     result = runner.invoke(cli.jotquote, ['random', '-t', 'franklin'], obj={})
 
     assert result.exit_code == 0
-    assert result.output == 'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n'
+    assert (
+        result.output
+        == 'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n'
+    )
 
 
 def test_random_with_tags_nomatch(config, tmp_path):
@@ -215,7 +221,10 @@ def test_random_with_keyword(config, tmp_path):
     result = runner.invoke(cli.jotquote, ['random', '-k', 'Franklin'], obj={})
 
     assert result.exit_code == 0
-    assert result.output == 'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n'
+    assert (
+        result.output
+        == 'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n'
+    )
 
 
 def test_random_with_keyword_nomatch(config, tmp_path):
@@ -236,17 +245,20 @@ def test_add(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', '--no-lint', ' We accept the love we think we deserve.-Stephen Chbosky'],
-                           obj={})
+    result = runner.invoke(
+        cli.jotquote, ['add', '--no-lint', ' We accept the love we think we deserve.-Stephen Chbosky'], obj={}
+    )
 
     assert result.exit_code == 0
     assert result.output == '1 quote added for total of 5.\n'
     result = runner.invoke(cli.jotquote, ['list'], obj={})
-    expected = "The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it.  - Linus Torvalds\n" + \
-               "The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall.  - Mitch Hedberg\n" + \
-               'Ask for what you want and be prepared to get it.  - Maya Angelou\n' + \
-               'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n' + \
-               'We accept the love we think we deserve.  - Stephen Chbosky\n'
+    expected = (
+        "The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it.  - Linus Torvalds\n"
+        + "The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall.  - Mitch Hedberg\n"
+        + 'Ask for what you want and be prepared to get it.  - Maya Angelou\n'
+        + 'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n'
+        + 'We accept the love we think we deserve.  - Stephen Chbosky\n'
+    )
     assert result.output == expected
 
 
@@ -256,12 +268,15 @@ def test_add_when_quote_already_in_file(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', '--no-lint', '  Ask for what you want and be prepared to get it.  - Maya Angelou'], obj={})
+    result = runner.invoke(
+        cli.jotquote, ['add', '--no-lint', '  Ask for what you want and be prepared to get it.  - Maya Angelou'], obj={}
+    )
 
     assert result.exit_code == 1
     assert result.output == (
-        'Error: the quote "Ask for what you want and be prepared to get it." is already ' +
-        'in the quote file {0}.\n'.format(path))
+        'Error: the quote "Ask for what you want and be prepared to get it." is already '
+        + 'in the quote file {0}.\n'.format(path)
+    )
 
 
 def test_add_stdin(config, tmp_path):
@@ -270,9 +285,12 @@ def test_add_stdin(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', '--no-lint', '-'],
-                           input='Ask for what you want and be prepared to get it.-Maya Angelou\n',
-                           obj={})
+    result = runner.invoke(
+        cli.jotquote,
+        ['add', '--no-lint', '-'],
+        input='Ask for what you want and be prepared to get it.-Maya Angelou\n',
+        obj={},
+    )
 
     assert result.exit_code == 0
     assert result.output == '1 quote added for total of 2.\n'
@@ -280,8 +298,10 @@ def test_add_stdin(config, tmp_path):
     with open(path, 'r') as modified_quotefile:
         returned = modified_quotefile.readlines()
 
-    expected = ['They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\n',
-                'Ask for what you want and be prepared to get it. | Maya Angelou |  | \n']
+    expected = [
+        'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\n',
+        'Ask for what you want and be prepared to get it. | Maya Angelou |  | \n',
+    ]
     assert returned == expected
 
 
@@ -294,8 +314,10 @@ def test_add_with_no_author(config, tmp_path):
     result = runner.invoke(cli.jotquote, ['add', '--no-lint', '  We accept the love we think we deserve.-'], obj={})
 
     assert result.exit_code == 1
-    assert result.output == ("Error: unable to parse the author and publication.  "
-        "Try 'Quote - Author (Publication)', or 'Quote - Author, Publication'\n")
+    assert result.output == (
+        'Error: unable to parse the author and publication.  '
+        "Try 'Quote - Author (Publication)', or 'Quote - Author, Publication'\n"
+    )
 
 
 def test_add_with_publication(config, tmp_path):
@@ -304,18 +326,22 @@ def test_add_with_publication(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote,
-                           ['add', '--no-lint', '  We accept the love we think we deserve.-Stephen Chbosky (Publication)'],
-                           obj={})
+    result = runner.invoke(
+        cli.jotquote,
+        ['add', '--no-lint', '  We accept the love we think we deserve.-Stephen Chbosky (Publication)'],
+        obj={},
+    )
 
     assert result.exit_code == 0
     assert result.output.strip() == '1 quote added for total of 5.'
     result = runner.invoke(cli.jotquote, ['list', '-n', '5', '-l'], obj={})
-    expected = '5: We accept the love we think we deserve.\n' + \
-               '    author: Stephen Chbosky\n' + \
-               '    publication: Publication\n' + \
-               '    tags: \n' + \
-               '    hash: 53e070059e1c14f7\n'
+    expected = (
+        '5: We accept the love we think we deserve.\n'
+        + '    author: Stephen Chbosky\n'
+        + '    publication: Publication\n'
+        + '    tags: \n'
+        + '    hash: 53e070059e1c14f7\n'
+    )
     assert result.output == expected
 
 
@@ -323,35 +349,42 @@ def test_bulk_add_from_stdin(config, tmp_path):
     """Test add of multiple quotes from stdin"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
     config[api.APP_NAME]['quote_file'] = path
-    stdin_input = "The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it. - Linus Torvalds" + os.linesep + \
-                  "The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall. - Mitch Hedberg" + os.linesep + \
-                  'Ask for what you want and be prepared to get it. - Maya Angelou' + os.linesep
+    stdin_input = (
+        "The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it. - Linus Torvalds"
+        + os.linesep
+        + "The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall. - Mitch Hedberg"
+        + os.linesep
+        + 'Ask for what you want and be prepared to get it. - Maya Angelou'
+        + os.linesep
+    )
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '--no-lint', '-'], input=stdin_input, obj={})
 
     assert result.exit_code == 0
     assert result.output == '3 quotes added for total of 4.\n'
-    expected = '1: They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.\n' + \
-               '    author: Ben Franklin\n' + \
-               '    publication: \n' + \
-               '    tags: U\n' + \
-               '    hash: 25382c2519fb23bd\n' + \
-               "2: The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it.\n" + \
-               '    author: Linus Torvalds\n' + \
-               '    publication: \n' + \
-               '    tags: \n' + \
-               '    hash: bbfc7839cd5c3559\n' + \
-               "3: The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall.\n" + \
-               '    author: Mitch Hedberg\n' + \
-               '    publication: \n' + \
-               '    tags: \n' + \
-               '    hash: 3002f948f63dad3d\n' + \
-               '4: Ask for what you want and be prepared to get it.\n' + \
-               '    author: Maya Angelou\n' + \
-               '    publication: \n' + \
-               '    tags: \n' + \
-               '    hash: 763188b907212a72\n'
+    expected = (
+        '1: They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.\n'
+        + '    author: Ben Franklin\n'
+        + '    publication: \n'
+        + '    tags: U\n'
+        + '    hash: 25382c2519fb23bd\n'
+        + "2: The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it.\n"
+        + '    author: Linus Torvalds\n'
+        + '    publication: \n'
+        + '    tags: \n'
+        + '    hash: bbfc7839cd5c3559\n'
+        + "3: The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall.\n"
+        + '    author: Mitch Hedberg\n'
+        + '    publication: \n'
+        + '    tags: \n'
+        + '    hash: 3002f948f63dad3d\n'
+        + '4: Ask for what you want and be prepared to get it.\n'
+        + '    author: Maya Angelou\n'
+        + '    publication: \n'
+        + '    tags: \n'
+        + '    hash: 763188b907212a72\n'
+    )
     result = runner.invoke(cli.jotquote, ['list', '-l'], obj={})
     assert result.exit_code == 0
     assert result.output == expected
@@ -372,8 +405,10 @@ def test_add_extended_format(config, tmp_path):
     with open(path, 'r') as modified_quotefile:
         returned = modified_quotefile.readlines()
 
-    expected = ['They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\n',
-                'Ask for what you want and be prepared to get it. | Maya Angelou |  | \n']
+    expected = [
+        'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\n',
+        'Ask for what you want and be prepared to get it. | Maya Angelou |  | \n',
+    ]
     assert returned == expected
 
 
@@ -383,16 +418,22 @@ def test_add_extended_format_with_error(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['add', '--no-lint', '-e', '-'], input='This is not properly formatted', obj={})
+    result = runner.invoke(
+        cli.jotquote, ['add', '--no-lint', '-e', '-'], input='This is not properly formatted', obj={}
+    )
 
     assert result.exit_code == 1
-    expected = "Error: syntax error on line 1 of stdin: did not find 3 '|' characters.  " + \
-               'Line with error: "This is not properly formatted"\n'
+    expected = (
+        "Error: syntax error on line 1 of stdin: did not find 3 '|' characters.  "
+        + 'Line with error: "This is not properly formatted"\n'
+    )
     assert result.output == expected
 
     with open(path, 'r') as modified_quotefile:
         returned = modified_quotefile.readlines()
-    expected = ['They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.|Ben Franklin||U\n']
+    expected = [
+        'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.|Ben Franklin||U\n'
+    ]
     assert returned == expected
 
 
@@ -417,7 +458,10 @@ def test_missing_subcommand(config, tmp_path):
     result = runner.invoke(cli.jotquote, [], obj={})
 
     assert result.exit_code == 0
-    assert result.output == 'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n'
+    assert (
+        result.output
+        == 'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety.  - Ben Franklin\n'
+    )
 
 
 def test_codepage_conversion(config, tmp_path):
@@ -432,14 +476,20 @@ def test_codepage_conversion(config, tmp_path):
     with open(path, 'rb') as quotefile:
         data = quotefile.read()
     text_data = data.decode('utf-8')
-    expected = \
-        "The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. " \
-        "Yes, that's it. | Linus Torvalds |  | funny" + os.linesep + \
-        "The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall. | Mitch Hedberg |  | funny, hedberg" + os.linesep + \
-        'Ask for what you want and be prepared to get it. ' \
-        '| Maya Angelou |  | life' + os.linesep + \
-        'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | franklin, freedom' + os.linesep + \
-        'δηψ. | Greek Author |  | ' + os.linesep
+    expected = (
+        "The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. "
+        "Yes, that's it. | Linus Torvalds |  | funny"
+        + os.linesep
+        + "The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall. | Mitch Hedberg |  | funny, hedberg"
+        + os.linesep
+        + 'Ask for what you want and be prepared to get it. '
+        '| Maya Angelou |  | life'
+        + os.linesep
+        + 'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | franklin, freedom'
+        + os.linesep
+        + 'δηψ. | Greek Author |  | '
+        + os.linesep
+    )
     assert text_data == expected
 
 
@@ -474,7 +524,8 @@ def test_settags(config, tmp_path):
         "The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it. | Linus Torvalds |  | U\n",
         "The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall. | Mitch Hedberg |  | U\n",
         'Ask for what you want and be prepared to get it. | Maya Angelou |  | tag1, tag2\n',
-        'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\n']
+        'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\n',
+    ]
     assert returned == expected
 
 
@@ -501,12 +552,14 @@ def test_jotquote_info(config, tmp_path):
 
     assert result.exit_code == 0
     import jotquote
+
     assert result.output == (
         'Version: {}\n'
         'Settings file: /fake/config/file.conf\n'
         'Quote file: {}\n'
         'Number of quotes: 4\n'
-        'Time quote file last modified: {}\n'.format(jotquote.__version__, path, time.ctime(os.path.getmtime(path))))
+        'Time quote file last modified: {}\n'.format(jotquote.__version__, path, time.ctime(os.path.getmtime(path)))
+    )
 
 
 def test_show_author_count(config, tmp_path):
@@ -551,6 +604,7 @@ def test_show_author_count_disabled(config, tmp_path):
 # ---------------------------------------------------------------------------
 # lint subcommand
 # ---------------------------------------------------------------------------
+
 
 def test_lint_clean_file(config, tmp_path):
     """lint returns exit code 0 and 'No issues found.' when no checks are run."""
@@ -598,7 +652,11 @@ def test_lint_ignore(config, tmp_path):
     result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii', '--ignore', 'spelling'], obj={})
 
     # Should fail due to mutual exclusion, so use a valid combo instead
-    result = runner.invoke(cli.jotquote, ['lint', '--ignore', 'spelling,no-tags,author-antipatterns,multiple-stars,ascii,smart-quotes,no-author'], obj={})
+    result = runner.invoke(
+        cli.jotquote,
+        ['lint', '--ignore', 'spelling,no-tags,author-antipatterns,multiple-stars,ascii,smart-quotes,no-author'],
+        obj={},
+    )
 
     assert result.exit_code == 0
     assert 'No issues found.' in result.output
@@ -619,6 +677,7 @@ def test_lint_unknown_check(config, tmp_path):
 def test_lint_fix_smart_quotes(config, tmp_path):
     """lint --fix replaces smart quotes in the quote file."""
     import shutil, os
+
     src = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
 
     # Append a quote with a smart quote
@@ -641,6 +700,7 @@ def test_lint_fix_smart_quotes(config, tmp_path):
 # lint-on-add
 # ---------------------------------------------------------------------------
 
+
 def test_add_lint_warnings_shown_and_confirmed(config, tmp_path):
     """add shows lint warnings and adds quote when user confirms with 'y'."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
@@ -648,9 +708,7 @@ def test_add_lint_warnings_shown_and_confirmed(config, tmp_path):
     config[api.APP_NAME]['lint_on_add'] = 'true'
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote,
-                           ['add', '\u201cSmart quote test\u201d - Test Author'],
-                           input='y\n', obj={})
+    result = runner.invoke(cli.jotquote, ['add', '\u201cSmart quote test\u201d - Test Author'], input='y\n', obj={})
 
     assert result.exit_code == 0
     assert 'Warning:' in result.output
@@ -664,9 +722,7 @@ def test_add_lint_warnings_declined(config, tmp_path):
     config[api.APP_NAME]['lint_on_add'] = 'true'
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote,
-                           ['add', '\u201cSmart quote test\u201d - Test Author'],
-                           input='N\n', obj={})
+    result = runner.invoke(cli.jotquote, ['add', '\u201cSmart quote test\u201d - Test Author'], input='N\n', obj={})
 
     assert result.exit_code == 1
     assert 'Warning:' in result.output
@@ -680,9 +736,7 @@ def test_add_lint_no_warnings_when_clean(config, tmp_path):
     config[api.APP_NAME]['lint_enabled_checks'] = 'smart-quotes, smart-dashes, double-spaces'
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote,
-                           ['add', 'A clean quote - Test Author'],
-                           obj={})
+    result = runner.invoke(cli.jotquote, ['add', 'A clean quote - Test Author'], obj={})
 
     assert result.exit_code == 0
     assert 'Warning:' not in result.output
@@ -696,9 +750,7 @@ def test_add_lint_respects_enabled_checks(config, tmp_path):
     config[api.APP_NAME]['lint_enabled_checks'] = 'ascii'
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote,
-                           ['add', 'A plain quote without tags - Test Author'],
-                           obj={})
+    result = runner.invoke(cli.jotquote, ['add', 'A plain quote without tags - Test Author'], obj={})
 
     assert result.exit_code == 0
     assert 'Warning:' not in result.output
@@ -711,9 +763,7 @@ def test_add_no_lint_flag_skips_checks(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote,
-                           ['add', '--no-lint', '\u201cSmart quote test\u201d - Test Author'],
-                           obj={})
+    result = runner.invoke(cli.jotquote, ['add', '--no-lint', '\u201cSmart quote test\u201d - Test Author'], obj={})
 
     assert result.exit_code == 0
     assert 'Warning:' not in result.output
@@ -727,12 +777,11 @@ def test_add_lint_exception_propagates(config, tmp_path, monkeypatch):
     config[api.APP_NAME]['lint_on_add'] = 'true'
 
     from jotquote import lint as lintmod
+
     monkeypatch.setattr(lintmod, 'lint_quotes', lambda *a, **kw: (_ for _ in ()).throw(RuntimeError('boom')))
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote,
-                           ['add', 'A plain quote - Test Author'],
-                           obj={})
+    result = runner.invoke(cli.jotquote, ['add', 'A plain quote - Test Author'], obj={})
 
     assert result.exit_code != 0
 
@@ -744,9 +793,7 @@ def test_add_lint_on_add_false_skips_checks(config, tmp_path):
     config[api.APP_NAME]['lint_on_add'] = 'false'
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote,
-                           ['add', '\u201cSmart quote test\u201d - Test Author'],
-                           obj={})
+    result = runner.invoke(cli.jotquote, ['add', '\u201cSmart quote test\u201d - Test Author'], obj={})
 
     assert result.exit_code == 0
     assert 'Warning:' not in result.output
@@ -760,9 +807,7 @@ def test_add_lint_on_add_true_runs_checks(config, tmp_path):
     config[api.APP_NAME]['lint_on_add'] = 'true'
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote,
-                           ['add', '\u201cSmart quote test\u201d - Test Author'],
-                           input='y\n', obj={})
+    result = runner.invoke(cli.jotquote, ['add', '\u201cSmart quote test\u201d - Test Author'], input='y\n', obj={})
 
     assert result.exit_code == 0
     assert 'Warning:' in result.output

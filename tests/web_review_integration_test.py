@@ -18,7 +18,6 @@ TEST_PORT = 15545
 TEST_URL = 'http://127.0.0.1:{}/'.format(TEST_PORT)
 
 
-
 SETTINGS_CONF_TEMPLATE = """\
 [jotquote]
 quote_file = {quote_file}
@@ -85,9 +84,13 @@ def wait_for_log_line(lines, expected, timeout=5):
 
 def _start_review_server(tmp_path, quote_file, env):
     """Launch the web_review server and return (proc, stderr_lines)."""
-    cmd = [sys.executable, '-c',
-           "from waitress import serve; from jotquote.web_review import app; "
-           "serve(app, host='127.0.0.1', port={})".format(TEST_PORT)]
+    cmd = [
+        sys.executable,
+        '-c',
+        "from waitress import serve; from jotquote.web_review import app; serve(app, host='127.0.0.1', port={})".format(
+            TEST_PORT
+        ),
+    ]
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
@@ -102,9 +105,9 @@ def _assert_server_started(proc, stderr_lines):
         exit_code = proc.poll()
         stderr_dump = '\n'.join(stderr_lines) or '(no stderr captured)'
         pytest.fail(
-            'Server did not start within timeout.\n'
-            'Process exit code: {}\n'
-            'Server stderr:\n{}'.format(exit_code, stderr_dump)
+            'Server did not start within timeout.\nProcess exit code: {}\nServer stderr:\n{}'.format(
+                exit_code, stderr_dump
+            )
         )
 
 
@@ -178,6 +181,7 @@ def test_post_settags(tmp_path):
 
         # Extract the hash value from the hidden input
         import re
+
         match = re.search(r'<input type="hidden" name="hash" value="([0-9a-f]+)">', body)
         assert match, 'Could not find hash hidden input in response body'
         hash_val = match.group(1)
@@ -195,6 +199,7 @@ def test_post_settags(tmp_path):
 
         # Verify the quote file was updated
         from jotquote import api
+
         quotes = api.read_quotes(str(quote_file))
         updated = [q for q in quotes if q.get_hash() == hash_val]
         assert updated, 'Quote with hash {} not found after POST'.format(hash_val)

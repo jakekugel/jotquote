@@ -22,8 +22,7 @@ def config(monkeypatch):
     cfg[api.APP_NAME]['web_ip'] = '0.0.0.0'
     cfg.add_section('jotquote.lint')
     cfg['jotquote.lint']['enabled_checks'] = (
-        'ascii, smart-quotes, spelling, no-tags, no-author, '
-        'author-antipatterns, multiple-stars, no-star, no-visibility'
+        'ascii, smart-quotes, spelling, no-tags, no-author, author-antipatterns, multiple-stars, no-star, no-visibility'
     )
     cfg['jotquote.lint']['visibility_tags'] = ''
     cfg['jotquote.lint']['spell_ignore'] = ''
@@ -36,6 +35,7 @@ def config(monkeypatch):
 def flask_client(tmp_path):
     """Provide a Flask test client with a temporary quote file."""
     from jotquote import web
+
     quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
     web.app.testing = True
     web.app.config['QUOTE_FILE'] = quote_file

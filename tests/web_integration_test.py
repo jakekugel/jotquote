@@ -30,6 +30,7 @@ def _script(name):
             return path
     return name  # fall back to PATH lookup
 
+
 SETTINGS_CONF_TEMPLATE = """\
 [jotquote]
 quote_file = {quote_file}
@@ -106,7 +107,10 @@ def _run_server_test(tmp_path, cmd, startup_log):
     env = _make_env(tmp_path, quote_file)
 
     proc = subprocess.Popen(
-        cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        cmd,
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
     )
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
@@ -114,10 +118,12 @@ def _run_server_test(tmp_path, cmd, startup_log):
     try:
         assert wait_for_server(TEST_URL), 'Server did not start within timeout'
         _assert_response(TEST_URL)
-        assert wait_for_log_line(stderr_lines, startup_log), \
-            'Expected startup message in stderr; got: {}'.format(stderr_lines)
-        assert wait_for_log_line(stderr_lines, 'GET / 200'), \
-            'Expected access log entry in stderr; got: {}'.format(stderr_lines)
+        assert wait_for_log_line(stderr_lines, startup_log), 'Expected startup message in stderr; got: {}'.format(
+            stderr_lines
+        )
+        assert wait_for_log_line(stderr_lines, 'GET / 200'), 'Expected access log entry in stderr; got: {}'.format(
+            stderr_lines
+        )
     finally:
         proc.terminate()
         proc.wait(timeout=10)
@@ -138,8 +144,10 @@ def test_waitress_serve_command(tmp_path):
         tmp_path,
         cmd=[
             _script('waitress-serve'),
-            '--host', '127.0.0.1',
-            '--port', str(TEST_PORT),
+            '--host',
+            '127.0.0.1',
+            '--port',
+            str(TEST_PORT),
             'jotquote.web:app',
         ],
         startup_log='Serving on http://127.0.0.1:{}'.format(TEST_PORT),
@@ -152,7 +160,10 @@ def test_web_page_title(tmp_path):
     env = _make_env(tmp_path, quote_file, web_page_title='My Quotes')
 
     proc = subprocess.Popen(
-        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
     )
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
@@ -174,7 +185,10 @@ def test_stars_displayed(tmp_path):
     env = _make_env(tmp_path, quote_file, web_show_stars='true')
 
     proc = subprocess.Popen(
-        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
     )
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
@@ -195,7 +209,10 @@ def test_static_asset_cache_header(tmp_path):
     env = _make_env(tmp_path, quote_file)
 
     proc = subprocess.Popen(
-        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
     )
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
@@ -220,7 +237,8 @@ def test_gunicorn_launch(tmp_path):
         tmp_path,
         cmd=[
             _script('gunicorn'),
-            '--bind', '127.0.0.1:{}'.format(TEST_PORT),
+            '--bind',
+            '127.0.0.1:{}'.format(TEST_PORT),
             'jotquote.web:app',
         ],
         startup_log='Listening at: http://127.0.0.1:{}'.format(TEST_PORT),
@@ -236,7 +254,10 @@ def test_quotemap_date_route(tmp_path):
     env = _make_env(tmp_path, quote_file, quotemap_file=str(quotemap_file))
 
     proc = subprocess.Popen(
-        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
     )
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
@@ -263,7 +284,10 @@ def test_quotemap_root_permalink(tmp_path):
     env = _make_env(tmp_path, quote_file, quotemap_file=str(quotemap_file))
 
     proc = subprocess.Popen(
-        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
     )
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
@@ -294,7 +318,10 @@ def test_web_theme_colors_config(tmp_path):
     )
 
     proc = subprocess.Popen(
-        [_script('jotquote'), 'webserver'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
     )
     stderr_lines = []
     reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)

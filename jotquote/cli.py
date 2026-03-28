@@ -11,23 +11,30 @@ import click
 
 from jotquote import api
 
-HELP_MAIN_F_ARG = 'optional path to quote file (if not provided, the command ' \
-                  'will check ~/.jotquote/settings.conf for path)'
+HELP_MAIN_F_ARG = (
+    'optional path to quote file (if not provided, the command will check ~/.jotquote/settings.conf for path)'
+)
 
 HELP_LIST_E_ARG = 'list the quotes using the same pipe-delimited format used in the quote file.'
 HELP_LIST_S_ARG = 'list the quote with the matching hash value'
 HELP_LIST_N_ARG = 'list the quote on the given line number'
-HELP_LIST_L_ARG = 'list the quotes using long-form output which includes publication, tags, and hash in addition ' \
-                  'to quote, author, and publication'
+HELP_LIST_L_ARG = (
+    'list the quotes using long-form output which includes publication, tags, and hash in addition '
+    'to quote, author, and publication'
+)
 HELP_LIST_K_ARG = 'list the quotes the given keyword in quote, author, or publication'
 HELP_LIST_T_ARG = 'list the quotes with the given tag will be displayed'
 
 HELP_ADD_USAGE = 'jotquote add [-e] [ - | <quote> ]'
-HELP_ADD_POS_ARG = 'this positional argument can either be a single dash indicating multiple ' \
-                   'quotes should be read from stdin, or a quote in following ' \
-                   'format: "<quote> - <author> [(publication)]", or "<quote> - <author> [\'publication\']"'
-HELP_ADD_E_ARG = 'use the same pipe-delimited quote format that is used in the quote file: ' \
-                 '"<quote>|<author>|[<publication>]|[<tag1>,<tag2>,...]"'
+HELP_ADD_POS_ARG = (
+    'this positional argument can either be a single dash indicating multiple '
+    'quotes should be read from stdin, or a quote in following '
+    'format: "<quote> - <author> [(publication)]", or "<quote> - <author> [\'publication\']"'
+)
+HELP_ADD_E_ARG = (
+    'use the same pipe-delimited quote format that is used in the quote file: '
+    '"<quote>|<author>|[<publication>]|[<tag1>,<tag2>,...]"'
+)
 
 HELP_SHOWALLTAGS_USAGE = 'quote showalltags [-h]'
 
@@ -63,9 +70,11 @@ def jotquote(ctx, quotefile):
         if ctx.invoked_subcommand not in ('webserver', 'quotemap') and not os.path.exists(quotefile):
             config_dir = click.get_app_dir(api.APP_NAME, roaming=True, force_posix=False)
             config_path = os.path.join(config_dir, 'settings.conf')
-            print("The quote file '{0}' does not exist.  Either create an empty file with this name, or edit "
-                  "the configuration file {1} and change the default_quote_file property to refer to a quote "
-                  "file that exists.".format(quotefile, config_path))
+            print(
+                "The quote file '{0}' does not exist.  Either create an empty file with this name, or edit "
+                'the configuration file {1} and change the default_quote_file property to refer to a quote '
+                'file that exists.'.format(quotefile, config_path)
+            )
             exit(1)
 
     # Save quotefile path into context so subcommands can use it
@@ -81,8 +90,7 @@ def jotquote(ctx, quotefile):
 @click.argument('quote')  # , help=HELP_ADD_POS_ARG
 @click.pass_context
 def add(ctx, extended, no_lint, quote):
-    """add a new quote to the quote file.
-    """
+    """add a new quote to the quote file."""
     quotefile = ctx.obj['QUOTEFILE']
 
     _add_quotes(quotefile, quote, extended, no_lint)
@@ -97,8 +105,7 @@ def add(ctx, extended, no_lint, quote):
 @click.option('--extended', '-e', help=HELP_LIST_E_ARG, is_flag=True)
 @click.pass_context
 def list(ctx, tags, keyword, long, number, hash, extended):
-    """List all quotes in the text file meeting some criteria.
-    """
+    """List all quotes in the text file meeting some criteria."""
     quotefile = ctx.obj['QUOTEFILE']
 
     # Some input validation
@@ -107,8 +114,7 @@ def list(ctx, tags, keyword, long, number, hash, extended):
 
     quotenum = _parse_number_arg(number)
     quotes = api.read_quotes(quotefile)
-    selected_quotes = _select_quotes(quotes, tags=tags, keyword=keyword, number=quotenum, hash_arg=hash,
-                                     rand=False)
+    selected_quotes = _select_quotes(quotes, tags=tags, keyword=keyword, number=quotenum, hash_arg=hash, rand=False)
 
     # Print each selected quote
     for index in selected_quotes:
@@ -124,8 +130,7 @@ def list(ctx, tags, keyword, long, number, hash, extended):
 @jotquote.command()
 @click.pass_context
 def showalltags(ctx):
-    """Show all tags used in the quote file.
-    """
+    """Show all tags used in the quote file."""
     quotefile = ctx.obj['QUOTEFILE']
 
     tags = api.read_tags(quotefile)
@@ -155,6 +160,7 @@ def webserver(ctx):
 
     # Lazy import to avoid importing web packages when using pure cli
     import jotquote.web
+
     jotquote.web.run_server()
 
 
@@ -234,7 +240,9 @@ def rebuild(quotefile, newquotemap, oldquotemap, days):
 
 @jotquote.command()
 @click.option('--fix', is_flag=True, help='Auto-fix issues that can be corrected safely.')
-@click.option('--select', 'select_checks', default='', help='Comma-separated list of checks to run (disables all others).')
+@click.option(
+    '--select', 'select_checks', default='', help='Comma-separated list of checks to run (disables all others).'
+)
 @click.option('--ignore', 'ignore_checks', default='', help='Comma-separated list of checks to skip.')
 @click.pass_context
 def lint(ctx, fix, select_checks, ignore_checks):
@@ -293,6 +301,7 @@ def lint(ctx, fix, select_checks, ignore_checks):
 def _get_active_checks(select_checks, ignore_checks, config):
     """Determine the set of lint checks to run based on CLI flags and config."""
     from jotquote import lint as lintmod
+
     all_checks = lintmod.ALL_CHECKS
     if select_checks:
         checks = {c.strip() for c in select_checks.split(',') if c.strip()}
@@ -341,8 +350,9 @@ def _add_quotes(quotefile, newquote_str, extended, no_lint=False):
             if issues:
                 for issue in issues:
                     click.echo('Warning: [{}] {}'.format(issue.check, issue.message))
-                if not click.confirm('Lint issues found. Would you like to add the quotes anyway?',
-                                     default=False, err=True):
+                if not click.confirm(
+                    'Lint issues found. Would you like to add the quotes anyway?', default=False, err=True
+                ):
                     sys.exit(1)
 
         total_count = api.add_quotes(quotefile, quotes)
@@ -360,8 +370,7 @@ def _add_quotes(quotefile, newquote_str, extended, no_lint=False):
             if issues:
                 for issue in issues:
                     click.echo('Warning: [{}] {}'.format(issue.check, issue.message))
-                if not click.confirm('Lint issues found. Would you like to add the quote anyway?',
-                                     default=False):
+                if not click.confirm('Lint issues found. Would you like to add the quote anyway?', default=False):
                     sys.exit(1)
 
         total_count = api.add_quote(quotefile, quote)
@@ -425,8 +434,9 @@ def _parse_number_arg(number):
     if number[0].isdigit():
         return int(number[0])
     else:
-        raise click.ClickException("the value '{}' is not a valid number, the -n option "
-                                   "requires an integer line number.".format(number[0]))
+        raise click.ClickException(
+            "the value '{}' is not a valid number, the -n option requires an integer line number.".format(number[0])
+        )
 
 
 def _select_quotes(quotes, tags=None, keyword=None, number=None, hash_arg=None, rand=False):
@@ -437,8 +447,11 @@ def _select_quotes(quotes, tags=None, keyword=None, number=None, hash_arg=None, 
     # Validate the number argument is within range
     if number is not None:
         if number > len(quotes):
-            raise click.ClickException('the number argument {0} is too large, there are only '
-                                       '{1} quotes in the file.'.format(str(number), str(len(quotes))))
+            raise click.ClickException(
+                'the number argument {0} is too large, there are only {1} quotes in the file.'.format(
+                    str(number), str(len(quotes))
+                )
+            )
     taglist = []
     if tags is not None:
         taglist = api.parse_tags(tags)
@@ -447,15 +460,19 @@ def _select_quotes(quotes, tags=None, keyword=None, number=None, hash_arg=None, 
     selected_quotes = []
     for index in range(0, len(quotes)):
         quote = quotes[index]
-        if ((keyword is None or quote.has_keyword(keyword))
-                and (tags is None or quote.has_tags(taglist))
-                and (number is None or number == index + 1)
-                and (hash_arg is None or hash_arg == quote.get_hash())):
+        if (
+            (keyword is None or quote.has_keyword(keyword))
+            and (tags is None or quote.has_tags(taglist))
+            and (number is None or number == index + 1)
+            and (hash_arg is None or hash_arg == quote.get_hash())
+        ):
             selected_quotes.append(index)
 
     # If there is a hash collision (unlikely), show an error.
     if hash_arg is not None and len(selected_quotes) > 1:
-        raise click.ClickException("a hash collision occurred, more than one quote in the quote file matches hash '{}'.".format(hash_arg))
+        raise click.ClickException(
+            "a hash collision occurred, more than one quote in the quote file matches hash '{}'.".format(hash_arg)
+        )
 
     # If random argument given, choose single quote from selected quotes
     if rand and len(selected_quotes) > 0:

@@ -615,8 +615,7 @@ def get_config():
     # Add lint defaults in memory if not present
     if not config.has_option(APP_NAME, 'enabled_checks'):
         config[APP_NAME]['enabled_checks'] = (
-            'ascii, smart-quotes, spelling, no-tags, no-author, '
-            'author-antipatterns, multiple-stars, required-tag-group'
+            'ascii, smart-quotes, spelling, no-tags, no-author, author-antipatterns, multiple-stars, required-tag-group'
         )
         config[APP_NAME]['spell_ignore'] = ''
         config[APP_NAME]['author_antipattern_regex'] = ''
@@ -661,7 +660,6 @@ def add_quotes(filename, newquotes):
 
     # Check for duplicates within new quotes.  Exception raised if duplicate found within input lines.
     _check_for_duplicates(newquotes, 'stdin')
-
 
     # Read in quotes from the quote file given.  Exception raised on I/O error
     quotes = read_quotes(filename)
@@ -783,7 +781,6 @@ def _get_random_value(days_since_epoch, numquotes):
     randomlib.shuffle(numlist)
     index = days_since_epoch % numquotes
     return numlist[index]
-
 
 
 def _check_for_duplicates(quotes, source):
