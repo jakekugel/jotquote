@@ -80,22 +80,6 @@ def _collect_stderr(proc, lines):
         lines.append(line.decode('utf-8', errors='replace').rstrip())
 
 
-def test_ascii_only(tmp_path):
-    """jotquote add fails with non-zero exit when ascii_only=true and quote has non-ASCII char."""
-    quote_file = _copy_quotes(tmp_path)
-    env = _make_env(tmp_path, quote_file, ascii_only='true')
-
-    result = subprocess.run(
-        [_script('jotquote'), 'add', 'Hello\u200aWorld - Some Author'],
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-    assert result.returncode != 0
-    output = result.stdout.decode('utf-8', errors='replace') + result.stderr.decode('utf-8', errors='replace')
-    assert 'non-ASCII' in output
-
 
 def test_web_cache_minutes(tmp_path):
     """jotquote webserver respects web_cache_minutes config: max-age capped at 1 minute."""
@@ -126,7 +110,7 @@ def test_show_author_count(tmp_path):
     env = _make_env(tmp_path, quote_file, show_author_count='true')
 
     result = subprocess.run(
-        [_script('jotquote'), 'add', 'New wisdom - Ben Franklin'],
+        [_script('jotquote'), 'add', '--no-lint', 'New wisdom - Ben Franklin'],
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -262,7 +246,72 @@ def test_default_settings_conf_written(tmp_path):
     assert conf_path.exists(), 'settings.conf was not created'
     contents = conf_path.read_text(encoding='utf-8')
 
-    assert 'ascii_only' in contents
     assert 'web_cache_minutes' in contents
     assert 'show_author_count' in contents
     assert 'web_page_title' in contents
+
+
+def test_add_shows_lint_warnings_integration(tmp_path):
+    """jotquote add shows lint warnings for a quote with smart quotes and adds after confirmation."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+
+    result = subprocess.run(
+        [_script('jotquote'), 'add', '\u201cSmart quote test\u201d - Test Author'],
+        env=env,
+        input=b'y\n',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    output = result.stdout.decode('utf-8', errors='replace')
+    assert result.returncode == 0
+    assert 'Warning:' in output
+    assert '1 quote added' in output
+
+
+def test_lint_required_tag_group_integration(tmp_path):
+    """jotquote lint flags quotes missing a tag from a configured required-tag-group."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file,
+                    lint_required_group_stars='1star, 2stars, 3stars, 4stars, 5stars')
+
+    result = subprocess.run(
+        [_script('jotquote'), 'lint', '--select', 'required-tag-group'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    output = result.stdout.decode('utf-8', errors='replace')
+    assert result.returncode != 0
+    assert 'required-tag-group' in output
+    assert 'stars' in output
+
+
+def test_add_stdin_multiple_quotes_with_lint_errors(tmp_path):
+    """jotquote add - reads multiple quotes from stdin and shows lint warnings when errors are found."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+
+    # Two quotes with double-spaces (lint errors); stdin ends at EOF so the
+    # confirmation prompt defaults to 'no', causing a non-zero exit.
+    stdin_input = (
+        'First  double  space quote - Author One\n'
+        'Second  double  space quote - Author Two\n'
+    ).encode('utf-8')
+
+    result = subprocess.run(
+        [_script('jotquote'), 'add', '-'],
+        env=env,
+        input=stdin_input,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    stdout = result.stdout.decode('utf-8', errors='replace')
+    assert result.returncode != 0
+    assert 'Warning:' in stdout
+    assert 'double-spaces' in stdout
+    # Two quotes means at least two warnings (one per quote)
+    assert stdout.count('Warning:') >= 2

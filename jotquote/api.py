@@ -583,7 +583,6 @@ def get_config():
         config[APP_NAME]['line_separator'] = 'platform'
         config[APP_NAME]['web_port'] = '5544'
         config[APP_NAME]['web_ip'] = '127.0.0.1'
-        config[APP_NAME]['ascii_only'] = 'false'
         config[APP_NAME]['web_cache_minutes'] = '240'
         config[APP_NAME]['show_author_count'] = 'false'
         config[APP_NAME]['web_page_title'] = 'jotquote'
@@ -604,9 +603,8 @@ def get_config():
     if not config.has_option(APP_NAME, 'enabled_checks'):
         config[APP_NAME]['enabled_checks'] = (
             'ascii, smart-quotes, spelling, no-tags, no-author, '
-            'author-antipatterns, multiple-stars, no-star, no-visibility'
+            'author-antipatterns, multiple-stars, required-tag-group'
         )
-        config[APP_NAME]['visibility_tags'] = ''
         config[APP_NAME]['spell_ignore'] = ''
         config[APP_NAME]['author_antipattern_regex'] = ''
 
@@ -652,11 +650,6 @@ def add_quotes(filename, newquotes):
     # Check for duplicates within new quotes.  Exception raised if duplicate found within input lines.
     _check_for_duplicates(newquotes, 'stdin')
 
-    # If ascii_only is set, reject quotes containing non-ASCII characters
-    config = get_config()
-    if config[APP_NAME].getboolean('ascii_only', fallback=False):
-        for new_quote in newquotes:
-            _check_ascii(new_quote)
 
     # Read in quotes from the quote file given.  Exception raised on I/O error
     quotes = read_quotes(filename)
@@ -779,17 +772,6 @@ def _get_random_value(days_since_epoch, numquotes):
     index = days_since_epoch % numquotes
     return numlist[index]
 
-
-def _check_ascii(quote):
-    """Raises a ClickException if any field of the quote contains a non-ASCII character."""
-    for field_name, value in [('quote', quote.quote), ('author', quote.author), ('publication', quote.publication)]:
-        if value is None:
-            continue
-        for char in value:
-            if ord(char) > 127:
-                raise click.ClickException(
-                    "the {0} included a non-ASCII character (U+{1:04X}): '{2}'".format(field_name, ord(char), char)
-                )
 
 
 def _check_for_duplicates(quotes, source):

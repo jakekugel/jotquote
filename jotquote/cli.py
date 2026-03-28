@@ -77,14 +77,15 @@ def jotquote(ctx, quotefile):
 
 @jotquote.command()
 @click.option('--extended', '-e', help=HELP_ADD_E_ARG, is_flag=True)
+@click.option('--no-lint', is_flag=True, help='Skip lint checks when adding.')
 @click.argument('quote')  # , help=HELP_ADD_POS_ARG
 @click.pass_context
-def add(ctx, extended, quote):
+def add(ctx, extended, no_lint, quote):
     """add a new quote to the quote file.
     """
     quotefile = ctx.obj['QUOTEFILE']
 
-    _add_quotes(quotefile, quote, extended)
+    _add_quotes(quotefile, quote, extended, no_lint)
 
 
 @jotquote.command()
@@ -235,13 +236,25 @@ def rebuild(quotefile, newquotemap, oldquotemap, days):
 @click.option('--fix', is_flag=True, help='Auto-fix issues that can be corrected safely.')
 @click.option('--select', 'select_checks', default='', help='Comma-separated list of checks to run (disables all others).')
 @click.option('--ignore', 'ignore_checks', default='', help='Comma-separated list of checks to skip.')
-@click.option('--format', 'output_format', type=click.Choice(['text', 'json']), default='text', help='Output format.')
-@click.option('--quiet', '-q', is_flag=True, help='Suppress per-issue output; only show summary.')
 @click.pass_context
-def lint(ctx, fix, select_checks, ignore_checks, output_format, quiet):
-    """Check the quote file for quality issues."""
-    import json as jsonmod
+def lint(ctx, fix, select_checks, ignore_checks):
+    """Check the quote file for quality issues.
 
+    By default, the checks configured in settings.conf
+    (lint_enabled_checks) are used. If that property is
+    not set, all checks are run.
+
+    \b
+    Examples:
+      Run configured checks (all if not configured):
+        jotquote lint
+      Run only specific checks:
+        jotquote lint --select smart-quotes,double-spaces
+      Run all configured checks except spelling:
+        jotquote lint --ignore spelling
+      Auto-fix issues that can be corrected safely:
+        jotquote lint --fix
+    """
     from jotquote import lint as lintmod
 
     if select_checks and ignore_checks:
@@ -263,30 +276,16 @@ def lint(ctx, fix, select_checks, ignore_checks, output_format, quiet):
             quotes = api.read_quotes(quotefile)
             issues = lintmod.lint_quotes(quotes, checks, config)
 
-    if output_format == 'json':
-        result = [
-            {
-                'line': i.line_number,
-                'check': i.check,
-                'field': i.field,
-                'message': i.message,
-                'fixable': i.fixable,
-            }
-            for i in issues
-        ]
-        click.echo(jsonmod.dumps(result, indent=2))
+    for issue in issues:
+        fixable_str = ' (fixable)' if issue.fixable else ''
+        click.echo('line {}: [{}] {}{}'.format(issue.line_number, issue.check, issue.message, fixable_str))
+    issue_count = len(issues)
+    if fix and fix_count > 0:
+        click.echo('{} fix{} applied.'.format(fix_count, 'es' if fix_count != 1 else ''))
+    if issue_count == 0:
+        click.echo('No issues found.')
     else:
-        if not quiet:
-            for issue in issues:
-                fixable_str = ' (fixable)' if issue.fixable else ''
-                click.echo('line {}: [{}] {}{}'.format(issue.line_number, issue.check, issue.message, fixable_str))
-        issue_count = len(issues)
-        if fix and fix_count > 0:
-            click.echo('{} fix{} applied.'.format(fix_count, 'es' if fix_count != 1 else ''))
-        if issue_count == 0:
-            click.echo('No issues found.')
-        else:
-            click.echo('{} issue{} found.'.format(issue_count, 's' if issue_count != 1 else ''))
+        click.echo('{} issue{} found.'.format(issue_count, 's' if issue_count != 1 else ''))
 
     sys.exit(1 if issues else 0)
 
@@ -307,12 +306,23 @@ def _get_active_checks(select_checks, ignore_checks, config):
             raise click.ClickException('Unknown check(s): {}'.format(', '.join(sorted(invalid))))
         checks = all_checks - ignore
     else:
-        raw = config.get('jotquote', 'enabled_checks', fallback='')
+        raw = config.get('jotquote', 'lint_enabled_checks', fallback='')
         checks = {c.strip() for c in raw.split(',') if c.strip()} if raw.strip() else all_checks
     return checks
 
 
-def _add_quotes(quotefile, newquote_str, extended):
+def _lint_new_quotes(quotes):
+    """Lint parsed quotes before adding. Returns list of LintIssue."""
+    from jotquote import lint as lintmod
+
+    config = api.get_config()
+    checks = _get_active_checks('', '', config)
+    if not checks:
+        return []
+    return lintmod.lint_quotes(quotes, checks, config)
+
+
+def _add_quotes(quotefile, newquote_str, extended, no_lint=False):
     """Adds the new quote(s) to the quote file."""
 
     if newquote_str == '-':
@@ -320,6 +330,17 @@ def _add_quotes(quotefile, newquote_str, extended):
             quotes = api.parse_quotes(sys.stdin, 'stdin', simple_format=True)
         else:
             quotes = api.parse_quotes(sys.stdin, 'stdin', simple_format=False)
+
+        if not no_lint:
+            for i, q in enumerate(quotes, 1):
+                q.line_number = i
+            issues = _lint_new_quotes(quotes)
+            if issues:
+                for issue in issues:
+                    click.echo('Warning: [{}] {}'.format(issue.check, issue.message))
+                if not click.confirm('Lint issues found. Would you like to add the quotes anyway?',
+                                     default=False, err=True):
+                    sys.exit(1)
 
         total_count = api.add_quotes(quotefile, quotes)
         new_count = len(quotes)
@@ -329,6 +350,16 @@ def _add_quotes(quotefile, newquote_str, extended):
             quote = api.parse_quote(newquote_str, simple_format=True)
         else:
             quote = api.parse_quote(newquote_str, simple_format=False)
+
+        if not no_lint:
+            quote.line_number = 1
+            issues = _lint_new_quotes([quote])
+            if issues:
+                for issue in issues:
+                    click.echo('Warning: [{}] {}'.format(issue.check, issue.message))
+                if not click.confirm('Lint issues found. Would you like to add the quote anyway?',
+                                     default=False):
+                    sys.exit(1)
 
         total_count = api.add_quote(quotefile, quote)
         new_count = 1
