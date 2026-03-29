@@ -6,18 +6,18 @@ Be kinder than necessary, everybody is fighting some kind of battle. | Unknown |
 Remember that unjust criticism is often a disguised compliment. | Dale Carnegie |  | relationships
 To find fulfillment... don't coexist with life -- embrace it. | Jim Beggs |  | happiness
 We are all faced with great opportunities brilliantly disguised as impossible situations. | Dr. Charles R. Swindoll |  | motivational
-Life is what happens while you are making other plans. | John Lennon |  | life
+Life is what happens while you are making other plans. | John Lennon |  | flexibility
 Be who you are and say what you feel... Because those that matter... don't mind... And those that mind... don't matter. | Author Unknown |  | relationships
 If I had 8 hours to chop down a tree, I'd spend 6 sharpening my ax. | Abraham Lincoln |  | work
 Continuous effort - not strength or intelligence - is the key to unlocking our potential. | Sir Winston Churchill |  | motivational
-Those who have knowledge don't predict. Those who predict don't have knowledge. | Lao Tzu |  | knowledge
+Those who have knowledge don't predict. Those who predict don't have knowledge. | Lao Tzu |  | predictions
 An expert is someone who knows some of the worst mistakes that can be made in his subject, and how to avoid them. | Werner Karl Heisenberg |  | work
-In theory, there is no difference between theory and practice. In practice, however, there is. | Unknown |  | knowledge
+In theory, there is no difference between theory and practice. In practice, however, there is. | Unknown |  | theories
 You will find no reasonable men on the tops of great mountains. | Zen Proverb |  | motivational
 Imagination is more important than knowledge. | Albert Einstein |  | motivational
 Dripping water can pierce a stone. | Chinese Proverb |  | motivational
 Being unwanted, unloved, uncared for, forgotten by everybody, I think that is a much greater hunger, a much greater poverty than the person who has nothing to eat. | Mother Teresa |  | kindness
-Make everything as simple as possible, but not simpler. | Albert Einstein |  | work
+Make everything as simple as possible, but not simpler. | Albert Einstein |  | simplicity
 How we live our days is how we live our lives. | Annie Dillard |  | life
 Be the difference you want to see in the world. | Gandhi |  | motivational
 To invent, you need a good imagination and a pile of junk. | Thomas Edison |  | funny, motivational
@@ -31,7 +31,7 @@ I'm a slow walker, but I never walk back. | Abraham Lincoln |  | motivational
 Do not squander time, it is all that we have. | Gone with the Wind |  | life, motivational
 Go confidently in the direction of your dreams! Live the life you've imagined. | Henry David Thoreau |  | motivational
 By three methods we may learn wisdom: First, by reflection, which is noblest; Second, by imitation, which is easiest; and third by experience, which is the bitterest. | Confucius |  | learning
-The key to golf is managing your worst shots. | Jack Nicklaus |  | sports
+The key to golf is managing your worst shots. | Jack Nicklaus |  | sports, life
 Educating the mind without educating the heart is no education at all. | Aristotle |  | learning
 It's kind of fun to do the impossible. | Walt Disney |  | motivational
 Men occasionally stumble over the truth, but most of them pick themselves up and hurry off as if nothing had happened. | Winston Churchill |  | knowledge

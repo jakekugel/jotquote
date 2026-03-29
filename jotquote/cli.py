@@ -86,7 +86,7 @@ def jotquote(ctx, quotefile):
 
 @jotquote.command()
 @click.option('--extended', '-e', help=HELP_ADD_E_ARG, is_flag=True)
-@click.option('--no-lint', is_flag=True, help='Skip lint checks when adding.')
+@click.option('--no-lint', is_flag=True, help='Skip lint checks when adding (overrides lint_on_add in settings.conf).')
 @click.argument('quote')  # , help=HELP_ADD_POS_ARG
 @click.pass_context
 def add(ctx, extended, no_lint, quote):

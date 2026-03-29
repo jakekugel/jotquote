@@ -13,6 +13,8 @@ from string import ascii_letters
 
 import click
 
+from jotquote.lint import ALL_CHECKS
+
 APP_NAME = 'jotquote'
 CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.jotquote', 'settings.conf')
 INVALID_CHARS_QUOTE = re.compile('[|"\n\r]')
@@ -598,7 +600,7 @@ def get_config():
         with open(config_file, 'w') as f:
             config.write(f)
 
-        # Copy the default quote file if the resolved path doesn't exist
+        # If the quote file doesn't exist, copy the template quotes.txt to the configuration directory, usually ~/.jotquote/quotes.txt
         quote_file_raw = config.get(APP_NAME, 'quote_file')
         if not os.path.isabs(quote_file_raw):
             quote_file = os.path.normpath(os.path.join(config_dir, quote_file_raw))
@@ -614,11 +616,7 @@ def get_config():
 
     # Add lint defaults in memory if not present
     if not config.has_option(APP_NAME, 'enabled_checks'):
-        config[APP_NAME]['enabled_checks'] = (
-            'ascii, smart-quotes, spelling, no-tags, no-author, author-antipatterns, multiple-stars, required-tag-group'
-        )
-        config[APP_NAME]['spell_ignore'] = ''
-        config[APP_NAME]['author_antipattern_regex'] = ''
+        config[APP_NAME]['enabled_checks'] = ', '.join(sorted(ALL_CHECKS))
 
     return config
 

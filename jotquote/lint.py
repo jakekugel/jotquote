@@ -11,13 +11,11 @@ ALL_CHECKS = frozenset(
         'ascii',  # Flag non-ASCII characters in quote, author, or publication
         'smart-quotes',  # Flag (and fix) typographic/smart quote characters
         'smart-dashes',  # Flag (and fix) unicode dash/hyphen variants
-        'spelling',  # Flag possible misspellings in the quote text (requires pyspellchecker)
         'double-spaces',  # Flag (and fix) runs of multiple spaces in any field
         'quote-too-long',  # Flag quotes exceeding a configurable max length (lint_max_quote_length)
         'no-tags',  # Flag quotes with no tags
         'no-author',  # Flag quotes with no author
         'author-antipatterns',  # Flag author fields matching known bad patterns (anonymous, all-caps, source-type words)
-        'multiple-stars',  # Flag quotes with more than one star-rating tag
         'required-tag-group',  # Flag quotes missing a tag from any user-defined required tag group
     }
 )
@@ -45,20 +43,15 @@ _SMART_DASH_NAMES = {
 _SMART_DASH_CHARS = ''.join(_SMART_DASH_NAMES)
 _SMART_DASH_MAP = str.maketrans(_SMART_DASH_CHARS, '-' * len(_SMART_DASH_CHARS))
 
-_STAR_TAGS = frozenset({'1star', '2stars', '3stars', '4stars', '5stars'})
-
 _ANON_RE = re.compile(r'^\s*(unknown|anonymous|anon|n/a|none|\?)\s*$', re.IGNORECASE)
 _ALLCAPS_WORD_RE = re.compile(r'\b[A-Z]{3,}\b')
-
-# Words always ignored by the spell checker regardless of user configuration.
-_SPELL_IGNORE_BUILTIN = frozenset({'uncared', "might've"})
 
 
 @dataclass
 class LintIssue:
     line_number: int
     check: str
-    field: str
+    field: str  # One of: 'quote', 'author', 'publication', 'tags'
     message: str
     fixable: bool = False
     fix_value: Optional[str] = None
@@ -67,7 +60,6 @@ class LintIssue:
 def lint_quotes(quotes, checks, config):
     """Run enabled checks against all quotes. Returns a list of LintIssue."""
     lint_cfg = config['jotquote']
-    spell, ignore_words = _make_spellchecker(lint_cfg) if 'spelling' in checks else (None, None)
     issues = []
     for quote in quotes:
         if 'ascii' in checks:
@@ -80,16 +72,12 @@ def lint_quotes(quotes, checks, config):
             issues.extend(_check_double_spaces(quote))
         if 'quote-too-long' in checks:
             issues.extend(_check_quote_length(quote, lint_cfg))
-        if spell is not None:
-            issues.extend(_check_spelling(quote, spell, ignore_words))
         if 'no-tags' in checks:
             issues.extend(_check_no_tags(quote))
         if 'no-author' in checks:
             issues.extend(_check_no_author(quote))
         if 'author-antipatterns' in checks:
             issues.extend(_check_author_antipatterns(quote, lint_cfg))
-        if 'multiple-stars' in checks:
-            issues.extend(_check_multiple_stars(quote))
         if 'required-tag-group' in checks:
             issues.extend(_check_required_tag_groups(quote, lint_cfg))
     return issues
@@ -111,7 +99,7 @@ def apply_fixes(quotes, issues):
         if not line_fixes:
             continue
 
-        # Smart-quotes and smart-dashes: apply transformations to current field values
+        # Apply smart-quote, smart-dash, and double-space fixes to each field
         for field_name in ('quote', 'author', 'publication'):
             sq = [i for i in line_fixes if i.check == 'smart-quotes' and i.field == field_name]
             if sq:
@@ -140,6 +128,7 @@ _ASCII_SKIP = frozenset(_SMART_QUOTE_CHARS) | frozenset(_SMART_DASH_CHARS)
 
 
 def _check_ascii(quote):
+    """Flag non-ASCII characters in the quote, author, or publication fields."""
     issues = []
     for field_name, value in [('quote', quote.quote), ('author', quote.author), ('publication', quote.publication)]:
         if value is None:
@@ -159,6 +148,7 @@ def _check_ascii(quote):
 
 
 def _check_smart_quotes(quote):
+    """Flag and fix typographic/smart quote characters in any field."""
     issues = []
     for field_name, value in [('quote', quote.quote), ('author', quote.author), ('publication', quote.publication)]:
         if value is None:
@@ -179,6 +169,7 @@ def _check_smart_quotes(quote):
 
 
 def _check_smart_dashes(quote):
+    """Flag and fix unicode dash/hyphen variants in any field."""
     issues = []
     for field_name, value in [('quote', quote.quote), ('author', quote.author), ('publication', quote.publication)]:
         if value is None:
@@ -201,6 +192,7 @@ def _check_smart_dashes(quote):
 
 
 def _check_double_spaces(quote):
+    """Flag and fix runs of multiple consecutive spaces in any field."""
     issues = []
     for field_name, value in [('quote', quote.quote), ('author', quote.author), ('publication', quote.publication)]:
         if value is None:
@@ -221,6 +213,7 @@ def _check_double_spaces(quote):
 
 
 def _check_quote_length(quote, lint_cfg):
+    """Flag quotes exceeding the configured maximum length (lint_max_quote_length)."""
     max_len = int(lint_cfg.get('lint_max_quote_length', '0'))
     if max_len <= 0:
         return []
@@ -237,43 +230,8 @@ def _check_quote_length(quote, lint_cfg):
     return []
 
 
-def _make_spellchecker(lint_cfg):
-    """Create a SpellChecker instance once, or return (None, None) if unavailable."""
-    try:
-        from spellchecker import SpellChecker
-    except ImportError:
-        return None, None
-
-    ignore_raw = lint_cfg.get('lint_spell_ignore', '')
-    ignore_words = {w.strip().lower() for w in ignore_raw.split(',') if w.strip()} | _SPELL_IGNORE_BUILTIN
-
-    spell = SpellChecker()
-    if ignore_words:
-        spell.word_frequency.load_words(ignore_words)
-    return spell, ignore_words
-
-
-def _check_spelling(quote, spell, ignore_words):
-    issues = []
-    for field_name, value in [('quote', quote.quote)]:
-        if not value:
-            continue
-        raw_words = re.findall(r"[a-zA-Z']+", value)
-        words = [w.strip("'") for w in raw_words if w.strip("'")]
-        misspelled = spell.unknown(words) - ignore_words
-        for word in sorted(misspelled):
-            issues.append(
-                LintIssue(
-                    line_number=quote.line_number,
-                    check='spelling',
-                    field=field_name,
-                    message="Possible misspelling: '{}'".format(word),
-                )
-            )
-    return issues
-
-
 def _check_no_tags(quote):
+    """Flag quotes with no tags."""
     if not quote.tags:
         return [
             LintIssue(
@@ -287,6 +245,7 @@ def _check_no_tags(quote):
 
 
 def _check_no_author(quote):
+    """Flag quotes with no author."""
     if not quote.author or not quote.author.strip():
         return [
             LintIssue(
@@ -300,6 +259,7 @@ def _check_no_author(quote):
 
 
 def _check_author_antipatterns(quote, lint_cfg):
+    """Flag author fields matching known bad patterns (anonymous, all-caps, or custom regex)."""
     issues = []
     author = quote.author
 
@@ -341,21 +301,8 @@ def _check_author_antipatterns(quote, lint_cfg):
     return issues
 
 
-def _check_multiple_stars(quote):
-    star_count = sum(1 for tag in quote.tags if tag in _STAR_TAGS)
-    if star_count > 1:
-        return [
-            LintIssue(
-                line_number=quote.line_number,
-                check='multiple-stars',
-                field='tags',
-                message='Quote has {} star tags (only one allowed)'.format(star_count),
-            )
-        ]
-    return []
-
-
 def _check_required_tag_groups(quote, lint_cfg):
+    """Flag quotes missing a tag from any user-defined required tag group."""
     issues = []
     for key, value in lint_cfg.items():
         if not key.startswith('lint_required_group_'):

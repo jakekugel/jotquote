@@ -612,7 +612,7 @@ def test_lint_clean_file(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    # Run with only ascii check to avoid spurious spelling/star/tag failures on fixture data
+    # Run with only ascii check to avoid spurious tag failures on fixture data
     result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii'], obj={})
 
     assert result.exit_code == 0
@@ -637,7 +637,7 @@ def test_lint_select_and_ignore_mutually_exclusive(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii', '--ignore', 'spelling'], obj={})
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii', '--ignore', 'no-tags'], obj={})
 
     assert result.exit_code != 0
     assert 'mutually exclusive' in result.output
@@ -649,12 +649,9 @@ def test_lint_ignore(config, tmp_path):
     config[api.APP_NAME]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii', '--ignore', 'spelling'], obj={})
-
-    # Should fail due to mutual exclusion, so use a valid combo instead
     result = runner.invoke(
         cli.jotquote,
-        ['lint', '--ignore', 'spelling,no-tags,author-antipatterns,multiple-stars,ascii,smart-quotes,no-author'],
+        ['lint', '--ignore', 'no-tags,author-antipatterns,ascii,smart-quotes,no-author'],
         obj={},
     )
 

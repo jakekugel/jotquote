@@ -22,10 +22,9 @@ def config(monkeypatch):
     cfg[api.APP_NAME]['web_ip'] = '0.0.0.0'
     cfg.add_section('jotquote.lint')
     cfg['jotquote.lint']['enabled_checks'] = (
-        'ascii, smart-quotes, spelling, no-tags, no-author, author-antipatterns, multiple-stars, no-star, no-visibility'
+        'ascii, smart-quotes, no-tags, no-author, author-antipatterns, no-star, no-visibility'
     )
     cfg['jotquote.lint']['visibility_tags'] = ''
-    cfg['jotquote.lint']['spell_ignore'] = ''
     cfg['jotquote.lint']['author_antipattern_regex'] = ''
     monkeypatch.setattr(api, 'get_config', Mock(return_value=cfg))
     return cfg

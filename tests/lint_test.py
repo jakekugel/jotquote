@@ -4,15 +4,12 @@
 
 from configparser import ConfigParser
 
-import pytest
-
 from jotquote import api
 from jotquote.lint import (
     LintIssue,
     _check_ascii,
     _check_author_antipatterns,
     _check_double_spaces,
-    _check_multiple_stars,
     _check_no_author,
     _check_no_tags,
     _check_quote_length,
@@ -31,16 +28,13 @@ def _make_quote(quote='Test quote', author='Test Author', publication=None, tags
     return q
 
 
-def _make_config(
-    spell_ignore='', author_antipattern_regex='', enabled_checks='', max_quote_length='0', required_tag_groups=None
-):
+def _make_config(author_antipattern_regex='', enabled_checks='', max_quote_length='0', required_tag_groups=None):
     """Helper to create a config with the jotquote.lint section populated."""
     cfg = ConfigParser()
     cfg.add_section(api.APP_NAME)
     cfg[api.APP_NAME]['quote_file'] = 'notset'
     cfg.add_section('jotquote.lint')
     cfg['jotquote.lint']['lint_enabled_checks'] = enabled_checks
-    cfg['jotquote.lint']['lint_spell_ignore'] = spell_ignore
     cfg['jotquote.lint']['lint_author_antipattern_regex'] = author_antipattern_regex
     cfg['jotquote.lint']['lint_max_quote_length'] = max_quote_length
     if required_tag_groups:
@@ -342,28 +336,6 @@ def test_author_antipatterns_custom_regex_no_match():
 
 
 # ---------------------------------------------------------------------------
-# _check_multiple_stars
-# ---------------------------------------------------------------------------
-
-
-def test_multiple_stars_none():
-    q = _make_quote(tags=['funny'])
-    assert _check_multiple_stars(q) == []
-
-
-def test_multiple_stars_one():
-    q = _make_quote(tags=['3stars'])
-    assert _check_multiple_stars(q) == []
-
-
-def test_multiple_stars_two():
-    q = _make_quote(tags=['1star', '3stars'])
-    issues = _check_multiple_stars(q)
-    assert len(issues) == 1
-    assert issues[0].check == 'multiple-stars'
-
-
-# ---------------------------------------------------------------------------
 # _check_required_tag_groups
 # ---------------------------------------------------------------------------
 
@@ -439,26 +411,6 @@ def test_apply_fixes_no_fixable_issues():
     ]
     quotes, count = apply_fixes([q], issues)
     assert count == 0
-
-
-# ---------------------------------------------------------------------------
-# _check_spelling (author field extension)
-# ---------------------------------------------------------------------------
-
-
-def test_spelling_quote_field_still_checked():
-    """Quote text misspellings should still be reported with field='quote'."""
-    pytest.importorskip('spellchecker')
-    from jotquote.lint import _check_spelling, _make_spellchecker
-
-    cfg = _make_config()['jotquote.lint']
-    spell, ignore_words = _make_spellchecker(cfg)
-    if spell is None:
-        pytest.skip('pyspellchecker not installed')
-    q = _make_quote(quote='Nevr give up.', author='Jane Doe')
-    issues = _check_spelling(q, spell, ignore_words)
-    quote_issues = [i for i in issues if i.field == 'quote']
-    assert any('nevr' in i.message.lower() for i in quote_issues)
 
 
 # ---------------------------------------------------------------------------
