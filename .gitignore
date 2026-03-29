@@ -18,3 +18,6 @@ venv/
 
 # Claude Code local settings (personal overrides)
 .claude/settings.local.json
+
+# jotquote backup files created during testing
+*.jotquote.bak

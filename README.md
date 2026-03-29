@@ -29,12 +29,7 @@ $ jotquote add "The larger the island of knowledge, the longer the shoreline of 
 ## Starting the web server
 
 In some cases, the command-line might be good enough for viewing the quotes in your
-collection, but you can start a web server that will show a quote of the day.
-
-**Method 1 — `jotquote webserver` command (recommended)**
-
-The simplest way to start the web server is with the built-in command.  The host
-and port are read from settings.conf (default: `127.0.0.1:5544`):
+collection, but you can start a web server that will show a quote of the day.  The simplest way to start the web server is with the built-in command:
 
 ```bash
 $ jotquote webserver
@@ -42,56 +37,7 @@ $ jotquote webserver
 
 By default, the web server is only accessible on the system on which
 it is running.  But by editing the settings.conf file, the web server can be
-made accessible to computers on the network also.  See the section below about
-the settings.conf file for details.
-
-**Method 2 — WSGI server (advanced)**
-
-For more control, you can point any WSGI server directly at the `jotquote.web:app`
-object and specify the host and port on the command line.  For example:
-
-```bash
-# Using gunicorn (Linux/Mac):
-$ gunicorn --bind 0.0.0.0:5544 jotquote.web:app
-
-# Using waitress-serve (all platforms):
-$ waitress-serve --host 0.0.0.0 --port 5544 jotquote.web:app
-```
-
-This method is useful when hosting jotquote on a cloud platform such as
-[Render](https://render.com) where the WSGI server is configured separately.
-
-## Quotemap
-
-By default, the web server selects a quote of the day using a deterministic
-algorithm.  If you want to control which quote is shown on a specific date,
-you can create a **quotemap file** that maps dates to specific quotes.
-
-First, add the `quotemap_file` property to your settings.conf:
-
-```
-quotemap_file = ~/.jotquote/quotemap.txt
-```
-
-Then create the quotemap file with one mapping per line.  Each line has the
-format `YYYYMMDD: <16-char hash>`.  You can add comments after the hash
-with `#`:
-
-```
-# My quote schedule
-20260319: a1b2c3d4e5f67890  # "The only way to do great work..." - Steve Jobs
-20260320: 25382c2519fb23bd  # "Be yourself..." - Oscar Wilde
-```
-
-You can find a quote's 16-character hash using `jotquote list -s <hash>` or by
-viewing a quote with the CLI.
-
-When a quotemap is configured:
-- Visiting `http://host:port/` shows today's mapped quote (if today is in the
-  quotemap), with a small **permalink** link beneath the quote.
-- Visiting `http://host:port/YYYYMMDD` shows the mapped quote for that
-  specific date.
-- Dates not in the quotemap fall back to the default daily quote algorithm.
+made accessible to computers on the network also.  See [DOCUMENTATION.md](DOCUMENTATION.md) for details.
 
 ## The quote file
 
@@ -111,7 +57,7 @@ The best way out is always through. | Robert Frost | A Servant to Servants | mot
 
 You can find the location of the quote file using the `jotquote info` command,
 and you can change the location by modifying the `quote_file` property in
-settings.conf (see the settings.conf section below).
+settings.conf.
 
 The text file is encoded in UTF-8 to allow the full Unicode character set.
 
@@ -144,19 +90,20 @@ $ jotquote add -h
 
 The behavior of the jotquote command is controlled with the settings.conf
 file.  This file is always found at `~/.jotquote/settings.conf` on Windows, Mac,
-and Linux.
+and Linux.  See [DOCUMENTATION.md](DOCUMENTATION.md) for the full table of available properties.
 
 ## Supported environments
 
 jotquote is tested on Python 3.9 through 3.14 on Windows, Mac, and Linux.
 
-## Cloud storage
+## Additional documentation
 
-If you'd like to make your quotes accessible from multiple computers, you can
-put your quote file in a cloud storage service such as Dropbox or Google Drive
-and then configure jotquote on each computer to use the file on your cloud
-storage directory.  To do this, edit the settings.conf file and change the
-`quote_file` property to the path to the file on your cloud storage drive.
+[DOCUMENTATION.md](DOCUMENTATION.md) contains full reference documentation for the package, including:
+
+- Complete CLI command reference with all options and examples
+- The quotemap feature for scheduling specific quotes on specific dates
+- The review app for managing quote tags from a browser
+- Full settings.conf property reference
 
 ## Credit
 
