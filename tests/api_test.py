@@ -862,12 +862,12 @@ def test_get_config_creates_from_template(tmp_path, monkeypatch):
     contents = config_file.read_text(encoding='utf-8')
     assert 'quote_file' in contents
     assert 'line_separator' in contents
-    assert 'show_author_count' in contents
     assert 'web_page_title' in contents
+    assert 'lint_on_add' in contents
     # quotes.txt should have been copied alongside settings.conf
     assert (tmp_path / 'quotes.txt').exists()
     # quote_file should be resolved to an absolute path in the returned config
-    quote_file = config.get(api.APP_NAME, 'quote_file')
+    quote_file = config.get_str('quote_file')
     assert os.path.isabs(quote_file)
 
 
@@ -882,7 +882,7 @@ def test_get_config_env_var_overrides_default(tmp_path, monkeypatch):
 
     config = api.get_config()
 
-    assert config.get(api.APP_NAME, 'web_page_title') == 'Custom Title'
+    assert config.get_str('web_page_title') == 'Custom Title'
 
 
 def test_get_config_resolves_relative_quote_file(tmp_path, monkeypatch):
@@ -898,6 +898,6 @@ def test_get_config_resolves_relative_quote_file(tmp_path, monkeypatch):
 
     config = api.get_config()
 
-    resolved = config.get(api.APP_NAME, 'quote_file')
+    resolved = config.get_str('quote_file')
     assert os.path.isabs(resolved)
     assert resolved == str(quotes_file)

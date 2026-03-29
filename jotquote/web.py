@@ -62,14 +62,26 @@ def showpage(date_path_param=None):
     # Calculate max-age: configured cap or seconds until midnight, whichever is less
     midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     seconds_until_midnight = int((midnight - now).total_seconds())
-    config = api.get_config()
-    cap_minutes = int(config[api.APP_NAME].get('web_cache_minutes', '240'))
-    page_title = config[api.APP_NAME].get('web_page_title', 'jotquote')
-    show_stars = config[api.APP_NAME].get('web_show_stars', 'false').lower() == 'true'
-    light_fg = config[api.APP_NAME].get('web_light_foreground_color', '#000000')
-    light_bg = config[api.APP_NAME].get('web_light_background_color', '#ffffff')
-    dark_fg = config[api.APP_NAME].get('web_dark_foreground_color', '#ffffff')
-    dark_bg = config[api.APP_NAME].get('web_dark_background_color', '#000000')
+
+    try:
+        config = api.get_config()
+        cap_minutes = config.get_int('web_cache_minutes')
+        page_title = config.get_str('web_page_title')
+        show_stars = config.get_bool('web_show_stars')
+        light_fg = config.get_str('web_light_foreground_color')
+        light_bg = config.get_str('web_light_background_color')
+        dark_fg = config.get_str('web_dark_foreground_color')
+        dark_bg = config.get_str('web_dark_background_color')
+    except api.ConfigurationError as e:
+        app.logger.error(f'Configuration error: {str(e)}')
+        page_title = 'jotquote'
+        light_fg = '#000000'
+        light_bg = '#ffffff'
+        dark_fg = '#ffffff'
+        dark_bg = '#000000'
+        cap_minutes = 240
+        show_stars = False
+
     max_age = min(cap_minutes * 60, seconds_until_midnight)
 
     # Determine display date
@@ -100,7 +112,11 @@ def showpage(date_path_param=None):
 
     # Try to load quotemap and find a mapped quote
     permalink = None
-    quotemap_file = config[api.APP_NAME].get('quotemap_file', '')
+    try:
+        quotemap_file = config.get_str('quotemap_file')
+    except api.ConfigurationError:
+        quotemap_file = ''
+
     quotemap = {}
     if quotemap_file:
         try:
@@ -167,8 +183,12 @@ def get_quotes():
 
     # Ensure that path to quote file read from configuration file
     if 'QUOTE_FILE' not in app.config:
-        config = api.get_config()
-        app.config['QUOTE_FILE'] = config.get('jotquote', 'quote_file')
+        try:
+            config = api.get_config()
+            app.config['QUOTE_FILE'] = config.get_str('quote_file')
+        except api.ConfigurationError as e:
+            app.logger.error(f'Configuration error reading quote_file: {str(e)}')
+            return None
 
     try:
         if quotes is None:
@@ -215,9 +235,12 @@ def run_server():
     """
 
     # Load needed configuration from settings.conf file
-    config = api.get_config()
-    listen_port = config.get('jotquote', 'web_port')
-    listen_ip = config.get('jotquote', 'web_ip')
+    try:
+        config = api.get_config()
+        listen_port = config.get_int('web_port')
+        listen_ip = config.get_str('web_ip')
+    except api.ConfigurationError as e:
+        raise click.ClickException(f'Configuration error: {str(e)}')
 
     if not listen_port:
         listen_port = 5544

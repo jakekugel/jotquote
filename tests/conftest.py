@@ -2,6 +2,7 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
+import tempfile
 from configparser import ConfigParser
 from unittest.mock import Mock
 
@@ -13,21 +14,34 @@ from jotquote import api
 
 @pytest.fixture
 def config(monkeypatch):
-    """Provide a test ConfigParser and patch api.get_config to return it."""
+    """Provide a test Config object and patch api.get_config to return it."""
     cfg = ConfigParser()
-    cfg.add_section(api.APP_NAME)
-    cfg[api.APP_NAME]['quote_file'] = 'notset'
-    cfg[api.APP_NAME]['line_separator'] = 'platform'
-    cfg[api.APP_NAME]['web_port'] = '80'
-    cfg[api.APP_NAME]['web_ip'] = '0.0.0.0'
-    cfg.add_section('jotquote.lint')
-    cfg['jotquote.lint']['enabled_checks'] = (
-        'ascii, smart-quotes, no-tags, no-author, author-antipatterns, no-star, no-visibility'
-    )
-    cfg['jotquote.lint']['visibility_tags'] = ''
-    cfg['jotquote.lint']['author_antipattern_regex'] = ''
-    monkeypatch.setattr(api, 'get_config', Mock(return_value=cfg))
-    return cfg
+    cfg.add_section('general')
+    cfg['general']['quote_file'] = 'notset'
+    cfg['general']['line_separator'] = 'platform'
+    cfg['general']['web_page_title'] = 'Test Quotes'
+    cfg['general']['quotemap_file'] = ''
+
+    cfg.add_section('lint')
+    cfg['lint']['lint_on_add'] = 'false'
+    cfg['lint']['lint_author_antipattern_regex'] = ''
+    cfg['lint']['lint_enabled_checks'] = 'ascii, smart-quotes, no-tags, no-author, author-antipatterns'
+    cfg['lint']['lint_max_quote_length'] = '0'
+
+    cfg.add_section('web')
+    cfg['web']['web_port'] = '80'
+    cfg['web']['web_ip'] = '0.0.0.0'
+    cfg['web']['web_cache_minutes'] = '240'
+    cfg['web']['web_show_stars'] = 'false'
+    cfg['web']['web_light_foreground_color'] = '#000000'
+    cfg['web']['web_light_background_color'] = '#ffffff'
+    cfg['web']['web_dark_foreground_color'] = '#ffffff'
+    cfg['web']['web_dark_background_color'] = '#000000'
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_obj = api.Config(cfg, tmpdir)
+        monkeypatch.setattr(api, 'get_config', Mock(return_value=config_obj))
+        yield config_obj
 
 
 @pytest.fixture

@@ -43,16 +43,25 @@ def log_request(response):
 
 @app.route('/')
 def index():
-    config = api.get_config()
-    quotefile = config.get(api.APP_NAME, 'quote_file')
-    page_title = config.get(api.APP_NAME, 'web_page_title', fallback='jotquote')
-    show_stars = config[api.APP_NAME].get('web_show_stars', 'false').lower() == 'true'
-    light_fg = config[api.APP_NAME].get('web_light_foreground_color', '#000000')
-    light_bg = config[api.APP_NAME].get('web_light_background_color', '#ffffff')
-    dark_fg = config[api.APP_NAME].get('web_dark_foreground_color', '#ffffff')
-    dark_bg = config[api.APP_NAME].get('web_dark_background_color', '#000000')
+    try:
+        config = api.get_config()
+        quotefile = config.get_str('quote_file')
+        page_title = config.get_str('web_page_title')
+        show_stars = config.get_bool('web_show_stars')
+        light_fg = config.get_str('web_light_foreground_color')
+        light_bg = config.get_str('web_light_background_color')
+        dark_fg = config.get_str('web_dark_foreground_color')
+        dark_bg = config.get_str('web_dark_background_color')
+    except api.ConfigurationError as e:
+        app.logger.error(f'Configuration error: {str(e)}')
+        return f'<p>Configuration error: {str(e)}</p>', 500
 
-    quotes = api.read_quotes(quotefile)
+    try:
+        quotes = api.read_quotes(quotefile)
+    except Exception as e:
+        app.logger.error(f'Error reading quotes: {str(e)}')
+        return f'<p>Error reading quotes: {str(e)}</p>', 500
+
     quote = api.get_first_match(quotes, excluded_tags=','.join(STAR_TAGS), rand=False)
 
     if quote is None:
@@ -88,8 +97,13 @@ def index():
 
 @app.route('/settags', methods=['POST'])
 def settags():
-    config = api.get_config()
-    quotefile = config.get(api.APP_NAME, 'quote_file')
+    try:
+        config = api.get_config()
+        quotefile = config.get_str('quote_file')
+    except api.ConfigurationError as e:
+        app.logger.error(f'Configuration error: {str(e)}')
+        return f'<p>Configuration error: {str(e)}</p>', 500
+
     hash_val = request.form.get('hash')
     star_tag = request.form.get('star_tag', '')
     visibility_tag = request.form.get('visibility_tag', '')

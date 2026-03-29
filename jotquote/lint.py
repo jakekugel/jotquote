@@ -59,7 +59,6 @@ class LintIssue:
 
 def lint_quotes(quotes, checks, config):
     """Run enabled checks against all quotes. Returns a list of LintIssue."""
-    lint_cfg = config['jotquote']
     issues = []
     for quote in quotes:
         if 'ascii' in checks:
@@ -71,15 +70,15 @@ def lint_quotes(quotes, checks, config):
         if 'double-spaces' in checks:
             issues.extend(_check_double_spaces(quote))
         if 'quote-too-long' in checks:
-            issues.extend(_check_quote_length(quote, lint_cfg))
+            issues.extend(_check_quote_length(quote, config))
         if 'no-tags' in checks:
             issues.extend(_check_no_tags(quote))
         if 'no-author' in checks:
             issues.extend(_check_no_author(quote))
         if 'author-antipatterns' in checks:
-            issues.extend(_check_author_antipatterns(quote, lint_cfg))
+            issues.extend(_check_author_antipatterns(quote, config))
         if 'required-tag-group' in checks:
-            issues.extend(_check_required_tag_groups(quote, lint_cfg))
+            issues.extend(_check_required_tag_groups(quote, config))
     return issues
 
 
@@ -212,9 +211,12 @@ def _check_double_spaces(quote):
     return issues
 
 
-def _check_quote_length(quote, lint_cfg):
+def _check_quote_length(quote, config):
     """Flag quotes exceeding the configured maximum length (lint_max_quote_length)."""
-    max_len = int(lint_cfg.get('lint_max_quote_length', '0'))
+    try:
+        max_len = config.get_int('lint_max_quote_length')
+    except:
+        max_len = 0
     if max_len <= 0:
         return []
     length = len(quote.quote)
@@ -258,7 +260,7 @@ def _check_no_author(quote):
     return []
 
 
-def _check_author_antipatterns(quote, lint_cfg):
+def _check_author_antipatterns(quote, config):
     """Flag author fields matching known bad patterns (anonymous, all-caps, or custom regex)."""
     issues = []
     author = quote.author
@@ -284,7 +286,11 @@ def _check_author_antipatterns(quote, lint_cfg):
             )
         )
 
-    raw_patterns = lint_cfg.get('lint_author_antipattern_regex', '')
+    try:
+        raw_patterns = config.get_str('lint_author_antipattern_regex')
+    except:
+        raw_patterns = ''
+
     if raw_patterns.strip():
         for pattern in raw_patterns.split(','):
             pattern = pattern.strip()
@@ -301,12 +307,11 @@ def _check_author_antipatterns(quote, lint_cfg):
     return issues
 
 
-def _check_required_tag_groups(quote, lint_cfg):
+def _check_required_tag_groups(quote, config):
     """Flag quotes missing a tag from any user-defined required tag group."""
     issues = []
-    for key, value in lint_cfg.items():
-        if not key.startswith('lint_required_group_'):
-            continue
+    group_items = config.get_property_items_with_prefix('lint_required_group_')
+    for key, value in group_items.items():
         group_name = key[len('lint_required_group_') :]
         required_tags = {t.strip() for t in value.split(',') if t.strip()}
         if not required_tags:

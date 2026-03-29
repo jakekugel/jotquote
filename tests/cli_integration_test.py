@@ -27,24 +27,76 @@ def _script(name):
 
 
 SETTINGS_CONF_TEMPLATE = """\
-[jotquote]
+[general]
 quote_file = {quote_file}
+line_separator = platform
+
+[lint]
+lint_enabled_checks = ascii,author-antipatterns,double-spaces,no-author,no-tags,quote-too-long,required-tag-group,smart-dashes,smart-quotes
+
+[web]
 web_port = {port}
 web_ip = 127.0.0.1
-line_separator = platform
 {extra}"""
+
+
+PROPERTY_TO_SECTION = {
+    'quote_file': 'general',
+    'line_separator': 'general',
+    'web_page_title': 'general',
+    'quotemap_file': 'general',
+    'lint_on_add': 'lint',
+    'lint_author_antipattern_regex': 'lint',
+    'lint_enabled_checks': 'lint',
+    'lint_max_quote_length': 'lint',
+    'web_port': 'web',
+    'web_ip': 'web',
+    'web_cache_minutes': 'web',
+    'web_show_stars': 'web',
+    'show_author_count': 'web',  # for backward compat with tests
+    'web_light_foreground_color': 'web',
+    'web_light_background_color': 'web',
+    'web_dark_foreground_color': 'web',
+    'web_dark_background_color': 'web',
+}
 
 
 def _make_env(tmp_path, quote_file, **extra_props):
     """Build a settings.conf in tmp_path and return a subprocess env dict."""
-    extra = '\n'.join('{} = {}'.format(k, v) for k, v in extra_props.items())
+    # Organize extra_props by section
+    lint_props = []
+    web_props = []
+
+    for k, v in extra_props.items():
+        if k.startswith('lint_'):
+            lint_props.append(f'{k} = {v}')
+        else:
+            web_props.append(f'{k} = {v}')
+
+    # Build the extra lines (append to respective sections)
+    extra = '\n'.join(web_props) if web_props else ''
+
+    # Build config
+    config_text = SETTINGS_CONF_TEMPLATE.format(quote_file=str(quote_file), port=CLI_TEST_PORT, extra=extra)
+
+    # If there are lint props, insert them before [web]
+    if lint_props:
+        lint_extra = '\n'.join(lint_props)
+        config_text = config_text.replace('[web]', lint_extra + '\n\n[web]')
+
     jotquote_dir = tmp_path / '.jotquote'
     jotquote_dir.mkdir(exist_ok=True)
     conf_path = jotquote_dir / 'settings.conf'
-    conf_path.write_text(
-        SETTINGS_CONF_TEMPLATE.format(quote_file=str(quote_file), port=CLI_TEST_PORT, extra=extra),
-        encoding='utf-8',
-    )
+    conf_path.write_text(config_text, encoding='utf-8')
+
+    env = os.environ.copy()
+    env['HOME'] = str(tmp_path)
+    env['USERPROFILE'] = str(tmp_path)
+    env['PYTHONUNBUFFERED'] = '1'
+    return env
+
+    conf_path.write_text(config_text, encoding='utf-8')
+
     env = os.environ.copy()
     env['HOME'] = str(tmp_path)
     env['USERPROFILE'] = str(tmp_path)
@@ -333,3 +385,77 @@ def test_lint_on_add_false_skips_lint_integration(tmp_path):
     assert result.returncode == 0
     assert 'Warning:' not in output
     assert '1 quote added' in output
+
+
+def test_missing_property_shows_friendly_error(tmp_path):
+    """Missing configuration property shows friendly error, not stack trace."""
+    quote_file = _copy_quotes(tmp_path)
+    jotquote_dir = tmp_path / '.jotquote'
+    jotquote_dir.mkdir(exist_ok=True)
+
+    # Create settings.conf with missing quote_file property
+    conf_path = jotquote_dir / 'settings.conf'
+    conf_path.write_text(
+        '[jotquote]\nweb_port = 15545\nweb_ip = 127.0.0.1\n',
+        encoding='utf-8',
+    )
+
+    env = os.environ.copy()
+    env['HOME'] = str(tmp_path)
+    env['USERPROFILE'] = str(tmp_path)
+
+    result = subprocess.run(
+        [_script('jotquote'), 'list'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    output = result.stdout.decode('utf-8', errors='replace')
+    error_output = result.stderr.decode('utf-8', errors='replace')
+    all_output = output + error_output
+
+    # Should have non-zero exit code
+    assert result.returncode != 0
+    # Should show friendly error message
+    assert 'Configuration error' in all_output or 'quote_file' in all_output
+    # Should NOT show Python stack trace or ConfigParser errors
+    assert 'Traceback' not in all_output
+    assert 'NoOptionError' not in all_output
+    assert 'configparser' not in all_output.lower()
+
+
+def test_old_format_config_shows_migration_warning(tmp_path):
+    """Old format settings.conf (single [jotquote] section) shows migration warning."""
+    quote_file = _copy_quotes(tmp_path)
+    jotquote_dir = tmp_path / '.jotquote'
+    jotquote_dir.mkdir(exist_ok=True)
+
+    # Create old-format settings.conf with all properties under [jotquote]
+    conf_path = jotquote_dir / 'settings.conf'
+    conf_path.write_text(
+        '[jotquote]\nquote_file = {}\nweb_port = 15545\nweb_ip = 127.0.0.1\nline_separator = platform\n'.format(
+            str(quote_file)
+        ),
+        encoding='utf-8',
+    )
+
+    env = os.environ.copy()
+    env['HOME'] = str(tmp_path)
+    env['USERPROFILE'] = str(tmp_path)
+
+    result = subprocess.run(
+        [_script('jotquote'), 'list'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    output = result.stdout.decode('utf-8', errors='replace')
+    error_output = result.stderr.decode('utf-8', errors='replace')
+    all_output = output + error_output
+
+    # Should succeed (exit code 0)
+    assert result.returncode == 0
+    # Should display warning about outdated format
+    assert 'Configuration format is outdated' in all_output or 'new sections' in all_output or '[general]' in all_output

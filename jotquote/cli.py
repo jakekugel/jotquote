@@ -59,11 +59,22 @@ def jotquote(ctx, quotefile):
     file; you can add, view, and tag quotes.  The command can also be used to start
     a simple web server to display a quote of the day.
     """
-    config = api.get_config()
+    try:
+        config = api.get_config()
+        if config.should_warn_old_format():
+            click.echo(
+                'Configuration format is outdated; consider updating to new sections: [general], [lint], [web]',
+                err=True,
+            )
+    except api.ConfigurationError as e:
+        raise click.ClickException(f'Configuration error: {str(e)}')
 
     # Get path to quote file
     if quotefile is None:
-        quotefile = config.get(api.APP_NAME, 'quote_file')
+        try:
+            quotefile = config.get_str('quote_file')
+        except api.ConfigurationError as e:
+            raise click.ClickException(f'Configuration error: {str(e)}')
 
         # All subcommands except webserver require quotefile to exist.  The
         # webserver subcommand lazy-loads when user views page.
@@ -315,8 +326,11 @@ def _get_active_checks(select_checks, ignore_checks, config):
             raise click.ClickException('Unknown check(s): {}'.format(', '.join(sorted(invalid))))
         checks = all_checks - ignore
     else:
-        raw = config.get('jotquote', 'lint_enabled_checks', fallback='')
-        checks = {c.strip() for c in raw.split(',') if c.strip()} if raw.strip() else all_checks
+        try:
+            enabled = config.get_list('lint_enabled_checks')
+            checks = set(enabled) if enabled else all_checks
+        except api.ConfigurationError:
+            checks = all_checks
     return checks
 
 
@@ -328,14 +342,20 @@ def _lint_new_quotes(quotes):
     checks = _get_active_checks('', '', config)
     if not checks:
         return []
-    return lintmod.lint_quotes(quotes, checks, config)
+    try:
+        return lintmod.lint_quotes(quotes, checks, config)
+    except api.ConfigurationError as e:
+        raise click.ClickException(f'Configuration error: {str(e)}')
 
 
 def _add_quotes(quotefile, newquote_str, extended, no_lint=False):
     """Adds the new quote(s) to the quote file."""
 
-    config = api.get_config()
-    lint_on_add = config[api.APP_NAME].getboolean('lint_on_add', fallback=False)
+    try:
+        config = api.get_config()
+        lint_on_add = config.get_bool('lint_on_add')
+    except api.ConfigurationError as e:
+        raise click.ClickException(f'Configuration error: {str(e)}')
 
     if newquote_str == '-':
         if not extended:
@@ -378,11 +398,6 @@ def _add_quotes(quotefile, newquote_str, extended, no_lint=False):
 
     if new_count == 1:
         print('{0} quote added for total of {1}.'.format(str(new_count), str(total_count)))
-        config = api.get_config()
-        if config[api.APP_NAME].getboolean('show_author_count', fallback=False):
-            all_quotes = api.read_quotes(quotefile)
-            count = sum(1 for q in all_quotes if q.author == quote.author)
-            print('You now have {0} quote{1} by {2}.'.format(count, '' if count == 1 else 's', quote.author))
     else:
         print('{0} quotes added for total of {1}.'.format(str(new_count), str(total_count)))
 

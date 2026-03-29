@@ -29,18 +29,19 @@ def _make_quote(quote='Test quote', author='Test Author', publication=None, tags
 
 
 def _make_config(author_antipattern_regex='', enabled_checks='', max_quote_length='0', required_tag_groups=None):
-    """Helper to create a config with the jotquote.lint section populated."""
+    """Helper to create a Config object with lint section populated."""
     cfg = ConfigParser()
-    cfg.add_section(api.APP_NAME)
-    cfg[api.APP_NAME]['quote_file'] = 'notset'
-    cfg.add_section('jotquote.lint')
-    cfg['jotquote.lint']['lint_enabled_checks'] = enabled_checks
-    cfg['jotquote.lint']['lint_author_antipattern_regex'] = author_antipattern_regex
-    cfg['jotquote.lint']['lint_max_quote_length'] = max_quote_length
+    cfg.add_section('general')
+    cfg['general']['quote_file'] = 'notset'
+    cfg.add_section('lint')
+    cfg['lint']['lint_enabled_checks'] = enabled_checks
+    cfg['lint']['lint_author_antipattern_regex'] = author_antipattern_regex
+    cfg['lint']['lint_max_quote_length'] = max_quote_length
     if required_tag_groups:
         for name, tags in required_tag_groups.items():
-            cfg['jotquote.lint']['lint_required_group_{}'.format(name)] = tags
-    return cfg
+            cfg['lint']['lint_required_group_{}'.format(name)] = tags
+    cfg.add_section('web')
+    return api.Config(cfg, '.')
 
 
 # ---------------------------------------------------------------------------

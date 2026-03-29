@@ -21,6 +21,243 @@ INVALID_CHARS_QUOTE = re.compile('[|"\n\r]')
 INVALID_CHARS = re.compile('[|\n\r]')
 
 
+class ConfigurationError(Exception):
+    """Raised when a configuration property cannot be read or is invalid."""
+
+    pass
+
+
+class Config:
+    """Provides typed access to jotquote configuration properties.
+
+    Supports both old single-section [jotquote] format and new three-section
+    format ([general], [lint], [web]). Auto-detects format on initialization.
+    """
+
+    # Property name to section mapping for new format
+    _PROPERTY_SECTIONS = {
+        # General properties
+        'quote_file': 'general',
+        'line_separator': 'general',
+        'web_page_title': 'general',
+        'quotemap_file': 'general',
+        # Lint properties
+        'lint_on_add': 'lint',
+        'lint_author_antipattern_regex': 'lint',
+        'lint_enabled_checks': 'lint',
+        'lint_max_quote_length': 'lint',
+        # Web properties
+        'web_port': 'web',
+        'web_ip': 'web',
+        'web_cache_minutes': 'web',
+        'web_show_stars': 'web',
+        'web_page_title': 'web',
+        'web_light_foreground_color': 'web',
+        'web_light_background_color': 'web',
+        'web_dark_foreground_color': 'web',
+        'web_dark_background_color': 'web',
+    }
+
+    # Default values for all properties
+    _DEFAULTS = {
+        'quote_file': os.path.join(os.path.expanduser('~'), '.jotquote', 'quotes.txt'),
+        'line_separator': 'platform',
+        'web_page_title': 'jotquote',
+        'quotemap_file': '',
+        'lint_on_add': False,
+        'lint_author_antipattern_regex': '',
+        'lint_enabled_checks': ', '.join(sorted(ALL_CHECKS)),
+        'lint_max_quote_length': 0,
+        'web_port': 5544,
+        'web_ip': '127.0.0.1',
+        'web_cache_minutes': 240,
+        'web_show_stars': False,
+        'web_light_foreground_color': '#000000',
+        'web_light_background_color': '#ffffff',
+        'web_dark_foreground_color': '#ffffff',
+        'web_dark_background_color': '#000000',
+    }
+
+    def __init__(self, config_parser: ConfigParser, config_dir: str = None):
+        """Initialize Config from a ConfigParser object.
+
+        Args:
+            config_parser: A ConfigParser instance with configuration data
+            config_dir: Directory containing settings.conf (for path resolution)
+        """
+        self._config = config_parser
+        self._config_dir = config_dir or os.path.dirname(os.path.abspath(CONFIG_FILE))
+        self._is_old_format = self._detect_old_format()
+        self._warn_old_format = self._is_old_format
+
+    def _detect_old_format(self) -> bool:
+        """Check if config is in old single-section format."""
+        has_new_sections = any(self._config.has_section(section) for section in ['general', 'lint', 'web'])
+        has_old_section = self._config.has_section(APP_NAME)
+        return has_old_section and not has_new_sections
+
+    def _get_property(self, prop_name: str, prop_type: type):
+        """Internal method to get a property with type conversion.
+
+        Raises ConfigurationError if property is not found.
+        """
+        try:
+            if self._is_old_format:
+                # For old format, try to read from [jotquote] section
+                section = APP_NAME
+                if not self._config.has_option(section, prop_name):
+                    # Use default if available
+                    if prop_name in self._DEFAULTS:
+                        return self._DEFAULTS[prop_name]
+                    raise ConfigurationError(f"Property '{prop_name}' not found in [{section}] section")
+
+                if prop_type == int:
+                    return self._config.getint(section, prop_name)
+                elif prop_type == bool:
+                    return self._config.getboolean(section, prop_name)
+                else:
+                    return self._config.get(section, prop_name)
+            else:
+                # For new format, read from appropriate section
+                expected_section = self._PROPERTY_SECTIONS.get(prop_name, 'general')
+
+                if not self._config.has_section(expected_section):
+                    # Section doesn't exist, use default
+                    if prop_name in self._DEFAULTS:
+                        return self._DEFAULTS[prop_name]
+                    raise ConfigurationError(f"Section '[{expected_section}]' not found in configuration file")
+
+                if not self._config.has_option(expected_section, prop_name):
+                    # Property not in section, use default
+                    if prop_name in self._DEFAULTS:
+                        return self._DEFAULTS[prop_name]
+                    raise ConfigurationError(f"Property '{prop_name}' not found in [{expected_section}] section")
+
+                if prop_type == int:
+                    return self._config.getint(expected_section, prop_name)
+                elif prop_type == bool:
+                    return self._config.getboolean(expected_section, prop_name)
+                else:
+                    return self._config.get(expected_section, prop_name)
+        except (ValueError, TypeError) as e:
+            raise ConfigurationError(f"Invalid value for property '{prop_name}': {str(e)}")
+
+    def get_str(self, prop_name: str) -> str:
+        """Get a string property."""
+        value = self._get_property(prop_name, str)
+        return value if isinstance(value, str) else str(value)
+
+    def get_int(self, prop_name: str) -> int:
+        """Get an integer property."""
+        return self._get_property(prop_name, int)
+
+    def get_bool(self, prop_name: str) -> bool:
+        """Get a boolean property."""
+        value = self._get_property(prop_name, bool)
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.lower() in ('true', '1', 'yes', 'on')
+        return bool(value)
+
+    def get_list(self, prop_name: str) -> list:
+        """Get a comma-separated list property as a list of strings."""
+        value = self.get_str(prop_name)
+        if not value:
+            return []
+        return [item.strip() for item in value.split(',') if item.strip()]
+
+    def resolve_paths(self) -> None:
+        """Resolve relative paths in quote_file and quotemap_file to absolute paths."""
+        for key in ('quote_file', 'quotemap_file'):
+            try:
+                value = self.get_str(key)
+                if value and not os.path.isabs(value):
+                    resolved = os.path.normpath(os.path.join(self._config_dir, value))
+                    # Update in config
+                    section = self._PROPERTY_SECTIONS.get(key, APP_NAME)
+                    if not self._config.has_section(section):
+                        self._config.add_section(section)
+                    self._config[section][key] = resolved
+            except ConfigurationError:
+                # Path property missing, skip
+                pass
+
+    def should_warn_old_format(self) -> bool:
+        """Return True if config is in old format and warning should be shown."""
+        return self._warn_old_format
+
+    def __getitem__(self, key: str):
+        """Provide backward compatibility for subscripting. Returns section-like object."""
+        config_obj = self  # Capture self for use in the nested class
+
+        class SectionProxy:
+            """Proxy to allow test code to read/write section-like configs."""
+
+            def __init__(self, config, section_name):
+                self.config = config
+                self.section_name = section_name
+
+            def _get_target_section(self, prop_name):
+                """Map old [jotquote] properties to new sections if needed."""
+                if self.section_name == APP_NAME and config_obj._PROPERTY_SECTIONS.get(prop_name):
+                    return config_obj._PROPERTY_SECTIONS.get(prop_name)
+                return self.section_name
+
+            def __setitem__(self, prop_name, value):
+                # For test support, allow setting values directly in underlying ConfigParser
+                target_section = self._get_target_section(prop_name)
+                if not self.config._config.has_section(target_section):
+                    self.config._config.add_section(target_section)
+                self.config._config[target_section][prop_name] = str(value)
+
+            def __getitem__(self, prop_name):
+                target_section = self._get_target_section(prop_name)
+                if self.config._config.has_section(target_section):
+                    if self.config._config.has_option(target_section, prop_name):
+                        return self.config._config[target_section][prop_name]
+                return None
+
+            def get(self, prop_name, fallback=None):
+                target_section = self._get_target_section(prop_name)
+                if self.config._config.has_section(target_section):
+                    if self.config._config.has_option(target_section, prop_name):
+                        return self.config._config[target_section][prop_name]
+                return fallback
+
+            def getboolean(self, prop_name, fallback=False):
+                target_section = self._get_target_section(prop_name)
+                if self.config._config.has_section(target_section):
+                    if self.config._config.has_option(target_section, prop_name):
+                        val = self.config._config[target_section][prop_name]
+                        return val.lower() in ('true', '1', 'yes', 'on')
+                return fallback
+
+        return SectionProxy(self, key)
+
+    def get_property_items_with_prefix(self, prefix: str) -> dict:
+        """Get all properties that start with the given prefix.
+
+        Returns dict of {property_name: value} for all properties matching prefix.
+        Useful for dynamic group-like properties (e.g., lint_required_group_*).
+        """
+        results = {}
+        if self._is_old_format:
+            section = APP_NAME
+            if self._config.has_section(section):
+                for option in self._config.options(section):
+                    if option.startswith(prefix):
+                        results[option] = self._config.get(section, option)
+        else:
+            # Check all three sections for properties with prefix
+            for section_name in ['general', 'lint', 'web']:
+                if self._config.has_section(section_name):
+                    for option in self._config.options(section_name):
+                        if option.startswith(prefix):
+                            results[option] = self._config.get(section_name, option)
+        return results
+
+
 class Quote:
     """A quote with these properties:
     quote: string with actual quote text.
@@ -578,7 +815,7 @@ def _resolve_config_paths(config, config_dir):
 
 
 def get_config():
-    """Read settings.conf and return a ConfigParser with all settings.
+    """Read settings.conf and return a Config object with all settings.
 
     The config file location is taken from the JOTQUOTE_CONFIG environment
     variable if set, otherwise defaults to ~/.jotquote/settings.conf.
@@ -601,7 +838,14 @@ def get_config():
             config.write(f)
 
         # If the quote file doesn't exist, copy the template quotes.txt to the configuration directory, usually ~/.jotquote/quotes.txt
-        quote_file_raw = config.get(APP_NAME, 'quote_file')
+        # Handle both old [jotquote] section and new [general] section
+        if config.has_option('general', 'quote_file'):
+            quote_file_raw = config.get('general', 'quote_file')
+        elif config.has_option(APP_NAME, 'quote_file'):
+            quote_file_raw = config.get(APP_NAME, 'quote_file')
+        else:
+            quote_file_raw = './quotes.txt'  # fallback
+
         if not os.path.isabs(quote_file_raw):
             quote_file = os.path.normpath(os.path.join(config_dir, quote_file_raw))
         else:
@@ -612,20 +856,22 @@ def get_config():
 
     config = ConfigParser()
     config.read(config_file)
-    _resolve_config_paths(config, config_dir)
 
-    # Add lint defaults in memory if not present
-    if not config.has_option(APP_NAME, 'lint_enabled_checks'):
-        config[APP_NAME]['lint_enabled_checks'] = ', '.join(sorted(ALL_CHECKS))
+    # Create Config object
+    config_obj = Config(config, config_dir)
+    config_obj.resolve_paths()
 
-    return config
+    return config_obj
 
 
 def get_filename():
     """Convenience method to get the quote_file property from the
     settings.conf file and verify it exists."""
     config = get_config()
-    filename = config.get(APP_NAME, 'quote_file')
+    try:
+        filename = config.get_str('quote_file')
+    except ConfigurationError as e:
+        raise click.ClickException(f'Configuration error: {str(e)}')
     if not os.path.exists(filename):
         raise click.ClickException("The quote file specified in settings.conf, '{}', was not found.".format(filename))
     return filename
@@ -819,7 +1065,10 @@ def _assert_no_invalid_chars(text, component_name):
 def _get_newline():
     """Return the newline string based on the line_separator config property."""
     config = get_config()
-    linesep_property = config.get(APP_NAME, 'line_separator')
+    try:
+        linesep_property = config.get_str('line_separator')
+    except ConfigurationError as e:
+        raise click.ClickException(f'Configuration error: {str(e)}')
     if not linesep_property or linesep_property == 'platform':
         return os.linesep
     elif linesep_property == 'unix':
