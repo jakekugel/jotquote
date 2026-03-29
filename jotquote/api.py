@@ -615,8 +615,8 @@ def get_config():
     _resolve_config_paths(config, config_dir)
 
     # Add lint defaults in memory if not present
-    if not config.has_option(APP_NAME, 'enabled_checks'):
-        config[APP_NAME]['enabled_checks'] = ', '.join(sorted(ALL_CHECKS))
+    if not config.has_option(APP_NAME, 'lint_enabled_checks'):
+        config[APP_NAME]['lint_enabled_checks'] = ', '.join(sorted(ALL_CHECKS))
 
     return config
 
