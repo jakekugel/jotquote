@@ -15,3 +15,6 @@ venv/
 
 # Temporary file for coverage.py
 .coverage
+
+# Claude Code local settings (personal overrides)
+.claude/settings.local.json

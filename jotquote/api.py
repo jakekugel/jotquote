@@ -13,6 +13,8 @@ from string import ascii_letters
 
 import click
 
+from jotquote.lint import ALL_CHECKS
+
 APP_NAME = 'jotquote'
 CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.jotquote', 'settings.conf')
 INVALID_CHARS_QUOTE = re.compile('[|"\n\r]')
@@ -43,6 +45,7 @@ class Quote:
 
         self.tags = []
         self.set_tags(tags)
+        self.line_number = 0
 
     def __eq__(self, other):
         if (
@@ -95,6 +98,10 @@ class Quote:
             if self.has_tag(label):
                 return i
         return 0
+
+    def get_line_number(self):
+        """Return the line number of this quote in the quote file."""
+        return self.line_number
 
 
 def read_quotes(filename):
@@ -405,6 +412,7 @@ def parse_quotes(rawlines, filename, encoding=None, simple_format=True):
 
         try:
             quote = _parse_quote(line, simple_format=simple_format)
+            quote.line_number = linenum
             quotes.append(quote)
         except Exception as exception:
             raise click.ClickException(
@@ -557,44 +565,59 @@ def _parse_tags(tag_string):
     return sorted(list(tagset))
 
 
+_PATH_KEYS = ('quote_file', 'quotemap_file')
+
+
+def _resolve_config_paths(config, config_dir):
+    """Resolve relative path values in config in-place, relative to config_dir."""
+    for key in _PATH_KEYS:
+        if config.has_option(APP_NAME, key):
+            value = config.get(APP_NAME, key)
+            if value and not os.path.isabs(value):
+                config[APP_NAME][key] = os.path.normpath(os.path.join(config_dir, value))
+
+
 def get_config():
-    """This function reads the file ~/.jotquote/settings.conf and returns a
-    ConfigParser object containing the settings.  If settings.conf
-    does not yet exist, a file containing default settings is created.
+    """Read settings.conf and return a ConfigParser with all settings.
+
+    The config file location is taken from the JOTQUOTE_CONFIG environment
+    variable if set, otherwise defaults to ~/.jotquote/settings.conf.
+    On first run the file is created from jotquote/templates/settings.conf
+    and the default quote file is copied alongside it.
+    Relative paths in the config (e.g. quote_file = ./quotes.txt) are resolved
+    to absolute paths relative to the directory containing settings.conf.
     """
+    config_file = os.environ.get('JOTQUOTE_CONFIG') or CONFIG_FILE
+    config_dir = os.path.dirname(os.path.abspath(config_file))
 
-    if not os.path.exists(CONFIG_FILE):
-        # Create config directory ~/.jotquote if it does not exist
-        config_dir = os.path.join(os.path.expanduser('~'), '.jotquote')
-        if not os.path.exists(config_dir):
-            os.mkdir(config_dir)
+    if not os.path.exists(config_file):
+        os.makedirs(config_dir, exist_ok=True)
 
-        # Create settings.conf within ~/.jotquote
-        quote_file = os.path.join(config_dir, 'quotes.txt')
+        # Read template and write to config_file with OS-default line endings
+        template_conf = os.path.normpath(os.path.join(__file__, '../templates/settings.conf'))
         config = ConfigParser()
-        config.add_section(APP_NAME)
-        config[APP_NAME]['quote_file'] = quote_file
-        config[APP_NAME]['line_separator'] = 'platform'
-        config[APP_NAME]['web_port'] = '5544'
-        config[APP_NAME]['web_ip'] = '127.0.0.1'
-        config[APP_NAME]['ascii_only'] = 'false'
-        config[APP_NAME]['web_cache_minutes'] = '240'
-        config[APP_NAME]['show_author_count'] = 'false'
-        config[APP_NAME]['web_page_title'] = 'jotquote'
-        config[APP_NAME]['web_show_stars'] = 'false'
-        config[APP_NAME]['quotemap_file'] = ''
-        with open(CONFIG_FILE, 'w') as configfile:
-            config.write(configfile)
+        config.read(template_conf)
+        with open(config_file, 'w') as f:
+            config.write(f)
 
-        # Create a default, empty quote file
+        # If the quote file doesn't exist, copy the template quotes.txt to the configuration directory, usually ~/.jotquote/quotes.txt
+        quote_file_raw = config.get(APP_NAME, 'quote_file')
+        if not os.path.isabs(quote_file_raw):
+            quote_file = os.path.normpath(os.path.join(config_dir, quote_file_raw))
+        else:
+            quote_file = quote_file_raw
         if not os.path.exists(quote_file):
-            template_quote_file = os.path.normpath(os.path.join(__file__, '../templates/quotes.txt'))
-            shutil.copyfile(template_quote_file, quote_file)
+            template_quotes = os.path.normpath(os.path.join(__file__, '../templates/quotes.txt'))
+            shutil.copyfile(template_quotes, quote_file)
 
     config = ConfigParser()
-    config.read(CONFIG_FILE)
+    config.read(config_file)
+    _resolve_config_paths(config, config_dir)
 
-    # If we made it here, the settings.conf file exists
+    # Add lint defaults in memory if not present
+    if not config.has_option(APP_NAME, 'enabled_checks'):
+        config[APP_NAME]['enabled_checks'] = ', '.join(sorted(ALL_CHECKS))
+
     return config
 
 
@@ -635,12 +658,6 @@ def add_quotes(filename, newquotes):
 
     # Check for duplicates within new quotes.  Exception raised if duplicate found within input lines.
     _check_for_duplicates(newquotes, 'stdin')
-
-    # If ascii_only is set, reject quotes containing non-ASCII characters
-    config = get_config()
-    if config[APP_NAME].getboolean('ascii_only', fallback=False):
-        for new_quote in newquotes:
-            _check_ascii(new_quote)
 
     # Read in quotes from the quote file given.  Exception raised on I/O error
     quotes = read_quotes(filename)
@@ -762,18 +779,6 @@ def _get_random_value(days_since_epoch, numquotes):
     randomlib.shuffle(numlist)
     index = days_since_epoch % numquotes
     return numlist[index]
-
-
-def _check_ascii(quote):
-    """Raises a ClickException if any field of the quote contains a non-ASCII character."""
-    for field_name, value in [('quote', quote.quote), ('author', quote.author), ('publication', quote.publication)]:
-        if value is None:
-            continue
-        for char in value:
-            if ord(char) > 127:
-                raise click.ClickException(
-                    "the {0} included a non-ASCII character (U+{1:04X}): '{2}'".format(field_name, ord(char), char)
-                )
 
 
 def _check_for_duplicates(quotes, source):

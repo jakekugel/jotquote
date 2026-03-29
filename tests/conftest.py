@@ -20,6 +20,12 @@ def config(monkeypatch):
     cfg[api.APP_NAME]['line_separator'] = 'platform'
     cfg[api.APP_NAME]['web_port'] = '80'
     cfg[api.APP_NAME]['web_ip'] = '0.0.0.0'
+    cfg.add_section('jotquote.lint')
+    cfg['jotquote.lint']['enabled_checks'] = (
+        'ascii, smart-quotes, no-tags, no-author, author-antipatterns, no-star, no-visibility'
+    )
+    cfg['jotquote.lint']['visibility_tags'] = ''
+    cfg['jotquote.lint']['author_antipattern_regex'] = ''
     monkeypatch.setattr(api, 'get_config', Mock(return_value=cfg))
     return cfg
 
@@ -28,6 +34,7 @@ def config(monkeypatch):
 def flask_client(tmp_path):
     """Provide a Flask test client with a temporary quote file."""
     from jotquote import web
+
     quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
     web.app.testing = True
     web.app.config['QUOTE_FILE'] = quote_file

@@ -36,6 +36,17 @@ uv run coverage report
 uv build
 ```
 
+## Development Verification
+
+After any change to `jotquote/` or `jotquote/templates/quotes.txt`, run the linter against the built-in quote collection to confirm there are no lint errors:
+
+```bash
+export JOTQUOTE_CONFIG=jotquote/templates/settings.conf
+uv run jotquote lint
+```
+
+Because the template `settings.conf` uses `quote_file = ./quotes.txt` (a relative path), jotquote resolves it to `jotquote/templates/quotes.txt` automatically. The built-in quotes must always be lint-clean.
+
 ## Architecture
 
 **jotquote** is a CLI tool + web server for managing a personal quote collection.
@@ -62,7 +73,7 @@ There are two input formats for the `add` command:
 - **Daily quote**: `get_random_choice()` seeds RNG with days since 2016-01-01, so the same quote is shown all day. `_get_random_value()` shuffles a list with seed 0 then uses `days % numquotes` as the index.
 - **Atomic writes**: `write_quotes()` writes to a randomly-named temp file, sanity-checks it against the backup size, creates a backup, then uses `os.replace()` to atomically swap it in.
 - **Duplicate detection**: `add_quotes()` compares quote text (not hash) against existing quotes before appending.
-- **Config auto-creation**: First run creates `~/.jotquote/settings.conf` and copies the template quote file from `jotquote/templates/quotes.txt`.
+- **Config auto-creation**: First run copies `jotquote/templates/settings.conf` to `~/.jotquote/settings.conf` and copies `jotquote/templates/quotes.txt` alongside it. The config file location can be overridden with the `JOTQUOTE_CONFIG` environment variable. Relative paths in `settings.conf` (e.g. `quote_file = ./quotes.txt`) are resolved relative to the directory containing the config file.
 - **Quotemap**: Optional `quotemap_file` config property pointing to a date-to-hash mapping file. Format: `YYYYMMDD: <16-char-hash>  # optional comment`, one per line. When configured, the web server checks this file before falling back to the seeded RNG. The `/<date>` route serves a specific date's mapped quote. Parsed by `read_quotemap()` in `api.py`; raises `ClickException` on any validation failure. `read_quotemap()` returns `dict[str, dict]` where each value has keys `hash`, `sticky`, `raw_line`. The `jotquote quotemap rebuild` subcommand auto-generates entries for 10 years with even distribution; see [QUOTEMAP.md](QUOTEMAP.md).
 - **Version**: Defined in `pyproject.toml` as `version`. `jotquote/__init__.py` exposes it as `__version__` via `importlib.metadata`. Convention is `X.Y.Z.dev0` between releases; strip `.dev0` when releasing and tag the commit.
 

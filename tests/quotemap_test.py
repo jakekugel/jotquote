@@ -93,8 +93,7 @@ def test_read_quotemap_inline_comments(tmp_path):
     """Lines with inline comments after the hash are parsed correctly."""
     f = tmp_path / 'quotemap.txt'
     f.write_text(
-        '20260319: a1b2c3d4e5f67890  # "The only way..." - Steve Jobs\n'
-        '20260320: 25382c2519fb23bd  # Be yourself\n',
+        '20260319: a1b2c3d4e5f67890  # "The only way..." - Steve Jobs\n20260320: 25382c2519fb23bd  # Be yourself\n',
         encoding='utf-8',
     )
     result = api.read_quotemap(str(f))
@@ -106,8 +105,7 @@ def test_read_quotemap_sticky(tmp_path):
     """Lines with '# Sticky:' inline comment are flagged as sticky."""
     f = tmp_path / 'quotemap.txt'
     f.write_text(
-        '20260319: a1b2c3d4e5f67890  # Sticky: some quote\n'
-        '20260320: 25382c2519fb23bd  # regular comment\n',
+        '20260319: a1b2c3d4e5f67890  # Sticky: some quote\n20260320: 25382c2519fb23bd  # regular comment\n',
         encoding='utf-8',
     )
     result = api.read_quotemap(str(f))
@@ -119,8 +117,7 @@ def test_read_quotemap_sticky_case_insensitive(tmp_path):
     """Sticky detection is case-insensitive and allows extra whitespace."""
     f = tmp_path / 'quotemap.txt'
     f.write_text(
-        '20260319: a1b2c3d4e5f67890  #   STICKY: some quote\n'
-        '20260320: 25382c2519fb23bd  #sticky: another\n',
+        '20260319: a1b2c3d4e5f67890  #   STICKY: some quote\n20260320: 25382c2519fb23bd  #sticky: another\n',
         encoding='utf-8',
     )
     result = api.read_quotemap(str(f))
@@ -140,8 +137,7 @@ def test_read_quotemap_mixed_valid_invalid(tmp_path):
     """Any invalid line causes ClickException (entire file rejected)."""
     f = tmp_path / 'quotemap.txt'
     f.write_text(
-        '20260319: a1b2c3d4e5f67890\n'
-        'BADDATE!: 25382c2519fb23bd\n',
+        '20260319: a1b2c3d4e5f67890\nBADDATE!: 25382c2519fb23bd\n',
         encoding='utf-8',
     )
     with pytest.raises(click.ClickException):
@@ -167,15 +163,24 @@ def test_read_quotemap_year_before_2000(tmp_path):
 def test_read_quotemap_include_future_false(tmp_path, monkeypatch):
     """include_future=False omits future non-sticky entries."""
     import datetime as dt
-    monkeypatch.setattr(dt, 'datetime', type('MockDT', (dt.datetime,), {
-        'now': staticmethod(lambda: dt.datetime(2026, 3, 20)),
-    }))
+
+    monkeypatch.setattr(
+        dt,
+        'datetime',
+        type(
+            'MockDT',
+            (dt.datetime,),
+            {
+                'now': staticmethod(lambda: dt.datetime(2026, 3, 20)),
+            },
+        ),
+    )
     f = tmp_path / 'quotemap.txt'
     f.write_text(
-        '20260319: a1b2c3d4e5f67890\n'                     # past
-        '20260320: 25382c2519fb23bd\n'                      # today
-        '20260321: a1b2c3d4e5f67890  # sticky: keep\n'     # future sticky
-        '20260322: 25382c2519fb23bd  # drop this\n',        # future non-sticky
+        '20260319: a1b2c3d4e5f67890\n'  # past
+        '20260320: 25382c2519fb23bd\n'  # today
+        '20260321: a1b2c3d4e5f67890  # sticky: keep\n'  # future sticky
+        '20260322: 25382c2519fb23bd  # drop this\n',  # future non-sticky
         encoding='utf-8',
     )
     result = api.read_quotemap(str(f), include_future=False)

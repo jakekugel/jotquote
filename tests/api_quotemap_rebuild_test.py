@@ -118,6 +118,7 @@ def test_rebuild_deterministic(tmp_path):
 def test_rebuild_output_format(tmp_path):
     """Data lines match expected format: YYYYMMDD: <hash>  # <snippet>."""
     import re
+
     quote_file = _copy_quotes(tmp_path)
     quotemap_file = _empty_quotemap(tmp_path)
     new_file = _new_quotemap_path(tmp_path)
