@@ -9,12 +9,13 @@ import shutil
 import click
 import pytest
 
-from jotquote import api, quotemap as quotemapmod
+from jotquote import api
+from jotquote import quotemap as quotemapmod
 
 
 def _copy_quotes(tmp_path, fixture='quotes1.txt'):
     """Copy a test quote fixture into tmp_path and return the path."""
-    src = os.path.join(os.path.dirname(__file__), 'testdata', fixture)
+    src = os.path.join(os.path.dirname(__file__), '..', 'testdata', fixture)
     dst = tmp_path / fixture
     shutil.copy(src, dst)
     return str(dst)
