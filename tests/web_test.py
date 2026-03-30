@@ -113,7 +113,7 @@ def test_io_errors(flask_client):
 
 def test_web_cache_minutes(flask_client, config):
     """Cache-Control max-age respects web_cache_minutes config property."""
-    config[api.APP_NAME]['web_cache_minutes'] = '1'
+    config[api.SECTION_WEB]['cache_minutes'] = '1'
     client, quote_file = flask_client
     rv = client.get('/')
     cc = rv.headers.get('Cache-Control', '')
@@ -132,7 +132,7 @@ def test_web_cache_minutes_default(flask_client, config):
 
 def test_web_page_title_custom(flask_client, config):
     """Page title reflects web_page_title config property."""
-    config[api.APP_NAME]['web_page_title'] = 'My Quotes'
+    config[api.SECTION_WEB]['page_title'] = 'My Quotes'
     client, quote_file = flask_client
     rv = client.get('/')
     assert b'<title>My Quotes</title>' in rv.data
@@ -140,7 +140,7 @@ def test_web_page_title_custom(flask_client, config):
 
 def test_web_page_title_custom_unavailable(flask_client, config):
     """Unavailable page title also reflects web_page_title config property."""
-    config[api.APP_NAME]['web_page_title'] = 'My Quotes'
+    config[api.SECTION_WEB]['page_title'] = 'My Quotes'
     client, quote_file = flask_client
     os.remove(quote_file)
     rv = client.get('/')
@@ -156,7 +156,7 @@ def test_web_page_title_default(flask_client, config):
 
 def test_stars_displayed(flask_client, config, monkeypatch):
     """Star tag causes the correct number of star characters to appear when web_show_stars is true."""
-    config[api.APP_NAME]['web_show_stars'] = 'true'
+    config[api.SECTION_WEB]['show_stars'] = 'true'
     client, quote_file = flask_client
     with open(quote_file, 'w', encoding='utf-8') as f:
         f.write('Some quote | Some Author | | 3stars\n')
@@ -168,7 +168,7 @@ def test_stars_displayed(flask_client, config, monkeypatch):
 
 def test_stars_hidden_when_show_stars_false(flask_client, config, monkeypatch):
     """Stars are not rendered when web_show_stars is false."""
-    config[api.APP_NAME]['web_show_stars'] = 'false'
+    config[api.SECTION_WEB]['show_stars'] = 'false'
     client, quote_file = flask_client
     with open(quote_file, 'w', encoding='utf-8') as f:
         f.write('Some quote | Some Author | | 3stars\n')
@@ -188,7 +188,7 @@ def test_static_asset_cache_control(flask_client):
 
 def test_no_stars_when_untagged(flask_client, config):
     """Quotes without a star tag don't render any star characters."""
-    config[api.APP_NAME]['web_show_stars'] = 'true'
+    config[api.SECTION_WEB]['show_stars'] = 'true'
     client, quote_file = flask_client
     rv = client.get('/')
     assert '\u2605'.encode('utf-8') not in rv.data
@@ -199,7 +199,7 @@ def test_date_route_with_quotemap(flask_client, config, tmp_path):
     client, quote_file = flask_client
     quotemap_file = tmp_path / 'quotemap.txt'
     quotemap_file.write_text('20260319: 25382c2519fb23bd\n', encoding='utf-8')
-    config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
+    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
     rv = client.get('/20260319')
     assert rv.status_code == 200
     assert b'Ben Franklin' in rv.data
@@ -239,7 +239,7 @@ def test_root_with_quotemap_today(flask_client, config, tmp_path, monkeypatch):
     today = datetime.datetime.now().strftime('%Y%m%d')
     quotemap_file = tmp_path / 'quotemap.txt'
     quotemap_file.write_text(f'{today}: 25382c2519fb23bd\n', encoding='utf-8')
-    config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
+    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
     rv = client.get('/')
     assert rv.status_code == 200
     assert b'Ben Franklin' in rv.data
@@ -260,7 +260,7 @@ def test_date_route_no_permalink(flask_client, config, tmp_path):
     client, quote_file = flask_client
     quotemap_file = tmp_path / 'quotemap.txt'
     quotemap_file.write_text('20260319: 25382c2519fb23bd\n', encoding='utf-8')
-    config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
+    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
     rv = client.get('/20260319')
     assert rv.status_code == 200
     assert b'>permalink</a>' not in rv.data
@@ -271,7 +271,7 @@ def test_quotemap_hash_not_found_date_route(flask_client, config, tmp_path):
     client, quote_file = flask_client
     quotemap_file = tmp_path / 'quotemap.txt'
     quotemap_file.write_text('20260319: aaaaaaaaaaaaaaaa\n', encoding='utf-8')
-    config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
+    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
     rv = client.get('/20260319')
     assert rv.status_code == 404
 
@@ -282,7 +282,7 @@ def test_quotemap_hash_not_found_root(flask_client, config, tmp_path, monkeypatc
     today = datetime.datetime.now().strftime('%Y%m%d')
     quotemap_file = tmp_path / 'quotemap.txt'
     quotemap_file.write_text(f'{today}: aaaaaaaaaaaaaaaa\n', encoding='utf-8')
-    config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
+    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
     rv = client.get('/')
     assert rv.status_code == 200
     assert b'<!DOCTYPE html>' in rv.data
@@ -298,8 +298,8 @@ def test_web_theme_colors_default(flask_client, config):
 
 def test_web_theme_colors_custom(flask_client, config):
     """Custom dark colors from config appear in rendered HTML."""
-    config[api.APP_NAME]['web_dark_foreground_color'] = '#cccccc'
-    config[api.APP_NAME]['web_dark_background_color'] = '#111111'
+    config[api.SECTION_WEB]['dark_foreground_color'] = '#cccccc'
+    config[api.SECTION_WEB]['dark_background_color'] = '#111111'
     client, quote_file = flask_client
     rv = client.get('/')
     assert b'--fg:           #cccccc' in rv.data
@@ -319,7 +319,47 @@ def test_permalink_button_present(flask_client, config, tmp_path):
     today = datetime.datetime.now().strftime('%Y%m%d')
     quotemap_file = tmp_path / 'quotemap.txt'
     quotemap_file.write_text(f'{today}: 25382c2519fb23bd\n', encoding='utf-8')
-    config[api.APP_NAME]['quotemap_file'] = str(quotemap_file)
+    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
     rv = client.get('/')
     assert b'id="permalink-btn"' in rv.data
     assert b'copyPermalink' in rv.data
+
+
+# ---------------------------------------------------------------------------
+# Legacy [jotquote] migration warning in web server
+# ---------------------------------------------------------------------------
+
+
+def test_run_server_logs_migration_warning(flask_client, config, monkeypatch):
+    """run_server() logs a warning via app.logger when migration occurs."""
+    from unittest.mock import Mock, patch
+
+    config[api.SECTION_WEB]['port'] = '5544'
+    config[api.SECTION_WEB]['ip'] = '127.0.0.1'
+    monkeypatch.setattr(api, 'get_config', Mock(return_value=(config, True)))
+
+    warning_messages = []
+    monkeypatch.setattr(web.app.logger, 'warning', lambda msg: warning_messages.append(msg))
+
+    with patch('waitress.serve'):
+        web.run_server()
+
+    assert len(warning_messages) == 1
+    assert 'deprecated' in warning_messages[0].lower()
+
+
+def test_run_server_no_warning_when_not_migrated(flask_client, config, monkeypatch):
+    """run_server() does not log a warning when migration did not occur."""
+    from unittest.mock import Mock, patch
+
+    config[api.SECTION_WEB]['port'] = '5544'
+    config[api.SECTION_WEB]['ip'] = '127.0.0.1'
+    monkeypatch.setattr(api, 'get_config', Mock(return_value=(config, False)))
+
+    warning_messages = []
+    monkeypatch.setattr(web.app.logger, 'warning', lambda msg: warning_messages.append(msg))
+
+    with patch('waitress.serve'):
+        web.run_server()
+
+    assert len(warning_messages) == 0

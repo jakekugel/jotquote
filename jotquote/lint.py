@@ -6,19 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
-ALL_CHECKS = frozenset(
-    {
-        'ascii',  # Flag non-ASCII characters in quote, author, or publication
-        'smart-quotes',  # Flag (and fix) typographic/smart quote characters
-        'smart-dashes',  # Flag (and fix) unicode dash/hyphen variants
-        'double-spaces',  # Flag (and fix) runs of multiple spaces in any field
-        'quote-too-long',  # Flag quotes exceeding a configurable max length (lint_max_quote_length)
-        'no-tags',  # Flag quotes with no tags
-        'no-author',  # Flag quotes with no author
-        'author-antipatterns',  # Flag author fields matching known bad patterns (anonymous, all-caps, source-type words)
-        'required-tag-group',  # Flag quotes missing a tag from any user-defined required tag group
-    }
-)
+from jotquote import api
 
 # Smart/typographic quote characters and their ASCII replacements
 _SMART_QUOTE_CHARS = '\u2018\u2019\u201c\u201d\u2039\u203a\u00ab\u00bb'
@@ -59,7 +47,7 @@ class LintIssue:
 
 def lint_quotes(quotes, checks, config):
     """Run enabled checks against all quotes. Returns a list of LintIssue."""
-    lint_cfg = config['jotquote']
+    lint_cfg = config[api.SECTION_LINT]
     issues = []
     for quote in quotes:
         if 'ascii' in checks:
@@ -214,7 +202,7 @@ def _check_double_spaces(quote):
 
 def _check_quote_length(quote, lint_cfg):
     """Flag quotes exceeding the configured maximum length (lint_max_quote_length)."""
-    max_len = int(lint_cfg.get('lint_max_quote_length', '0'))
+    max_len = int(lint_cfg.get('max_quote_length', '0'))
     if max_len <= 0:
         return []
     length = len(quote.quote)
@@ -284,7 +272,7 @@ def _check_author_antipatterns(quote, lint_cfg):
             )
         )
 
-    raw_patterns = lint_cfg.get('lint_author_antipattern_regex', '')
+    raw_patterns = lint_cfg.get('author_antipattern_regex', '')
     if raw_patterns.strip():
         for pattern in raw_patterns.split(','):
             pattern = pattern.strip()
@@ -305,9 +293,9 @@ def _check_required_tag_groups(quote, lint_cfg):
     """Flag quotes missing a tag from any user-defined required tag group."""
     issues = []
     for key, value in lint_cfg.items():
-        if not key.startswith('lint_required_group_'):
+        if not key.startswith('required_group_'):
             continue
-        group_name = key[len('lint_required_group_') :]
+        group_name = key[len('required_group_') :]
         required_tags = {t.strip() for t in value.split(',') if t.strip()}
         if not required_tags:
             continue

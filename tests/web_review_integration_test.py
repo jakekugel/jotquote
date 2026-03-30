@@ -19,22 +19,50 @@ TEST_URL = 'http://127.0.0.1:{}/'.format(TEST_PORT)
 
 
 SETTINGS_CONF_TEMPLATE = """\
-[jotquote]
+[general]
 quote_file = {quote_file}
-web_port = {port}
-web_ip = 127.0.0.1
 line_separator = platform
-{extra}"""
+{general_extra}
+
+[lint]
+{lint_extra}
+
+[web]
+port = {port}
+ip = 127.0.0.1
+{web_extra}"""
+
+_GENERAL_KEYS = {'show_author_count'}
+_WEB_NO_PREFIX = {'quotemap_file'}
 
 
 def _make_env(tmp_path, quote_file, **extra_props):
     """Build a settings.conf in tmp_path and return a subprocess env dict."""
-    extra = '\n'.join('{} = {}'.format(k, v) for k, v in extra_props.items())
+    general_lines = []
+    lint_lines = []
+    web_lines = []
+    for k, v in extra_props.items():
+        if k in _GENERAL_KEYS:
+            general_lines.append('{} = {}'.format(k, v))
+        elif k in _WEB_NO_PREFIX:
+            web_lines.append('{} = {}'.format(k, v))
+        elif k.startswith('lint_'):
+            lint_lines.append('{} = {}'.format(k[5:], v))
+        elif k.startswith('web_'):
+            web_lines.append('{} = {}'.format(k[4:], v))
+        else:
+            general_lines.append('{} = {}'.format(k, v))
     jotquote_dir = tmp_path / '.jotquote'
     jotquote_dir.mkdir()
     conf_path = jotquote_dir / 'settings.conf'
     conf_path.write_text(
-        SETTINGS_CONF_TEMPLATE.format(quote_file=str(quote_file), port=TEST_PORT, extra=extra),
+        SETTINGS_CONF_TEMPLATE.format(
+            quote_file=str(quote_file),
+            port=TEST_PORT,
+            general_extra='\n'.join(general_lines),
+            lint_extra='\n'.join(lint_lines),
+            web_extra='\n'.join(web_lines),
+        ),
         encoding='utf-8',
     )
     env = os.environ.copy()

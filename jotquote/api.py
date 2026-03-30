@@ -13,12 +13,30 @@ from string import ascii_letters
 
 import click
 
-from jotquote.lint import ALL_CHECKS
-
 APP_NAME = 'jotquote'
 CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.jotquote', 'settings.conf')
 INVALID_CHARS_QUOTE = re.compile('[|"\n\r]')
 INVALID_CHARS = re.compile('[|\n\r]')
+
+ALL_CHECKS = frozenset(
+    {
+        'ascii',  # Flag non-ASCII characters in quote, author, or publication
+        'smart-quotes',  # Flag (and fix) typographic/smart quote characters
+        'smart-dashes',  # Flag (and fix) unicode dash/hyphen variants
+        'double-spaces',  # Flag (and fix) runs of multiple spaces in any field
+        'quote-too-long',  # Flag quotes exceeding a configurable max length (max_quote_length)
+        'no-tags',  # Flag quotes with no tags
+        'no-author',  # Flag quotes with no author
+        'author-antipatterns',  # Flag author fields matching known bad patterns (anonymous, all-caps, source-type words)
+        'required-tag-group',  # Flag quotes missing a tag from any user-defined required tag group
+    }
+)
+
+SECTION_GENERAL = 'general'
+SECTION_LINT = 'lint'
+SECTION_WEB = 'web'
+# Retained for backwards compatibility with the old single-section [jotquote] config format
+_SECTION_LEGACY = 'jotquote'
 
 
 class Quote:
@@ -565,20 +583,86 @@ def _parse_tags(tag_string):
     return sorted(list(tagset))
 
 
-_PATH_KEYS = ('quote_file', 'quotemap_file')
+_GENERAL_KEYS = frozenset(
+    {
+        'quote_file',
+        'line_separator',
+        'show_author_count',
+    }
+)
+
+_LINT_KEYS = frozenset(
+    {
+        'lint_on_add',
+        'lint_author_antipattern_regex',
+    }
+)
+
+_WEB_KEYS = frozenset(
+    {
+        'quotemap_file',
+        'web_port',
+        'web_ip',
+        'web_cache_minutes',
+        'web_page_title',
+        'web_show_stars',
+        'web_light_foreground_color',
+        'web_light_background_color',
+        'web_dark_foreground_color',
+        'web_dark_background_color',
+    }
+)
+
+
+def _migrate_legacy_section(config):
+    """Migrate in-memory config from old [jotquote] section to [general]/[lint]/[web].
+
+    Detects the legacy format (has [jotquote] but no [general]), routes each key
+    to the correct new section, strips lint_/web_ prefixes (except lint_on_add which
+    retains its prefix), removes [jotquote], and returns True if migration occurred.
+    """
+    if not config.has_section(_SECTION_LEGACY) or config.has_section(SECTION_GENERAL):
+        return False
+
+    for section in (SECTION_GENERAL, SECTION_LINT, SECTION_WEB):
+        if not config.has_section(section):
+            config.add_section(section)
+
+    for key, value in config.items(_SECTION_LEGACY):
+        if key in _LINT_KEYS:
+            new_key = key if key == 'lint_on_add' else key[len('lint_') :]
+            config[SECTION_LINT][new_key] = value
+        elif key.startswith('lint_'):
+            config[SECTION_LINT][key[len('lint_') :]] = value
+        elif key in _WEB_KEYS:
+            new_key = key[len('web_') :] if key.startswith('web_') else key
+            config[SECTION_WEB][new_key] = value
+        else:
+            config[SECTION_GENERAL][key] = value
+
+    config.remove_section(_SECTION_LEGACY)
+    return True
 
 
 def _resolve_config_paths(config, config_dir):
     """Resolve relative path values in config in-place, relative to config_dir."""
-    for key in _PATH_KEYS:
-        if config.has_option(APP_NAME, key):
-            value = config.get(APP_NAME, key)
+    path_lookups = [
+        (SECTION_GENERAL, 'quote_file'),
+        (SECTION_WEB, 'quotemap_file'),
+    ]
+    for section, key in path_lookups:
+        if config.has_option(section, key):
+            value = config.get(section, key)
             if value and not os.path.isabs(value):
-                config[APP_NAME][key] = os.path.normpath(os.path.join(config_dir, value))
+                config[section][key] = os.path.normpath(os.path.join(config_dir, value))
 
 
 def get_config():
-    """Read settings.conf and return a ConfigParser with all settings.
+    """Read settings.conf and return (config, migrated).
+
+    config is a ConfigParser with all settings.  migrated is True if the legacy
+    [jotquote] section was detected and migrated in-memory to [general]/[lint]/[web];
+    the caller should present a deprecation warning to the user in that case.
 
     The config file location is taken from the JOTQUOTE_CONFIG environment
     variable if set, otherwise defaults to ~/.jotquote/settings.conf.
@@ -601,7 +685,7 @@ def get_config():
             config.write(f)
 
         # If the quote file doesn't exist, copy the template quotes.txt to the configuration directory, usually ~/.jotquote/quotes.txt
-        quote_file_raw = config.get(APP_NAME, 'quote_file')
+        quote_file_raw = config.get(SECTION_GENERAL, 'quote_file')
         if not os.path.isabs(quote_file_raw):
             quote_file = os.path.normpath(os.path.join(config_dir, quote_file_raw))
         else:
@@ -612,20 +696,37 @@ def get_config():
 
     config = ConfigParser()
     config.read(config_file)
+
+    # Migrate legacy [jotquote] section to [general]/[lint]/[web]
+    migrated = _migrate_legacy_section(config)
+
+    # Ensure optional sections exist
+    for section in (SECTION_LINT, SECTION_WEB):
+        if not config.has_section(section):
+            config.add_section(section)
+
     _resolve_config_paths(config, config_dir)
 
-    # Add lint defaults in memory if not present
-    if not config.has_option(APP_NAME, 'lint_enabled_checks'):
-        config[APP_NAME]['lint_enabled_checks'] = ', '.join(sorted(ALL_CHECKS))
+    # Validate required property
+    if not config.has_option(SECTION_GENERAL, 'quote_file'):
+        raise click.ClickException(
+            "'quote_file' is not set in [general] section of {}. Please add it to your settings.conf file.".format(
+                config_file
+            )
+        )
 
-    return config
+    # Add lint defaults in memory if not present
+    if not config.has_option(SECTION_LINT, 'enabled_checks'):
+        config[SECTION_LINT]['enabled_checks'] = ', '.join(sorted(ALL_CHECKS))
+
+    return config, migrated
 
 
 def get_filename():
     """Convenience method to get the quote_file property from the
     settings.conf file and verify it exists."""
-    config = get_config()
-    filename = config.get(APP_NAME, 'quote_file')
+    config, _ = get_config()
+    filename = config.get(SECTION_GENERAL, 'quote_file')
     if not os.path.exists(filename):
         raise click.ClickException("The quote file specified in settings.conf, '{}', was not found.".format(filename))
     return filename
@@ -818,8 +919,8 @@ def _assert_no_invalid_chars(text, component_name):
 
 def _get_newline():
     """Return the newline string based on the line_separator config property."""
-    config = get_config()
-    linesep_property = config.get(APP_NAME, 'line_separator')
+    config, _ = get_config()
+    linesep_property = config.get(SECTION_GENERAL, 'line_separator', fallback='platform')
     if not linesep_property or linesep_property == 'platform':
         return os.linesep
     elif linesep_property == 'unix':

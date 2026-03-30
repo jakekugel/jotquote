@@ -62,14 +62,14 @@ def showpage(date_path_param=None):
     # Calculate max-age: configured cap or seconds until midnight, whichever is less
     midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     seconds_until_midnight = int((midnight - now).total_seconds())
-    config = api.get_config()
-    cap_minutes = int(config[api.APP_NAME].get('web_cache_minutes', '240'))
-    page_title = config[api.APP_NAME].get('web_page_title', 'jotquote')
-    show_stars = config[api.APP_NAME].get('web_show_stars', 'false').lower() == 'true'
-    light_fg = config[api.APP_NAME].get('web_light_foreground_color', '#000000')
-    light_bg = config[api.APP_NAME].get('web_light_background_color', '#ffffff')
-    dark_fg = config[api.APP_NAME].get('web_dark_foreground_color', '#ffffff')
-    dark_bg = config[api.APP_NAME].get('web_dark_background_color', '#000000')
+    config, _ = api.get_config()
+    cap_minutes = int(config[api.SECTION_WEB].get('cache_minutes', '240'))
+    page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
+    show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
+    light_fg = config[api.SECTION_WEB].get('light_foreground_color', '#000000')
+    light_bg = config[api.SECTION_WEB].get('light_background_color', '#ffffff')
+    dark_fg = config[api.SECTION_WEB].get('dark_foreground_color', '#ffffff')
+    dark_bg = config[api.SECTION_WEB].get('dark_background_color', '#000000')
     max_age = min(cap_minutes * 60, seconds_until_midnight)
 
     # Determine display date
@@ -100,7 +100,7 @@ def showpage(date_path_param=None):
 
     # Try to load quotemap and find a mapped quote
     permalink = None
-    quotemap_file = config[api.APP_NAME].get('quotemap_file', '')
+    quotemap_file = config[api.SECTION_WEB].get('quotemap_file', '')
     quotemap = {}
     if quotemap_file:
         try:
@@ -167,8 +167,8 @@ def get_quotes():
 
     # Ensure that path to quote file read from configuration file
     if 'QUOTE_FILE' not in app.config:
-        config = api.get_config()
-        app.config['QUOTE_FILE'] = config.get('jotquote', 'quote_file')
+        config, _ = api.get_config()
+        app.config['QUOTE_FILE'] = config.get(api.SECTION_GENERAL, 'quote_file')
 
     try:
         if quotes is None:
@@ -215,9 +215,14 @@ def run_server():
     """
 
     # Load needed configuration from settings.conf file
-    config = api.get_config()
-    listen_port = config.get('jotquote', 'web_port')
-    listen_ip = config.get('jotquote', 'web_ip')
+    config, migrated = api.get_config()
+    if migrated:
+        app.logger.warning(
+            'settings.conf uses the deprecated [jotquote] section. '
+            'Please update to [general], [lint], and [web] sections.'
+        )
+    listen_port = config.get(api.SECTION_WEB, 'port')
+    listen_ip = config.get(api.SECTION_WEB, 'ip')
 
     if not listen_port:
         listen_port = 5544

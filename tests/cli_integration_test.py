@@ -27,22 +27,52 @@ def _script(name):
 
 
 SETTINGS_CONF_TEMPLATE = """\
-[jotquote]
+[general]
 quote_file = {quote_file}
-web_port = {port}
-web_ip = 127.0.0.1
 line_separator = platform
-{extra}"""
+{general_extra}
+
+[lint]
+{lint_extra}
+
+[web]
+port = {port}
+ip = 127.0.0.1
+{web_extra}"""
+
+_GENERAL_KEYS = {'show_author_count'}
+_WEB_NO_PREFIX = {'quotemap_file'}
 
 
 def _make_env(tmp_path, quote_file, **extra_props):
     """Build a settings.conf in tmp_path and return a subprocess env dict."""
-    extra = '\n'.join('{} = {}'.format(k, v) for k, v in extra_props.items())
+    general_lines = []
+    lint_lines = []
+    web_lines = []
+    for k, v in extra_props.items():
+        if k in _GENERAL_KEYS:
+            general_lines.append('{} = {}'.format(k, v))
+        elif k in _WEB_NO_PREFIX:
+            web_lines.append('{} = {}'.format(k, v))
+        elif k.startswith('lint_'):
+            # lint_on_add retains its prefix in [lint]; other lint_ keys have it stripped
+            new_key = k if k == 'lint_on_add' else k[5:]
+            lint_lines.append('{} = {}'.format(new_key, v))
+        elif k.startswith('web_'):
+            web_lines.append('{} = {}'.format(k[4:], v))
+        else:
+            general_lines.append('{} = {}'.format(k, v))
     jotquote_dir = tmp_path / '.jotquote'
     jotquote_dir.mkdir(exist_ok=True)
     conf_path = jotquote_dir / 'settings.conf'
     conf_path.write_text(
-        SETTINGS_CONF_TEMPLATE.format(quote_file=str(quote_file), port=CLI_TEST_PORT, extra=extra),
+        SETTINGS_CONF_TEMPLATE.format(
+            quote_file=str(quote_file),
+            port=CLI_TEST_PORT,
+            general_extra='\n'.join(general_lines),
+            lint_extra='\n'.join(lint_lines),
+            web_extra='\n'.join(web_lines),
+        ),
         encoding='utf-8',
     )
     env = os.environ.copy()
@@ -250,7 +280,7 @@ def test_default_settings_conf_written(tmp_path):
 
     assert 'quote_file' in contents
     assert 'show_author_count' in contents
-    assert 'web_page_title' in contents
+    assert 'page_title' in contents
 
 
 def test_add_shows_lint_warnings_integration(tmp_path):
@@ -333,3 +363,76 @@ def test_lint_on_add_false_skips_lint_integration(tmp_path):
     assert result.returncode == 0
     assert 'Warning:' not in output
     assert '1 quote added' in output
+
+
+LEGACY_SETTINGS_CONF_TEMPLATE = """\
+[jotquote]
+quote_file = {quote_file}
+web_port = {port}
+web_ip = 127.0.0.1
+line_separator = platform
+{extra}"""
+
+
+def _make_legacy_env(tmp_path, quote_file, **extra_props):
+    """Build a legacy [jotquote] settings.conf in tmp_path and return a subprocess env dict."""
+    extra = '\n'.join('{} = {}'.format(k, v) for k, v in extra_props.items())
+    jotquote_dir = tmp_path / '.jotquote'
+    jotquote_dir.mkdir(exist_ok=True)
+    conf_path = jotquote_dir / 'settings.conf'
+    conf_path.write_text(
+        LEGACY_SETTINGS_CONF_TEMPLATE.format(quote_file=str(quote_file), port=CLI_TEST_PORT, extra=extra),
+        encoding='utf-8',
+    )
+    env = os.environ.copy()
+    env['HOME'] = str(tmp_path)
+    env['USERPROFILE'] = str(tmp_path)
+    env['PYTHONUNBUFFERED'] = '1'
+    return env
+
+
+def test_legacy_jotquote_section_still_works(tmp_path):
+    """jotquote list works with the legacy [jotquote] section and emits a deprecation warning."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_legacy_env(tmp_path, quote_file)
+
+    result = subprocess.run(
+        [_script('jotquote'), 'list'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode == 0
+    stderr = result.stderr.decode('utf-8', errors='replace')
+    assert 'deprecated' in stderr.lower()
+    assert '[jotquote]' in stderr
+
+
+def test_missing_quote_file_friendly_error(tmp_path):
+    """Missing quote_file in settings.conf shows a friendly error, not a stack trace."""
+    jotquote_dir = tmp_path / '.jotquote'
+    jotquote_dir.mkdir(exist_ok=True)
+    conf_path = jotquote_dir / 'settings.conf'
+    conf_path.write_text(
+        '[general]\nline_separator = platform\n',
+        encoding='utf-8',
+    )
+    env = os.environ.copy()
+    env['HOME'] = str(tmp_path)
+    env['USERPROFILE'] = str(tmp_path)
+    env['JOTQUOTE_CONFIG'] = str(conf_path)
+    env['PYTHONUNBUFFERED'] = '1'
+
+    result = subprocess.run(
+        [_script('jotquote'), 'list'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode != 0
+    stderr = result.stderr.decode('utf-8', errors='replace')
+    assert 'quote_file' in stderr
+    assert 'NoOptionError' not in stderr
+    assert 'Traceback' not in stderr

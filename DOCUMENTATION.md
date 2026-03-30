@@ -36,7 +36,7 @@ Use `-e` / `--extended` to supply a quote in the same pipe-delimited format used
 $ jotquote add -e "The best way out is always through. | Robert Frost | A Servant to Servants | motivational"
 ```
 
-Use `--no-lint` to skip lint checks for a single invocation (overrides `lint_on_add` in settings.conf).
+Use `--no-lint` to skip lint checks for a single invocation (overrides `lint_on_add` in the `[lint]` section of settings.conf).
 
 ---
 
@@ -216,7 +216,7 @@ The `add` command accepts two input formats:
 
 ## Web Server
 
-Start the web server with `jotquote webserver`. It serves a quote of the day at `http://<web_ip>:<web_port>/`.
+Start the web server with `jotquote webserver`. It serves a quote of the day at `http://<ip>:<port>/` (configured in the `[web]` section of settings.conf).
 
 ### Daily quote algorithm
 
@@ -226,7 +226,7 @@ When a quotemap is configured, the quotemap takes precedence over the seeded alg
 
 ### Theming
 
-The web server supports light and dark mode. Colors are controlled via `settings.conf` properties (`web_light_foreground_color`, `web_light_background_color`, `web_dark_foreground_color`, `web_dark_background_color`). See the [settings.conf](#settingsconf) section for defaults.
+The web server supports light and dark mode. Colors are controlled via properties in the `[web]` section of `settings.conf` (`light_foreground_color`, `light_background_color`, `dark_foreground_color`, `dark_background_color`). See the [settings.conf](#settingsconf) section for defaults.
 
 ---
 
@@ -266,7 +266,7 @@ To find a quote's hash, use `jotquote list -l` or `jotquote list -s <hash>`.
 Add the `quotemap_file` property to `~/.jotquote/settings.conf`:
 
 ```ini
-[jotquote]
+[web]
 quotemap_file = ~/.jotquote/quotemap.txt
 ```
 
@@ -396,28 +396,44 @@ The review app reads the same `~/.jotquote/settings.conf` file used by the CLI a
 
 ## settings.conf
 
-The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotquote's behavior. It is created automatically on first run with default values.
+The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotquote's behavior. It is created automatically on first run with default values. Properties are organized into three sections: `[general]`, `[lint]`, and `[web]`.
+
+### `[general]` section
 
 | Property | Default | Description |
 |---|---|---|
 | `quote_file` | `~/.jotquote/quotes.txt` | Path to the quote file |
 | `line_separator` | `platform` | Line ending style: `platform`, `unix`, or `windows` |
 | `show_author_count` | `false` | If `true`, shows the number of quotes per author on the web server |
-| `quotemap_file` | _(empty)_ | Path to an optional quotemap file (see [Quotemap](#quotemap)) |
-| `web_port` | `5544` | Port the web server listens on |
-| `web_ip` | `127.0.0.1` | IP address the web server binds to |
-| `web_cache_minutes` | `240` | How long (in minutes) the web server caches the quote list after a file change |
-| `web_page_title` | `jotquote` | HTML page title shown in the browser tab |
-| `web_show_stars` | `false` | If `true`, shows star ratings on the web server |
-| `web_light_foreground_color` | `#000000` | Text color in light mode |
-| `web_light_background_color` | `#ffffff` | Background color in light mode |
-| `web_dark_foreground_color` | `#ffffff` | Text color in dark mode |
-| `web_dark_background_color` | `#000000` | Background color in dark mode |
-| `lint_enabled_checks` | _(all checks)_ | Comma-separated list of lint checks to run by default. If empty or absent, all checks run. Valid values: `ascii`, `smart-quotes`, `smart-dashes`, `double-spaces`, `quote-too-long`, `no-tags`, `no-author`, `author-antipatterns`, `required-tag-group` |
-| `lint_max_quote_length` | `0` | Maximum allowed quote length in characters; `0` disables the check. Used by the `quote-too-long` lint check |
-| `lint_author_antipattern_regex` | _(empty)_ | Comma-separated list of regex patterns; authors matching any pattern are flagged by the `author-antipatterns` lint check |
+
+### `[lint]` section
+
+| Property | Default | Description |
+|---|---|---|
+| `enabled_checks` | _(all checks)_ | Comma-separated list of lint checks to run by default. If empty or absent, all checks run. Valid values: `ascii`, `smart-quotes`, `smart-dashes`, `double-spaces`, `quote-too-long`, `no-tags`, `no-author`, `author-antipatterns`, `required-tag-group` |
+| `max_quote_length` | `0` | Maximum allowed quote length in characters; `0` disables the check. Used by the `quote-too-long` lint check |
+| `author_antipattern_regex` | _(empty)_ | Comma-separated list of regex patterns; authors matching any pattern are flagged by the `author-antipatterns` lint check |
 | `lint_on_add` | `false` | If `true`, lint checks are run automatically when adding a quote via the `add` command. Use `--no-lint` to skip lint for a single invocation regardless of this setting. |
-| `lint_required_group_<name>` | _(empty)_ | Defines a named group of required tags; a quote must have at least one tag from this group or it is flagged by the `required-tag-group` check. `<name>` is any identifier (e.g. `stars`, `visibility`). Add multiple properties with different names to define multiple groups. Example: `lint_required_group_stars = 1star, 2stars, 3stars, 4stars, 5stars` |
+| `required_group_<name>` | _(empty)_ | Defines a named group of required tags; a quote must have at least one tag from this group or it is flagged by the `required-tag-group` check. `<name>` is any identifier (e.g. `stars`, `visibility`). Add multiple properties with different names to define multiple groups. Example: `required_group_stars = 1star, 2stars, 3stars, 4stars, 5stars` |
+
+### `[web]` section
+
+| Property | Default | Description |
+|---|---|---|
+| `quotemap_file` | _(empty)_ | Path to an optional quotemap file (see [Quotemap](#quotemap)) |
+| `port` | `5544` | Port the web server listens on |
+| `ip` | `127.0.0.1` | IP address the web server binds to |
+| `cache_minutes` | `240` | How long (in minutes) the web server caches the quote list after a file change |
+| `page_title` | `jotquote` | HTML page title shown in the browser tab |
+| `show_stars` | `false` | If `true`, shows star ratings on the web server |
+| `light_foreground_color` | `#000000` | Text color in light mode |
+| `light_background_color` | `#ffffff` | Background color in light mode |
+| `dark_foreground_color` | `#ffffff` | Text color in dark mode |
+| `dark_background_color` | `#000000` | Background color in dark mode |
+
+### Legacy format
+
+The old single-section `[jotquote]` format (with prefixed key names like `lint_on_add`, `web_port`) is still supported but deprecated. If detected, jotquote will automatically migrate the settings in memory and print a deprecation warning to stderr. Users should update their `settings.conf` to the new three-section format.
 
 ## Environment Variables
 
@@ -428,7 +444,7 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 **Example** — restore the original dark color scheme:
 
 ```ini
-[jotquote]
-web_dark_foreground_color = #e8e8e8
-web_dark_background_color = #1a1a1a
+[web]
+dark_foreground_color = #e8e8e8
+dark_background_color = #1a1a1a
 ```

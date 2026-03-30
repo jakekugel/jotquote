@@ -8,7 +8,7 @@ The [plans/](plans/) folder stores implementation plans created by Claude for fu
 
 2026-14-03-migrate-tests-to-pytest.md
 
-All non-trivial implementation plans must include an appropriate number of new unit tests and at least one new integration test.
+All non-trivial implementation plans must include an appropriate number of new unit tests. Integration tests should also be included wherever they add value — at minimum one, but additional integration tests should be added when they cover meaningful scenarios.
 
 ## Commands
 
@@ -61,7 +61,7 @@ Because the template `settings.conf` uses `quote_file = ./quotes.txt` (a relativ
 
 - [jotquote/web_review.py](jotquote/web_review.py) — Separate Flask app for reviewing and updating quote tags. Serves the daily quote alongside a checkbox list of all tags; tag changes are saved via POST. Intended for local use only (no auth). Start with `waitress-serve --host 127.0.0.1 --port 5000 jotquote.web_review:app`.
 
-- [jotquote/lint.py](jotquote/lint.py) — All lint logic. `ALL_CHECKS` frozenset defines the valid check names. `lint_quotes()` runs enabled checks against a list of quotes and returns a list of `LintIssue`. `apply_fixes()` applies auto-fixable issues in place. Available checks: `ascii`, `smart-quotes`, `smart-dashes`, `double-spaces`, `quote-too-long`, `no-tags`, `no-author`, `author-antipatterns`, `required-tag-group`.
+- [jotquote/lint.py](jotquote/lint.py) — All lint logic. `lint_quotes()` runs enabled checks against a list of quotes and returns a list of `LintIssue`. `apply_fixes()` applies auto-fixable issues in place. `ALL_CHECKS` frozenset is defined in `api.py` and imported by `lint.py`. Available checks: `ascii`, `smart-quotes`, `smart-dashes`, `double-spaces`, `quote-too-long`, `no-tags`, `no-author`, `author-antipatterns`, `required-tag-group`.
 
 ### Quote file format
 
@@ -107,4 +107,4 @@ Prefer modern Python patterns and keep code as simple as possible. Favour the st
 
 ### settings.conf
 
-If `settings.conf` properties are added, removed, or changed, the table in [DOCUMENTATION.md](DOCUMENTATION.md) must be updated. Not all documented properties appear in the template `settings.conf` — the code sets in-memory defaults (e.g. `lint_enabled_checks`) when the property is absent from the file. [DOCUMENTATION.md](DOCUMENTATION.md) is the authoritative reference for all available properties.
+Properties in `settings.conf` are organized into three sections: `[general]`, `[lint]`, and `[web]`. The old single-section `[jotquote]` format is still supported via automatic in-memory migration with a deprecation warning. If `settings.conf` properties are added, removed, or changed, the table in [DOCUMENTATION.md](DOCUMENTATION.md) must be updated. Not all documented properties appear in the template `settings.conf` — the code sets in-memory defaults (e.g. `enabled_checks` in `[lint]`) when the property is absent from the file. [DOCUMENTATION.md](DOCUMENTATION.md) is the authoritative reference for all available properties.

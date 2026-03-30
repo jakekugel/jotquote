@@ -43,14 +43,14 @@ def log_request(response):
 
 @app.route('/')
 def index():
-    config = api.get_config()
-    quotefile = config.get(api.APP_NAME, 'quote_file')
-    page_title = config.get(api.APP_NAME, 'web_page_title', fallback='jotquote')
-    show_stars = config[api.APP_NAME].get('web_show_stars', 'false').lower() == 'true'
-    light_fg = config[api.APP_NAME].get('web_light_foreground_color', '#000000')
-    light_bg = config[api.APP_NAME].get('web_light_background_color', '#ffffff')
-    dark_fg = config[api.APP_NAME].get('web_dark_foreground_color', '#ffffff')
-    dark_bg = config[api.APP_NAME].get('web_dark_background_color', '#000000')
+    config, _ = api.get_config()
+    quotefile = config.get(api.SECTION_GENERAL, 'quote_file')
+    page_title = config.get(api.SECTION_WEB, 'page_title', fallback='jotquote')
+    show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
+    light_fg = config[api.SECTION_WEB].get('light_foreground_color', '#000000')
+    light_bg = config[api.SECTION_WEB].get('light_background_color', '#ffffff')
+    dark_fg = config[api.SECTION_WEB].get('dark_foreground_color', '#ffffff')
+    dark_bg = config[api.SECTION_WEB].get('dark_background_color', '#000000')
 
     quotes = api.read_quotes(quotefile)
     quote = api.get_first_match(quotes, excluded_tags=','.join(STAR_TAGS), rand=False)
@@ -88,8 +88,8 @@ def index():
 
 @app.route('/settags', methods=['POST'])
 def settags():
-    config = api.get_config()
-    quotefile = config.get(api.APP_NAME, 'quote_file')
+    config, _ = api.get_config()
+    quotefile = config.get(api.SECTION_GENERAL, 'quote_file')
     hash_val = request.form.get('hash')
     star_tag = request.form.get('star_tag', '')
     visibility_tag = request.form.get('visibility_tag', '')

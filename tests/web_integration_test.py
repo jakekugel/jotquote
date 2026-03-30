@@ -32,21 +32,50 @@ def _script(name):
 
 
 SETTINGS_CONF_TEMPLATE = """\
-[jotquote]
+[general]
 quote_file = {quote_file}
-web_port = {port}
-web_ip = 127.0.0.1
-{extra}"""
+line_separator = platform
+{general_extra}
+
+[lint]
+{lint_extra}
+
+[web]
+port = {port}
+ip = 127.0.0.1
+{web_extra}"""
+
+_GENERAL_KEYS = {'show_author_count'}
+_WEB_NO_PREFIX = {'quotemap_file'}
 
 
 def _make_env(tmp_path, quote_file, **extra_props):
     """Build a settings.conf in tmp_path and return a subprocess env dict."""
-    extra = '\n'.join('{} = {}'.format(k, v) for k, v in extra_props.items())
+    general_lines = []
+    lint_lines = []
+    web_lines = []
+    for k, v in extra_props.items():
+        if k in _GENERAL_KEYS:
+            general_lines.append('{} = {}'.format(k, v))
+        elif k in _WEB_NO_PREFIX:
+            web_lines.append('{} = {}'.format(k, v))
+        elif k.startswith('lint_'):
+            lint_lines.append('{} = {}'.format(k[5:], v))
+        elif k.startswith('web_'):
+            web_lines.append('{} = {}'.format(k[4:], v))
+        else:
+            general_lines.append('{} = {}'.format(k, v))
     jotquote_dir = tmp_path / '.jotquote'
     jotquote_dir.mkdir()
     conf_path = jotquote_dir / 'settings.conf'
     conf_path.write_text(
-        SETTINGS_CONF_TEMPLATE.format(quote_file=str(quote_file), port=TEST_PORT, extra=extra),
+        SETTINGS_CONF_TEMPLATE.format(
+            quote_file=str(quote_file),
+            port=TEST_PORT,
+            general_extra='\n'.join(general_lines),
+            lint_extra='\n'.join(lint_lines),
+            web_extra='\n'.join(web_lines),
+        ),
         encoding='utf-8',
     )
     env = os.environ.copy()
@@ -300,6 +329,57 @@ def test_quotemap_root_permalink(tmp_path):
         assert 'Ben Franklin' in body
         assert 'permalink' in body
         assert '/{}'.format(today) in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+LEGACY_SETTINGS_CONF_TEMPLATE = """\
+[jotquote]
+quote_file = {quote_file}
+web_port = {port}
+web_ip = 127.0.0.1
+{extra}"""
+
+
+def _make_legacy_env(tmp_path, quote_file, **extra_props):
+    """Build a legacy [jotquote] settings.conf in tmp_path and return a subprocess env dict."""
+    extra = '\n'.join('{} = {}'.format(k, v) for k, v in extra_props.items())
+    jotquote_dir = tmp_path / '.jotquote'
+    jotquote_dir.mkdir()
+    conf_path = jotquote_dir / 'settings.conf'
+    conf_path.write_text(
+        LEGACY_SETTINGS_CONF_TEMPLATE.format(quote_file=str(quote_file), port=TEST_PORT, extra=extra),
+        encoding='utf-8',
+    )
+    env = os.environ.copy()
+    env['HOME'] = str(tmp_path)
+    env['USERPROFILE'] = str(tmp_path)
+    env['PYTHONUNBUFFERED'] = '1'
+    return env
+
+
+def test_legacy_jotquote_section_warns_on_web_start(tmp_path):
+    """Web server with legacy [jotquote] config starts successfully and logs a deprecation warning."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_legacy_env(tmp_path, quote_file)
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            assert resp.status == 200
+        assert wait_for_log_line(stderr_lines, 'deprecated', timeout=5), (
+            'Expected deprecation warning in stderr; got: {}'.format(stderr_lines)
+        )
     finally:
         proc.terminate()
         proc.wait(timeout=10)
