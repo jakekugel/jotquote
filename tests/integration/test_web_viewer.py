@@ -87,7 +87,7 @@ def _make_env(tmp_path, quote_file, **extra_props):
 
 def _copy_quotes(tmp_path):
     """Copy a test quote fixture into tmp_path and return the path."""
-    src = os.path.join(os.path.dirname(__file__), 'testdata', 'quotes1.txt')
+    src = os.path.join(os.path.dirname(__file__), '..', 'testdata', 'quotes1.txt')
     dst = tmp_path / 'quotes1.txt'
     shutil.copy(src, dst)
     return dst
@@ -177,7 +177,7 @@ def test_waitress_serve_command(tmp_path):
             '127.0.0.1',
             '--port',
             str(TEST_PORT),
-            'jotquote.web:app',
+            'jotquote.web_viewer:app',
         ],
         startup_log='Serving on http://127.0.0.1:{}'.format(TEST_PORT),
     )
@@ -268,7 +268,7 @@ def test_gunicorn_launch(tmp_path):
             _script('gunicorn'),
             '--bind',
             '127.0.0.1:{}'.format(TEST_PORT),
-            'jotquote.web:app',
+            'jotquote.web_viewer:app',
         ],
         startup_log='Listening at: http://127.0.0.1:{}'.format(TEST_PORT),
     )

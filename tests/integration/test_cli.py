@@ -84,7 +84,7 @@ def _make_env(tmp_path, quote_file, **extra_props):
 
 def _copy_quotes(tmp_path):
     """Copy quotes1.txt fixture into tmp_path and return the path."""
-    src = os.path.join(os.path.dirname(__file__), 'testdata', 'quotes1.txt')
+    src = os.path.join(os.path.dirname(__file__), '..', 'testdata', 'quotes1.txt')
     dst = tmp_path / 'quotes1.txt'
     shutil.copy(src, dst)
     return dst

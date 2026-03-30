@@ -493,9 +493,9 @@ def test_codepage_conversion(config, tmp_path):
     assert text_data == expected
 
 
-@patch('jotquote.web.run_server')
+@patch('jotquote.web_viewer.run_server')
 def test_webserver(mock_run_server, config, tmp_path):
-    """Test webserver subcommand calls web.run_server"""
+    """Test webserver subcommand calls web_viewer.run_server"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
     config[api.SECTION_GENERAL]['quote_file'] = path
 
