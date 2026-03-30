@@ -10,6 +10,7 @@ import time
 import click
 
 from jotquote import api
+from jotquote import quotemap as quotemapmod
 
 HELP_MAIN_F_ARG = (
     'optional path to quote file (if not provided, the command will check ~/.jotquote/settings.conf for path)'
@@ -165,9 +166,9 @@ def webserver(ctx):
     """Start a web server to display quote of the day."""
 
     # Lazy import to avoid importing web packages when using pure cli
-    import jotquote.web
+    import jotquote.web_viewer
 
-    jotquote.web.run_server()
+    jotquote.web_viewer.run_server()
 
 
 @jotquote.command()
@@ -241,7 +242,7 @@ def rebuild(quotefile, newquotemap, oldquotemap, days):
         raise click.ClickException("the quotemap file '{}' was not found.".format(oldquotemap))
     if os.path.exists(newquotemap):
         raise click.ClickException("the output file '{}' already exists.".format(newquotemap))
-    api.rebuild_quotemap(quotefile, oldquotemap, newquotemap, days=days)
+    quotemapmod.rebuild_quotemap(quotefile, oldquotemap, newquotemap, days=days)
 
 
 @jotquote.command()

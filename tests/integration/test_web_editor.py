@@ -74,7 +74,7 @@ def _make_env(tmp_path, quote_file, **extra_props):
 
 def _copy_quotes(tmp_path):
     """Copy a test quote fixture into tmp_path and return the path."""
-    src = os.path.join(os.path.dirname(__file__), 'testdata', 'quotes1.txt')
+    src = os.path.join(os.path.dirname(__file__), '..', 'testdata', 'quotes1.txt')
     dst = tmp_path / 'quotes1.txt'
     shutil.copy(src, dst)
     return dst
@@ -115,7 +115,7 @@ def _start_review_server(tmp_path, quote_file, env):
     cmd = [
         sys.executable,
         '-c',
-        "from waitress import serve; from jotquote.web_review import app; serve(app, host='127.0.0.1', port={})".format(
+        "from waitress import serve; from jotquote.web_editor import app; serve(app, host='127.0.0.1', port={})".format(
             TEST_PORT
         ),
     ]

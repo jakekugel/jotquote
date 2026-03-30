@@ -10,11 +10,12 @@ import click
 import pytest
 
 from jotquote import api
+from jotquote import quotemap as quotemapmod
 
 
 def _copy_quotes(tmp_path, fixture='quotes1.txt'):
     """Copy a test quote fixture into tmp_path and return the path."""
-    src = os.path.join(os.path.dirname(__file__), 'testdata', fixture)
+    src = os.path.join(os.path.dirname(__file__), '..', 'testdata', fixture)
     dst = tmp_path / fixture
     shutil.copy(src, dst)
     return str(dst)
@@ -48,7 +49,7 @@ def test_rebuild_generates_entries(tmp_path):
     quote_file = _copy_quotes(tmp_path)
     quotemap_file = _empty_quotemap(tmp_path)
     new_file = _new_quotemap_path(tmp_path)
-    api.rebuild_quotemap(quote_file, quotemap_file, new_file, days=10)
+    quotemapmod.rebuild_quotemap(quote_file, quotemap_file, new_file, days=10)
     data_lines = _read_data_lines(new_file)
     assert len(data_lines) == 11  # days=10 generates today + 10 future days
 
@@ -62,7 +63,7 @@ def test_rebuild_skips_existing_dates(tmp_path):
     qm_file = tmp_path / 'quotemap.txt'
     qm_file.write_text('{}: {}  # existing\n'.format(tomorrow, existing_hash), encoding='utf-8')
     new_file = _new_quotemap_path(tmp_path)
-    api.rebuild_quotemap(quote_file, str(qm_file), new_file, days=5)
+    quotemapmod.rebuild_quotemap(quote_file, str(qm_file), new_file, days=5)
     data_lines = _read_data_lines(new_file)
     # The existing entry is preserved, plus 4 new ones (days=5, one already exists)
     tomorrow_lines = [line for line in data_lines if line.startswith(tomorrow)]
@@ -75,7 +76,7 @@ def test_rebuild_sticky_on_first_use(tmp_path):
     quote_file = _copy_quotes(tmp_path)
     quotemap_file = _empty_quotemap(tmp_path)
     new_file = _new_quotemap_path(tmp_path)
-    api.rebuild_quotemap(quote_file, quotemap_file, new_file, days=100)
+    quotemapmod.rebuild_quotemap(quote_file, quotemap_file, new_file, days=100)
     data_lines = _read_data_lines(new_file)
     quotes = api.read_quotes(quote_file)
     # Every hash should appear exactly once with Sticky
@@ -90,7 +91,7 @@ def test_rebuild_even_distribution(tmp_path):
     quote_file = _copy_quotes(tmp_path)
     quotemap_file = _empty_quotemap(tmp_path)
     new_file = _new_quotemap_path(tmp_path)
-    api.rebuild_quotemap(quote_file, quotemap_file, new_file, days=3652)
+    quotemapmod.rebuild_quotemap(quote_file, quotemap_file, new_file, days=3652)
     data_lines = _read_data_lines(new_file)
     counts = {}
     for line in data_lines:
@@ -106,8 +107,8 @@ def test_rebuild_deterministic(tmp_path):
     quotemap_file = _empty_quotemap(tmp_path)
     new_file1 = str(tmp_path / 'out1.txt')
     new_file2 = str(tmp_path / 'out2.txt')
-    api.rebuild_quotemap(quote_file, quotemap_file, new_file1, days=50)
-    api.rebuild_quotemap(quote_file, quotemap_file, new_file2, days=50)
+    quotemapmod.rebuild_quotemap(quote_file, quotemap_file, new_file1, days=50)
+    quotemapmod.rebuild_quotemap(quote_file, quotemap_file, new_file2, days=50)
     with open(new_file1, encoding='utf-8') as f:
         content1 = f.read()
     with open(new_file2, encoding='utf-8') as f:
@@ -122,7 +123,7 @@ def test_rebuild_output_format(tmp_path):
     quote_file = _copy_quotes(tmp_path)
     quotemap_file = _empty_quotemap(tmp_path)
     new_file = _new_quotemap_path(tmp_path)
-    api.rebuild_quotemap(quote_file, quotemap_file, new_file, days=10)
+    quotemapmod.rebuild_quotemap(quote_file, quotemap_file, new_file, days=10)
     data_lines = _read_data_lines(new_file)
     for line in data_lines:
         assert re.match(r'^\d{8}: [0-9a-f]{16}  # .+', line), 'Bad format: {}'.format(line)
@@ -132,7 +133,7 @@ def test_rebuild_quotemapfile_none(tmp_path):
     """quotemapfile=None is treated as no prior quotemap and generates entries."""
     quote_file = _copy_quotes(tmp_path)
     new_file = _new_quotemap_path(tmp_path)
-    api.rebuild_quotemap(quote_file, None, new_file, days=5)
+    quotemapmod.rebuild_quotemap(quote_file, None, new_file, days=5)
     data_lines = _read_data_lines(new_file)
     assert len(data_lines) == 6  # today + 5 future days
 
@@ -143,14 +144,14 @@ def test_rebuild_nonexistent_quotemapfile_raises(tmp_path):
     quotemap_file = str(tmp_path / 'does_not_exist.txt')
     new_file = _new_quotemap_path(tmp_path)
     with pytest.raises(click.ClickException, match='was not found'):
-        api.rebuild_quotemap(quote_file, quotemap_file, new_file, days=5)
+        quotemapmod.rebuild_quotemap(quote_file, quotemap_file, new_file, days=5)
 
 
 def test_rebuild_no_sticky_when_no_prior(tmp_path):
     """No Sticky markers are added when quotemapfile is None (isprior=False)."""
     quote_file = _copy_quotes(tmp_path)
     new_file = _new_quotemap_path(tmp_path)
-    api.rebuild_quotemap(quote_file, None, new_file, days=20)
+    quotemapmod.rebuild_quotemap(quote_file, None, new_file, days=20)
     data_lines = _read_data_lines(new_file)
     assert not any('# Sticky:' in line for line in data_lines)
 
@@ -163,7 +164,7 @@ def test_rebuild_unresolvable_hash(tmp_path):
     qm_file.write_text('{}: aaaaaaaaaaaaaaaa\n'.format(yesterday), encoding='utf-8')
     new_file = _new_quotemap_path(tmp_path)
     with pytest.raises(click.ClickException, match='does not match any quote'):
-        api.rebuild_quotemap(quote_file, str(qm_file), new_file)
+        quotemapmod.rebuild_quotemap(quote_file, str(qm_file), new_file)
 
 
 def test_rebuild_empty_quotefile(tmp_path):
@@ -173,7 +174,7 @@ def test_rebuild_empty_quotefile(tmp_path):
     quotemap_file = _empty_quotemap(tmp_path)
     new_file = _new_quotemap_path(tmp_path)
     with pytest.raises(click.ClickException, match='no quotes'):
-        api.rebuild_quotemap(str(quote_file), quotemap_file, new_file)
+        quotemapmod.rebuild_quotemap(str(quote_file), quotemap_file, new_file)
 
 
 def test_write_quotemap_raises_if_exists(tmp_path):
@@ -181,13 +182,13 @@ def test_write_quotemap_raises_if_exists(tmp_path):
     existing = tmp_path / 'existing.txt'
     existing.write_text('', encoding='utf-8')
     with pytest.raises(click.ClickException, match='already exists'):
-        api.write_quotemap(str(existing), {})
+        quotemapmod.write_quotemap(str(existing), {})
 
 
 def test_write_quotemap_empty(config, tmp_path):
     """write_quotemap with an empty quotemap writes an empty file."""
     out = tmp_path / 'out.txt'
-    api.write_quotemap(str(out), {})
+    quotemapmod.write_quotemap(str(out), {})
     assert out.read_bytes() == b''
 
 
@@ -198,7 +199,7 @@ def test_write_quotemap_writes_raw_lines(config, tmp_path):
         '20260322': {'hash': 'bbbbbbbbbbbbbbbb', 'raw_line': '20260322: bbbbbbbbbbbbbbbb  # Second'},
     }
     out = tmp_path / 'out.txt'
-    api.write_quotemap(str(out), quotemap)
+    quotemapmod.write_quotemap(str(out), quotemap)
     content = out.read_text(encoding='utf-8')
     assert '20260321: aaaaaaaaaaaaaaaa  # First' in content
     assert '20260322: bbbbbbbbbbbbbbbb  # Second' in content
@@ -212,7 +213,7 @@ def test_write_quotemap_sorted_by_date(config, tmp_path):
         '20260323': {'hash': 'bbbbbbbbbbbbbbbb', 'raw_line': '20260323: bbbbbbbbbbbbbbbb'},
     }
     out = tmp_path / 'out.txt'
-    api.write_quotemap(str(out), quotemap)
+    quotemapmod.write_quotemap(str(out), quotemap)
     lines = [line for line in out.read_text(encoding='utf-8').splitlines() if line]
     assert lines[0].startswith('20260321')
     assert lines[1].startswith('20260323')
@@ -227,7 +228,7 @@ def test_write_quotemap_unix_line_separator(config, tmp_path):
         '20260322': {'hash': 'bbbbbbbbbbbbbbbb', 'raw_line': '20260322: bbbbbbbbbbbbbbbb'},
     }
     out = tmp_path / 'out.txt'
-    api.write_quotemap(str(out), quotemap)
+    quotemapmod.write_quotemap(str(out), quotemap)
     assert b'\r\n' not in out.read_bytes()
     assert out.read_bytes().count(b'\n') == 2
 
@@ -240,7 +241,7 @@ def test_write_quotemap_windows_line_separator(config, tmp_path):
         '20260322': {'hash': 'bbbbbbbbbbbbbbbb', 'raw_line': '20260322: bbbbbbbbbbbbbbbb'},
     }
     out = tmp_path / 'out.txt'
-    api.write_quotemap(str(out), quotemap)
+    quotemapmod.write_quotemap(str(out), quotemap)
     assert out.read_bytes().count(b'\r\n') == 2
 
 
@@ -250,4 +251,4 @@ def test_write_quotemap_invalid_line_separator(config, tmp_path):
     quotemap = {'20260321': {'hash': 'aaaaaaaaaaaaaaaa', 'raw_line': '20260321: aaaaaaaaaaaaaaaa'}}
     out = tmp_path / 'out.txt'
     with pytest.raises(click.ClickException, match='not valid value for the line_separator property'):
-        api.write_quotemap(str(out), quotemap)
+        quotemapmod.write_quotemap(str(out), quotemap)

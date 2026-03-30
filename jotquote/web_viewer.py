@@ -10,6 +10,7 @@ import click
 from flask import Flask, abort, g, make_response, render_template, request
 
 from jotquote import api
+from jotquote import quotemap as quotemapmod
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 86400  # 24 hours
@@ -104,7 +105,7 @@ def showpage(date_path_param=None):
     quotemap = {}
     if quotemap_file:
         try:
-            quotemap = api.read_quotemap(quotemap_file)
+            quotemap = quotemapmod.read_quotemap(quotemap_file)
         except click.ClickException as e:
             app.logger.error('quotemap error: %s', e.format_message())
             if date_path_param:
@@ -206,8 +207,8 @@ def run_server():
     Alternatively, any WSGI server can be pointed directly at the 'app' object
     exported from this module.  For example:
 
-        waitress-serve --host 127.0.0.1 --port 5544 jotquote.web:app
-        gunicorn --bind 127.0.0.1:5544 jotquote.web:app  (Linux/Mac only)
+        waitress-serve --host 127.0.0.1 --port 5544 jotquote.web_viewer:app
+        gunicorn --bind 127.0.0.1:5544 jotquote.web_viewer:app  (Linux/Mac only)
 
     When using a WSGI server directly, this function is not called and the
     WSGI server determines the host and port.  Logging is configured at module

@@ -8,7 +8,8 @@ import os
 from flask import g
 
 import tests.test_util
-from jotquote import api, web
+from jotquote import api
+from jotquote import web_viewer as web
 
 
 def test_charset(flask_client):
