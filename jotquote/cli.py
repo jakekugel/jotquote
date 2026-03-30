@@ -9,7 +9,8 @@ import time
 
 import click
 
-from jotquote import api, quotemap as quotemapmod
+from jotquote import api
+from jotquote import quotemap as quotemapmod
 
 HELP_MAIN_F_ARG = (
     'optional path to quote file (if not provided, the command will check ~/.jotquote/settings.conf for path)'

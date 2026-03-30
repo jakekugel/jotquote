@@ -6,7 +6,7 @@
 import click
 import pytest
 
-from jotquote import api, quotemap as quotemapmod
+from jotquote import quotemap as quotemapmod
 
 
 def test_read_quotemap_valid(tmp_path):

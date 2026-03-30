@@ -9,7 +9,8 @@ import os
 import click
 from flask import Flask, abort, g, make_response, render_template, request
 
-from jotquote import api, quotemap as quotemapmod
+from jotquote import api
+from jotquote import quotemap as quotemapmod
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 86400  # 24 hours
