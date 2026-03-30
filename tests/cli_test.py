@@ -15,7 +15,7 @@ from jotquote import api, cli
 def test_list(config, tmp_path):
     """The list subcommand should print quotes in simple format."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list'], obj={})
@@ -33,7 +33,7 @@ def test_list(config, tmp_path):
 def test_list_by_tag(config, tmp_path):
     """The list subcommand should return quotes with matching tag."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list', '-t', 'funny'], obj={})
@@ -45,7 +45,7 @@ def test_list_by_tag(config, tmp_path):
 def test_list_by_tags(config, tmp_path):
     """The list subcommand should only return quotes matching multiple tags."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list', '-t', 'hedberg,funny'], obj={})
@@ -57,7 +57,7 @@ def test_list_by_tags(config, tmp_path):
 def test_list_by_tags_none_found(config, tmp_path):
     """The list subcommand should return no quotes if none match tags."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list', '-t', 'keillor,funny,bananas'], obj={})
@@ -68,7 +68,7 @@ def test_list_by_tags_none_found(config, tmp_path):
 
 def test_list_by_keyword(config, tmp_path):
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list', '-k', 'danger'], obj={})
@@ -79,7 +79,7 @@ def test_list_by_keyword(config, tmp_path):
 
 def test_list_by_keyword_none_found(config, tmp_path):
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list', '-k', 'nonexistent'], obj={})
@@ -90,7 +90,7 @@ def test_list_by_keyword_none_found(config, tmp_path):
 
 def test_list_by_number(config, tmp_path):
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list', '-n', '3'], obj={})
@@ -101,7 +101,7 @@ def test_list_by_number(config, tmp_path):
 
 def test_list_by_hash(config, tmp_path):
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list', '--hash', '763188b907212a72'], obj={})
@@ -113,7 +113,7 @@ def test_list_by_hash(config, tmp_path):
 def test_list_by_number_out_of_range(config, tmp_path):
     """The list subcommand should return error if number out of range."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list', '-n', '7'], obj={})
@@ -125,7 +125,7 @@ def test_list_by_number_out_of_range(config, tmp_path):
 def test_list_by_invalid_number(config, tmp_path):
     """The list subcommand should fail if the -n option passed non-number"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list', '-n', 'notanumber'], obj={})
@@ -140,7 +140,7 @@ def test_list_by_invalid_number(config, tmp_path):
 def test_list_invalid_tag(config, tmp_path):
     """The list subcommand shouldn't accept exclamation characters in tag."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list', '-t', 'badtag!'], obj={})
@@ -152,7 +152,7 @@ def test_list_invalid_tag(config, tmp_path):
 def test_list_extended(config, tmp_path):
     """The list subcommand should accept -e option to display extended format."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list', '--hash', '763188b907212a72', '-e'], obj={})
@@ -164,7 +164,7 @@ def test_list_extended(config, tmp_path):
 def test_list_extended_and_long(config, tmp_path):
     """The list subcommand should return error if both -e and -l options given."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['list', '-e', '-l'], obj={})
@@ -176,7 +176,7 @@ def test_list_extended_and_long(config, tmp_path):
 def test_random(config, tmp_path):
     """Test that the random subcommand returns single line of output."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['random'], obj={})
@@ -188,7 +188,7 @@ def test_random(config, tmp_path):
 def test_random_with_tags(config, tmp_path):
     """Test that the random subcommand returns single line of output."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['random', '-t', 'franklin'], obj={})
@@ -203,7 +203,7 @@ def test_random_with_tags(config, tmp_path):
 def test_random_with_tags_nomatch(config, tmp_path):
     """Test that the random subcommand returns nothing if no matching tag"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['random', '-t', 'book'], obj={})
@@ -215,7 +215,7 @@ def test_random_with_tags_nomatch(config, tmp_path):
 def test_random_with_keyword(config, tmp_path):
     """Test that the random subcommand returns something when keyword given"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['random', '-k', 'Franklin'], obj={})
@@ -230,7 +230,7 @@ def test_random_with_keyword(config, tmp_path):
 def test_random_with_keyword_nomatch(config, tmp_path):
     """Test that the random subcommand returns nothing if keyword doesn't match"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['random', '-k', 'parakeet'], obj={})
@@ -242,7 +242,7 @@ def test_random_with_keyword_nomatch(config, tmp_path):
 def test_add(config, tmp_path):
     """Test the add subcommand works with normal arguments"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(
@@ -265,7 +265,7 @@ def test_add(config, tmp_path):
 def test_add_when_quote_already_in_file(config, tmp_path):
     """The add subcommand should return error if quote is already in the quote file."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(
@@ -282,7 +282,7 @@ def test_add_when_quote_already_in_file(config, tmp_path):
 def test_add_stdin(config, tmp_path):
     """Test add subcommand with input from stdin"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(
@@ -308,7 +308,7 @@ def test_add_stdin(config, tmp_path):
 def test_add_with_no_author(config, tmp_path):
     """The add subcommand should return error if author not included with quote."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '--no-lint', '  We accept the love we think we deserve.-'], obj={})
@@ -323,7 +323,7 @@ def test_add_with_no_author(config, tmp_path):
 def test_add_with_publication(config, tmp_path):
     """The add subcommand should accept a publication after author if provided in parentheses."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(
@@ -348,7 +348,7 @@ def test_add_with_publication(config, tmp_path):
 def test_bulk_add_from_stdin(config, tmp_path):
     """Test add of multiple quotes from stdin"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
     stdin_input = (
         "The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it. - Linus Torvalds"
         + os.linesep
@@ -393,7 +393,7 @@ def test_bulk_add_from_stdin(config, tmp_path):
 def test_add_extended_format(config, tmp_path):
     """The add subcommand with -e option should allow extended format to be passed."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
     test_input = 'Ask for what you want and be prepared to get it. | Maya Angelou |  | \n'
 
     runner = CliRunner()
@@ -415,7 +415,7 @@ def test_add_extended_format(config, tmp_path):
 def test_add_extended_format_with_error(config, tmp_path):
     """Test add subcommand with extended format, error case"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(
@@ -440,7 +440,7 @@ def test_add_extended_format_with_error(config, tmp_path):
 def test_showalltags(config, tmp_path):
     """Test showalltags subcommand"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['showalltags'], obj={})
@@ -452,7 +452,7 @@ def test_showalltags(config, tmp_path):
 def test_missing_subcommand(config, tmp_path):
     """A random quote should be displayed if no subcommand."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, [], obj={})
@@ -467,7 +467,7 @@ def test_missing_subcommand(config, tmp_path):
 def test_codepage_conversion(config, tmp_path):
     """Characters in non-standard codepage should round trip OK to file and back."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '--no-lint', 'δηψ.-Greek Author'], obj={})
@@ -497,7 +497,7 @@ def test_codepage_conversion(config, tmp_path):
 def test_webserver(mock_run_server, config, tmp_path):
     """Test webserver subcommand calls web.run_server"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['webserver'], obj={})
@@ -509,7 +509,7 @@ def test_webserver(mock_run_server, config, tmp_path):
 def test_settags(config, tmp_path):
     """The settags subcommand should modify tags on given quote."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['settags', '-s', '763188b907212a72', 'tag1,tag2'], obj={})
@@ -532,7 +532,7 @@ def test_settags(config, tmp_path):
 def test_settags_invalid_args(config, tmp_path):
     """The settags subcommand should display error if both -s and -n given."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['settags', '-s', 'abcdef', '-n', '1', 'tag1,tag2'], obj={})
@@ -545,7 +545,7 @@ def test_settags_invalid_args(config, tmp_path):
 def test_jotquote_info(config, tmp_path):
     """The info subcommand should show path to config file, path to quote file, and number of quotes."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['info'], obj={})
@@ -564,9 +564,9 @@ def test_jotquote_info(config, tmp_path):
 
 def test_show_author_count(config, tmp_path):
     """add subcommand prints author count when show_author_count=true."""
-    config[api.APP_NAME]['show_author_count'] = 'true'
+    config[api.SECTION_GENERAL]['show_author_count'] = 'true'
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '--no-lint', 'New wisdom quote - Ben Franklin'], obj={})
@@ -578,9 +578,9 @@ def test_show_author_count(config, tmp_path):
 
 def test_show_author_count_singular(config, tmp_path):
     """add subcommand uses singular 'quote' when author has exactly one quote."""
-    config[api.APP_NAME]['show_author_count'] = 'true'
+    config[api.SECTION_GENERAL]['show_author_count'] = 'true'
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '--no-lint', 'A brand new thought - New Author'], obj={})
@@ -592,7 +592,7 @@ def test_show_author_count_singular(config, tmp_path):
 def test_show_author_count_disabled(config, tmp_path):
     """add subcommand does not print author count when show_author_count is not set."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '--no-lint', 'New wisdom quote - Ben Franklin'], obj={})
@@ -609,7 +609,7 @@ def test_show_author_count_disabled(config, tmp_path):
 def test_lint_clean_file(config, tmp_path):
     """lint returns exit code 0 and 'No issues found.' when no checks are run."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     # Run with only ascii check to avoid spurious tag failures on fixture data
@@ -622,7 +622,7 @@ def test_lint_clean_file(config, tmp_path):
 def test_lint_detects_issues(config, tmp_path):
     """lint reports issues and exits with code 1."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes9.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['lint', '--select', 'no-tags'], obj={})
@@ -634,7 +634,7 @@ def test_lint_detects_issues(config, tmp_path):
 def test_lint_select_and_ignore_mutually_exclusive(config, tmp_path):
     """lint raises error when both --select and --ignore are used."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii', '--ignore', 'no-tags'], obj={})
@@ -646,7 +646,7 @@ def test_lint_select_and_ignore_mutually_exclusive(config, tmp_path):
 def test_lint_ignore(config, tmp_path):
     """lint --ignore skips the specified check."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(
@@ -662,7 +662,7 @@ def test_lint_ignore(config, tmp_path):
 def test_lint_unknown_check(config, tmp_path):
     """lint rejects unknown check names."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['lint', '--select', 'nonexistent-check'], obj={})
@@ -680,7 +680,7 @@ def test_lint_fix_smart_quotes(config, tmp_path):
     with open(src, 'a', encoding='utf-8') as f:
         f.write('\u201cSmart quote test\u201d | Test Author | | funny\n')
 
-    config[api.APP_NAME]['quote_file'] = src
+    config[api.SECTION_GENERAL]['quote_file'] = src
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['lint', '--select', 'smart-quotes', '--fix'], obj={})
@@ -700,8 +700,8 @@ def test_lint_fix_smart_quotes(config, tmp_path):
 def test_add_lint_warnings_shown_and_confirmed(config, tmp_path):
     """add shows lint warnings and adds quote when user confirms with 'y'."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
-    config[api.APP_NAME]['lint_on_add'] = 'true'
+    config[api.SECTION_GENERAL]['quote_file'] = path
+    config[api.SECTION_LINT]['on_add'] = 'true'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '\u201cSmart quote test\u201d - Test Author'], input='y\n', obj={})
@@ -714,8 +714,8 @@ def test_add_lint_warnings_shown_and_confirmed(config, tmp_path):
 def test_add_lint_warnings_declined(config, tmp_path):
     """add shows lint warnings and aborts when user declines with 'N'."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
-    config[api.APP_NAME]['lint_on_add'] = 'true'
+    config[api.SECTION_GENERAL]['quote_file'] = path
+    config[api.SECTION_LINT]['on_add'] = 'true'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '\u201cSmart quote test\u201d - Test Author'], input='N\n', obj={})
@@ -728,8 +728,8 @@ def test_add_lint_warnings_declined(config, tmp_path):
 def test_add_lint_no_warnings_when_clean(config, tmp_path):
     """add does not show warnings or prompt when quote passes all checks."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
-    config[api.APP_NAME]['lint_enabled_checks'] = 'smart-quotes, smart-dashes, double-spaces'
+    config[api.SECTION_GENERAL]['quote_file'] = path
+    config[api.SECTION_LINT]['enabled_checks'] = 'smart-quotes, smart-dashes, double-spaces'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', 'A clean quote - Test Author'], obj={})
@@ -742,8 +742,8 @@ def test_add_lint_no_warnings_when_clean(config, tmp_path):
 def test_add_lint_respects_enabled_checks(config, tmp_path):
     """add only runs checks listed in lint_enabled_checks."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
-    config[api.APP_NAME]['lint_enabled_checks'] = 'ascii'
+    config[api.SECTION_GENERAL]['quote_file'] = path
+    config[api.SECTION_LINT]['enabled_checks'] = 'ascii'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', 'A plain quote without tags - Test Author'], obj={})
@@ -756,7 +756,7 @@ def test_add_lint_respects_enabled_checks(config, tmp_path):
 def test_add_no_lint_flag_skips_checks(config, tmp_path):
     """add --no-lint skips lint checks entirely."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
+    config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '--no-lint', '\u201cSmart quote test\u201d - Test Author'], obj={})
@@ -769,8 +769,8 @@ def test_add_no_lint_flag_skips_checks(config, tmp_path):
 def test_add_lint_exception_propagates(config, tmp_path, monkeypatch):
     """Exceptions from lint_quotes propagate to the caller."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
-    config[api.APP_NAME]['lint_on_add'] = 'true'
+    config[api.SECTION_GENERAL]['quote_file'] = path
+    config[api.SECTION_LINT]['on_add'] = 'true'
 
     from jotquote import lint as lintmod
 
@@ -785,8 +785,8 @@ def test_add_lint_exception_propagates(config, tmp_path, monkeypatch):
 def test_add_lint_on_add_false_skips_checks(config, tmp_path):
     """add does not run lint checks when lint_on_add is false."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
-    config[api.APP_NAME]['lint_on_add'] = 'false'
+    config[api.SECTION_GENERAL]['quote_file'] = path
+    config[api.SECTION_LINT]['on_add'] = 'false'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '\u201cSmart quote test\u201d - Test Author'], obj={})
@@ -799,8 +799,8 @@ def test_add_lint_on_add_false_skips_checks(config, tmp_path):
 def test_add_lint_on_add_true_runs_checks(config, tmp_path):
     """add runs lint checks when lint_on_add is true."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.APP_NAME]['quote_file'] = path
-    config[api.APP_NAME]['lint_on_add'] = 'true'
+    config[api.SECTION_GENERAL]['quote_file'] = path
+    config[api.SECTION_LINT]['on_add'] = 'true'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '\u201cSmart quote test\u201d - Test Author'], input='y\n', obj={})

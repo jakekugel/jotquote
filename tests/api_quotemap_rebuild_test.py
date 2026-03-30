@@ -221,7 +221,7 @@ def test_write_quotemap_sorted_by_date(config, tmp_path):
 
 def test_write_quotemap_unix_line_separator(config, tmp_path):
     """write_quotemap uses \\n when line_separator = unix."""
-    config[api.APP_NAME]['line_separator'] = 'unix'
+    config[api.SECTION_GENERAL]['line_separator'] = 'unix'
     quotemap = {
         '20260321': {'hash': 'aaaaaaaaaaaaaaaa', 'raw_line': '20260321: aaaaaaaaaaaaaaaa'},
         '20260322': {'hash': 'bbbbbbbbbbbbbbbb', 'raw_line': '20260322: bbbbbbbbbbbbbbbb'},
@@ -234,7 +234,7 @@ def test_write_quotemap_unix_line_separator(config, tmp_path):
 
 def test_write_quotemap_windows_line_separator(config, tmp_path):
     """write_quotemap uses \\r\\n when line_separator = windows."""
-    config[api.APP_NAME]['line_separator'] = 'windows'
+    config[api.SECTION_GENERAL]['line_separator'] = 'windows'
     quotemap = {
         '20260321': {'hash': 'aaaaaaaaaaaaaaaa', 'raw_line': '20260321: aaaaaaaaaaaaaaaa'},
         '20260322': {'hash': 'bbbbbbbbbbbbbbbb', 'raw_line': '20260322: bbbbbbbbbbbbbbbb'},
@@ -246,7 +246,7 @@ def test_write_quotemap_windows_line_separator(config, tmp_path):
 
 def test_write_quotemap_invalid_line_separator(config, tmp_path):
     """write_quotemap raises ClickException for an invalid line_separator value."""
-    config[api.APP_NAME]['line_separator'] = 'VAX-VMS'
+    config[api.SECTION_GENERAL]['line_separator'] = 'VAX-VMS'
     quotemap = {'20260321': {'hash': 'aaaaaaaaaaaaaaaa', 'raw_line': '20260321: aaaaaaaaaaaaaaaa'}}
     out = tmp_path / 'out.txt'
     with pytest.raises(click.ClickException, match='not valid value for the line_separator property'):

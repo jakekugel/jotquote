@@ -29,17 +29,17 @@ def _make_quote(quote='Test quote', author='Test Author', publication=None, tags
 
 
 def _make_config(author_antipattern_regex='', enabled_checks='', max_quote_length='0', required_tag_groups=None):
-    """Helper to create a config with the jotquote.lint section populated."""
+    """Helper to create a config with the lint section populated."""
     cfg = ConfigParser()
-    cfg.add_section(api.APP_NAME)
-    cfg[api.APP_NAME]['quote_file'] = 'notset'
-    cfg.add_section('jotquote.lint')
-    cfg['jotquote.lint']['lint_enabled_checks'] = enabled_checks
-    cfg['jotquote.lint']['lint_author_antipattern_regex'] = author_antipattern_regex
-    cfg['jotquote.lint']['lint_max_quote_length'] = max_quote_length
+    cfg.add_section(api.SECTION_GENERAL)
+    cfg[api.SECTION_GENERAL]['quote_file'] = 'notset'
+    cfg.add_section(api.SECTION_LINT)
+    cfg[api.SECTION_LINT]['enabled_checks'] = enabled_checks
+    cfg[api.SECTION_LINT]['author_antipattern_regex'] = author_antipattern_regex
+    cfg[api.SECTION_LINT]['max_quote_length'] = max_quote_length
     if required_tag_groups:
         for name, tags in required_tag_groups.items():
-            cfg['jotquote.lint']['lint_required_group_{}'.format(name)] = tags
+            cfg[api.SECTION_LINT]['required_group_{}'.format(name)] = tags
     return cfg
 
 
@@ -219,19 +219,19 @@ def test_apply_fixes_double_spaces():
 
 def test_check_quote_length_no_limit():
     """When lint_max_quote_length is 0 (default), no issues are raised."""
-    cfg = _make_config()['jotquote.lint']
+    cfg = _make_config()[api.SECTION_LINT]
     q = _make_quote(quote='x' * 500)
     assert _check_quote_length(q, cfg) == []
 
 
 def test_check_quote_length_within_limit():
-    cfg = _make_config(max_quote_length='100')['jotquote.lint']
+    cfg = _make_config(max_quote_length='100')[api.SECTION_LINT]
     q = _make_quote(quote='x' * 100)
     assert _check_quote_length(q, cfg) == []
 
 
 def test_check_quote_length_exceeds_limit():
-    cfg = _make_config(max_quote_length='100')['jotquote.lint']
+    cfg = _make_config(max_quote_length='100')[api.SECTION_LINT]
     q = _make_quote(quote='x' * 101)
     issues = _check_quote_length(q, cfg)
     assert len(issues) == 1
@@ -286,13 +286,13 @@ def test_check_no_author_empty():
 
 
 def test_author_antipatterns_clean():
-    cfg = _make_config()['jotquote.lint']
+    cfg = _make_config()[api.SECTION_LINT]
     q = _make_quote(author='Jane Doe')
     assert _check_author_antipatterns(q, cfg) == []
 
 
 def test_author_antipatterns_anonymous():
-    cfg = _make_config()['jotquote.lint']
+    cfg = _make_config()[api.SECTION_LINT]
     for name in ['unknown', 'anonymous', 'ANON', 'n/a', 'None', '?']:
         q = _make_quote(author=name)
         issues = _check_author_antipatterns(q, cfg)
@@ -301,13 +301,13 @@ def test_author_antipatterns_anonymous():
 
 def test_author_antipatterns_unknown_title_case_allowed():
     """'Unknown' (title case) is the canonical form and must not be flagged."""
-    cfg = _make_config()['jotquote.lint']
+    cfg = _make_config()[api.SECTION_LINT]
     q = _make_quote(author='Unknown')
     assert _check_author_antipatterns(q, cfg) == []
 
 
 def test_author_antipatterns_allcaps():
-    cfg = _make_config()['jotquote.lint']
+    cfg = _make_config()[api.SECTION_LINT]
     q = _make_quote(author='SMITH')
     issues = _check_author_antipatterns(q, cfg)
     assert any('all-caps' in i.message for i in issues)
@@ -315,21 +315,21 @@ def test_author_antipatterns_allcaps():
 
 def test_author_antipatterns_allcaps_short_allowed():
     """Two-letter uppercase words (initials/abbreviations) should not trigger."""
-    cfg = _make_config()['jotquote.lint']
+    cfg = _make_config()[api.SECTION_LINT]
     q = _make_quote(author='J.K. Rowling')
     issues = _check_author_antipatterns(q, cfg)
     assert not any('all-caps' in i.message for i in issues)
 
 
 def test_author_antipatterns_custom_regex():
-    cfg = _make_config(author_antipattern_regex=r'^\d')['jotquote.lint']
+    cfg = _make_config(author_antipattern_regex=r'^\d')[api.SECTION_LINT]
     q = _make_quote(author='123Author')
     issues = _check_author_antipatterns(q, cfg)
     assert any('custom pattern' in i.message for i in issues)
 
 
 def test_author_antipatterns_custom_regex_no_match():
-    cfg = _make_config(author_antipattern_regex=r'^\d')['jotquote.lint']
+    cfg = _make_config(author_antipattern_regex=r'^\d')[api.SECTION_LINT]
     q = _make_quote(author='Jane Doe')
     issues = _check_author_antipatterns(q, cfg)
     assert not any('custom pattern' in i.message for i in issues)
@@ -342,19 +342,19 @@ def test_author_antipatterns_custom_regex_no_match():
 
 def test_required_tag_groups_not_configured():
     """When no lint_required_group_* keys exist, no issues are raised."""
-    cfg = _make_config()['jotquote.lint']
+    cfg = _make_config()[api.SECTION_LINT]
     q = _make_quote(tags=['funny'])
     assert _check_required_tag_groups(q, cfg) == []
 
 
 def test_required_tag_groups_quote_has_required_tag():
-    cfg = _make_config(required_tag_groups={'stars': '1star, 2stars, 3stars, 4stars, 5stars'})['jotquote.lint']
+    cfg = _make_config(required_tag_groups={'stars': '1star, 2stars, 3stars, 4stars, 5stars'})[api.SECTION_LINT]
     q = _make_quote(tags=['3stars', 'funny'])
     assert _check_required_tag_groups(q, cfg) == []
 
 
 def test_required_tag_groups_missing_tag():
-    cfg = _make_config(required_tag_groups={'stars': '1star, 2stars, 3stars, 4stars, 5stars'})['jotquote.lint']
+    cfg = _make_config(required_tag_groups={'stars': '1star, 2stars, 3stars, 4stars, 5stars'})[api.SECTION_LINT]
     q = _make_quote(tags=['funny'])
     issues = _check_required_tag_groups(q, cfg)
     assert len(issues) == 1
@@ -370,7 +370,7 @@ def test_required_tag_groups_multiple_groups_all_satisfied():
             'stars': '1star, 2stars, 3stars, 4stars, 5stars',
             'visibility': 'public, private',
         }
-    )['jotquote.lint']
+    )[api.SECTION_LINT]
     q = _make_quote(tags=['3stars', 'public', 'funny'])
     assert _check_required_tag_groups(q, cfg) == []
 
@@ -381,7 +381,7 @@ def test_required_tag_groups_multiple_groups_one_missing():
             'stars': '1star, 2stars, 3stars, 4stars, 5stars',
             'visibility': 'public, private',
         }
-    )['jotquote.lint']
+    )[api.SECTION_LINT]
     q = _make_quote(tags=['3stars', 'funny'])
     issues = _check_required_tag_groups(q, cfg)
     assert len(issues) == 1

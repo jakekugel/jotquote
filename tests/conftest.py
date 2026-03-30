@@ -15,17 +15,15 @@ from jotquote import api
 def config(monkeypatch):
     """Provide a test ConfigParser and patch api.get_config to return it."""
     cfg = ConfigParser()
-    cfg.add_section(api.APP_NAME)
-    cfg[api.APP_NAME]['quote_file'] = 'notset'
-    cfg[api.APP_NAME]['line_separator'] = 'platform'
-    cfg[api.APP_NAME]['web_port'] = '80'
-    cfg[api.APP_NAME]['web_ip'] = '0.0.0.0'
-    cfg.add_section('jotquote.lint')
-    cfg['jotquote.lint']['enabled_checks'] = (
-        'ascii, smart-quotes, no-tags, no-author, author-antipatterns, no-star, no-visibility'
-    )
-    cfg['jotquote.lint']['visibility_tags'] = ''
-    cfg['jotquote.lint']['author_antipattern_regex'] = ''
+    cfg.add_section(api.SECTION_GENERAL)
+    cfg[api.SECTION_GENERAL]['quote_file'] = 'notset'
+    cfg[api.SECTION_GENERAL]['line_separator'] = 'platform'
+    cfg.add_section(api.SECTION_LINT)
+    cfg[api.SECTION_LINT]['enabled_checks'] = 'ascii, smart-quotes, no-tags, no-author, author-antipatterns'
+    cfg[api.SECTION_LINT]['author_antipattern_regex'] = ''
+    cfg.add_section(api.SECTION_WEB)
+    cfg[api.SECTION_WEB]['port'] = '80'
+    cfg[api.SECTION_WEB]['ip'] = '0.0.0.0'
     monkeypatch.setattr(api, 'get_config', Mock(return_value=cfg))
     return cfg
 
