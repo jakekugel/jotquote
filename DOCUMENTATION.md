@@ -36,7 +36,7 @@ Use `-e` / `--extended` to supply a quote in the same pipe-delimited format used
 $ jotquote add -e "The best way out is always through. | Robert Frost | A Servant to Servants | motivational"
 ```
 
-Use `--no-lint` to skip lint checks for a single invocation (overrides `on_add` in the `[lint]` section of settings.conf).
+Use `--no-lint` to skip lint checks for a single invocation (overrides `lint_on_add` in the `[lint]` section of settings.conf).
 
 ---
 
@@ -413,7 +413,7 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 | `enabled_checks` | _(all checks)_ | Comma-separated list of lint checks to run by default. If empty or absent, all checks run. Valid values: `ascii`, `smart-quotes`, `smart-dashes`, `double-spaces`, `quote-too-long`, `no-tags`, `no-author`, `author-antipatterns`, `required-tag-group` |
 | `max_quote_length` | `0` | Maximum allowed quote length in characters; `0` disables the check. Used by the `quote-too-long` lint check |
 | `author_antipattern_regex` | _(empty)_ | Comma-separated list of regex patterns; authors matching any pattern are flagged by the `author-antipatterns` lint check |
-| `on_add` | `false` | If `true`, lint checks are run automatically when adding a quote via the `add` command. Use `--no-lint` to skip lint for a single invocation regardless of this setting. |
+| `lint_on_add` | `false` | If `true`, lint checks are run automatically when adding a quote via the `add` command. Use `--no-lint` to skip lint for a single invocation regardless of this setting. |
 | `required_group_<name>` | _(empty)_ | Defines a named group of required tags; a quote must have at least one tag from this group or it is flagged by the `required-tag-group` check. `<name>` is any identifier (e.g. `stars`, `visibility`). Add multiple properties with different names to define multiple groups. Example: `required_group_stars = 1star, 2stars, 3stars, 4stars, 5stars` |
 
 ### `[web]` section

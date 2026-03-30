@@ -35,6 +35,7 @@ ALL_CHECKS = frozenset(
 SECTION_GENERAL = 'general'
 SECTION_LINT = 'lint'
 SECTION_WEB = 'web'
+# Retained for backwards compatibility with the old single-section [jotquote] config format
 _SECTION_LEGACY = 'jotquote'
 
 
@@ -582,6 +583,21 @@ def _parse_tags(tag_string):
     return sorted(list(tagset))
 
 
+_GENERAL_KEYS = frozenset(
+    {
+        'quote_file',
+        'line_separator',
+        'show_author_count',
+    }
+)
+
+_LINT_KEYS = frozenset(
+    {
+        'lint_on_add',
+        'lint_author_antipattern_regex',
+    }
+)
+
 _WEB_KEYS = frozenset(
     {
         'quotemap_file',
@@ -602,26 +618,22 @@ def _migrate_legacy_section(config):
     """Migrate in-memory config from old [jotquote] section to [general]/[lint]/[web].
 
     Detects the legacy format (has [jotquote] but no [general]), routes each key
-    to the correct new section, strips lint_/web_ prefixes, removes [jotquote],
-    and emits a deprecation warning to stderr.
+    to the correct new section, strips lint_/web_ prefixes (except lint_on_add which
+    retains its prefix), removes [jotquote], and returns True if migration occurred.
     """
     if not config.has_section(_SECTION_LEGACY) or config.has_section(SECTION_GENERAL):
-        return
-
-    click.echo(
-        'Warning: settings.conf uses the deprecated [jotquote] section. '
-        'Please update to [general], [lint], and [web] sections.',
-        err=True,
-    )
+        return False
 
     for section in (SECTION_GENERAL, SECTION_LINT, SECTION_WEB):
         if not config.has_section(section):
             config.add_section(section)
 
     for key, value in config.items(_SECTION_LEGACY):
-        if key.startswith('lint_'):
-            new_key = key[len('lint_') :]
+        if key in _LINT_KEYS:
+            new_key = key if key == 'lint_on_add' else key[len('lint_') :]
             config[SECTION_LINT][new_key] = value
+        elif key.startswith('lint_'):
+            config[SECTION_LINT][key[len('lint_') :]] = value
         elif key in _WEB_KEYS:
             new_key = key[len('web_') :] if key.startswith('web_') else key
             config[SECTION_WEB][new_key] = value
@@ -629,6 +641,7 @@ def _migrate_legacy_section(config):
             config[SECTION_GENERAL][key] = value
 
     config.remove_section(_SECTION_LEGACY)
+    return True
 
 
 def _resolve_config_paths(config, config_dir):
@@ -645,7 +658,11 @@ def _resolve_config_paths(config, config_dir):
 
 
 def get_config():
-    """Read settings.conf and return a ConfigParser with all settings.
+    """Read settings.conf and return (config, migrated).
+
+    config is a ConfigParser with all settings.  migrated is True if the legacy
+    [jotquote] section was detected and migrated in-memory to [general]/[lint]/[web];
+    the caller should present a deprecation warning to the user in that case.
 
     The config file location is taken from the JOTQUOTE_CONFIG environment
     variable if set, otherwise defaults to ~/.jotquote/settings.conf.
@@ -681,7 +698,7 @@ def get_config():
     config.read(config_file)
 
     # Migrate legacy [jotquote] section to [general]/[lint]/[web]
-    _migrate_legacy_section(config)
+    migrated = _migrate_legacy_section(config)
 
     # Ensure optional sections exist
     for section in (SECTION_LINT, SECTION_WEB):
@@ -702,13 +719,13 @@ def get_config():
     if not config.has_option(SECTION_LINT, 'enabled_checks'):
         config[SECTION_LINT]['enabled_checks'] = ', '.join(sorted(ALL_CHECKS))
 
-    return config
+    return config, migrated
 
 
 def get_filename():
     """Convenience method to get the quote_file property from the
     settings.conf file and verify it exists."""
-    config = get_config()
+    config, _ = get_config()
     filename = config.get(SECTION_GENERAL, 'quote_file')
     if not os.path.exists(filename):
         raise click.ClickException("The quote file specified in settings.conf, '{}', was not found.".format(filename))
@@ -902,7 +919,7 @@ def _assert_no_invalid_chars(text, component_name):
 
 def _get_newline():
     """Return the newline string based on the line_separator config property."""
-    config = get_config()
+    config, _ = get_config()
     linesep_property = config.get(SECTION_GENERAL, 'line_separator', fallback='platform')
     if not linesep_property or linesep_property == 'platform':
         return os.linesep

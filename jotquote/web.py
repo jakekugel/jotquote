@@ -62,7 +62,7 @@ def showpage(date_path_param=None):
     # Calculate max-age: configured cap or seconds until midnight, whichever is less
     midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     seconds_until_midnight = int((midnight - now).total_seconds())
-    config = api.get_config()
+    config, _ = api.get_config()
     cap_minutes = int(config[api.SECTION_WEB].get('cache_minutes', '240'))
     page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
     show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
@@ -167,7 +167,7 @@ def get_quotes():
 
     # Ensure that path to quote file read from configuration file
     if 'QUOTE_FILE' not in app.config:
-        config = api.get_config()
+        config, _ = api.get_config()
         app.config['QUOTE_FILE'] = config.get(api.SECTION_GENERAL, 'quote_file')
 
     try:
@@ -215,7 +215,12 @@ def run_server():
     """
 
     # Load needed configuration from settings.conf file
-    config = api.get_config()
+    config, migrated = api.get_config()
+    if migrated:
+        app.logger.warning(
+            'settings.conf uses the deprecated [jotquote] section. '
+            'Please update to [general], [lint], and [web] sections.'
+        )
     listen_port = config.get(api.SECTION_WEB, 'port')
     listen_ip = config.get(api.SECTION_WEB, 'ip')
 

@@ -55,7 +55,9 @@ def _make_env(tmp_path, quote_file, **extra_props):
         elif k in _WEB_NO_PREFIX:
             web_lines.append('{} = {}'.format(k, v))
         elif k.startswith('lint_'):
-            lint_lines.append('{} = {}'.format(k[5:], v))
+            # lint_on_add retains its prefix in [lint]; other lint_ keys have it stripped
+            new_key = k if k == 'lint_on_add' else k[5:]
+            lint_lines.append('{} = {}'.format(new_key, v))
         elif k.startswith('web_'):
             web_lines.append('{} = {}'.format(k[4:], v))
         else:

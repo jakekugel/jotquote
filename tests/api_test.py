@@ -857,7 +857,7 @@ def test_get_config_creates_from_template(tmp_path, monkeypatch):
     config_file = tmp_path / 'settings.conf'
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    config = api.get_config()
+    config, _ = api.get_config()
 
     assert config_file.exists()
     contents = config_file.read_text(encoding='utf-8')
@@ -881,7 +881,7 @@ def test_get_config_env_var_overrides_default(tmp_path, monkeypatch):
     )
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    config = api.get_config()
+    config, _ = api.get_config()
 
     assert config.get(api.SECTION_WEB, 'page_title') == 'Custom Title'
 
@@ -897,7 +897,7 @@ def test_get_config_resolves_relative_quote_file(tmp_path, monkeypatch):
     )
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    config = api.get_config()
+    config, _ = api.get_config()
 
     resolved = config.get(api.SECTION_GENERAL, 'quote_file')
     assert os.path.isabs(resolved)
@@ -918,7 +918,7 @@ def test_get_config_new_format(tmp_path, monkeypatch):
         'line_separator = unix\n'
         '\n'
         '[lint]\n'
-        'on_add = true\n'
+        'lint_on_add = true\n'
         'max_quote_length = 200\n'
         '\n'
         '[web]\n'
@@ -928,11 +928,11 @@ def test_get_config_new_format(tmp_path, monkeypatch):
     )
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    config = api.get_config()
+    config, _ = api.get_config()
 
     assert os.path.isabs(config.get(api.SECTION_GENERAL, 'quote_file'))
     assert config.get(api.SECTION_GENERAL, 'line_separator') == 'unix'
-    assert config.get(api.SECTION_LINT, 'on_add') == 'true'
+    assert config.get(api.SECTION_LINT, 'lint_on_add') == 'true'
     assert config.get(api.SECTION_LINT, 'max_quote_length') == '200'
     assert config.get(api.SECTION_WEB, 'port') == '8080'
     assert config.get(api.SECTION_WEB, 'page_title') == 'Test Quotes'
@@ -959,13 +959,14 @@ def test_get_config_legacy_format_migrates(tmp_path, monkeypatch):
     )
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    config = api.get_config()
+    config, migrated = api.get_config()
 
+    assert migrated is True
     # General properties
     assert os.path.isabs(config.get(api.SECTION_GENERAL, 'quote_file'))
     assert config.get(api.SECTION_GENERAL, 'show_author_count') == 'true'
-    # Lint properties (prefix stripped)
-    assert config.get(api.SECTION_LINT, 'on_add') == 'true'
+    # Lint properties (lint_on_add retains prefix; others have prefix stripped)
+    assert config.get(api.SECTION_LINT, 'lint_on_add') == 'true'
     assert config.get(api.SECTION_LINT, 'max_quote_length') == '150'
     # Web properties (prefix stripped)
     assert config.get(api.SECTION_WEB, 'port') == '9090'
@@ -976,8 +977,8 @@ def test_get_config_legacy_format_migrates(tmp_path, monkeypatch):
     assert not config.has_section('jotquote')
 
 
-def test_get_config_legacy_format_warns(tmp_path, monkeypatch, capsys):
-    """get_config() prints a deprecation warning for legacy [jotquote] format."""
+def test_get_config_legacy_format_warns(tmp_path, monkeypatch):
+    """get_config() returns migrated=True for legacy [jotquote] format."""
     config_file = tmp_path / 'settings.conf'
     config_file.write_text(
         '[jotquote]\nquote_file = /some/path/quotes.txt\n',
@@ -985,11 +986,9 @@ def test_get_config_legacy_format_warns(tmp_path, monkeypatch, capsys):
     )
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    api.get_config()
+    _, migrated = api.get_config()
 
-    captured = capsys.readouterr()
-    assert 'deprecated' in captured.err.lower()
-    assert '[jotquote]' in captured.err
+    assert migrated is True
 
 
 # ---------------------------------------------------------------------------

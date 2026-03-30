@@ -43,7 +43,7 @@ def log_request(response):
 
 @app.route('/')
 def index():
-    config = api.get_config()
+    config, _ = api.get_config()
     quotefile = config.get(api.SECTION_GENERAL, 'quote_file')
     page_title = config.get(api.SECTION_WEB, 'page_title', fallback='jotquote')
     show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
@@ -88,7 +88,7 @@ def index():
 
 @app.route('/settags', methods=['POST'])
 def settags():
-    config = api.get_config()
+    config, _ = api.get_config()
     quotefile = config.get(api.SECTION_GENERAL, 'quote_file')
     hash_val = request.form.get('hash')
     star_tag = request.form.get('star_tag', '')

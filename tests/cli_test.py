@@ -4,7 +4,7 @@
 
 import os
 import time
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from click.testing import CliRunner
 
@@ -701,7 +701,7 @@ def test_add_lint_warnings_shown_and_confirmed(config, tmp_path):
     """add shows lint warnings and adds quote when user confirms with 'y'."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     config[api.SECTION_GENERAL]['quote_file'] = path
-    config[api.SECTION_LINT]['on_add'] = 'true'
+    config[api.SECTION_LINT]['lint_on_add'] = 'true'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '\u201cSmart quote test\u201d - Test Author'], input='y\n', obj={})
@@ -715,7 +715,7 @@ def test_add_lint_warnings_declined(config, tmp_path):
     """add shows lint warnings and aborts when user declines with 'N'."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     config[api.SECTION_GENERAL]['quote_file'] = path
-    config[api.SECTION_LINT]['on_add'] = 'true'
+    config[api.SECTION_LINT]['lint_on_add'] = 'true'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '\u201cSmart quote test\u201d - Test Author'], input='N\n', obj={})
@@ -770,7 +770,7 @@ def test_add_lint_exception_propagates(config, tmp_path, monkeypatch):
     """Exceptions from lint_quotes propagate to the caller."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     config[api.SECTION_GENERAL]['quote_file'] = path
-    config[api.SECTION_LINT]['on_add'] = 'true'
+    config[api.SECTION_LINT]['lint_on_add'] = 'true'
 
     from jotquote import lint as lintmod
 
@@ -786,7 +786,7 @@ def test_add_lint_on_add_false_skips_checks(config, tmp_path):
     """add does not run lint checks when lint_on_add is false."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     config[api.SECTION_GENERAL]['quote_file'] = path
-    config[api.SECTION_LINT]['on_add'] = 'false'
+    config[api.SECTION_LINT]['lint_on_add'] = 'false'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '\u201cSmart quote test\u201d - Test Author'], obj={})
@@ -800,7 +800,7 @@ def test_add_lint_on_add_true_runs_checks(config, tmp_path):
     """add runs lint checks when lint_on_add is true."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     config[api.SECTION_GENERAL]['quote_file'] = path
-    config[api.SECTION_LINT]['on_add'] = 'true'
+    config[api.SECTION_LINT]['lint_on_add'] = 'true'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', '\u201cSmart quote test\u201d - Test Author'], input='y\n', obj={})
@@ -808,3 +808,35 @@ def test_add_lint_on_add_true_runs_checks(config, tmp_path):
     assert result.exit_code == 0
     assert 'Warning:' in result.output
     assert '1 quote added' in result.output
+
+
+# ---------------------------------------------------------------------------
+# Legacy [jotquote] migration warning in CLI
+# ---------------------------------------------------------------------------
+
+
+def test_legacy_migration_warning_emitted_to_stderr(config, tmp_path, monkeypatch):
+    """CLI emits a deprecation warning when get_config() reports migration."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.SECTION_GENERAL]['quote_file'] = path
+    monkeypatch.setattr(api, 'get_config', Mock(return_value=(config, True)))
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['list'], obj={})
+
+    assert result.exit_code == 0
+    assert 'deprecated' in result.output.lower()
+    assert '[jotquote]' in result.output
+
+
+def test_no_migration_warning_when_not_migrated(config, tmp_path, monkeypatch):
+    """CLI does not emit a deprecation warning when migration did not occur."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.SECTION_GENERAL]['quote_file'] = path
+    monkeypatch.setattr(api, 'get_config', Mock(return_value=(config, False)))
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['list'], obj={})
+
+    assert result.exit_code == 0
+    assert 'deprecated' not in result.output.lower()
