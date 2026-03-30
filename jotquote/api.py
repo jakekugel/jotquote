@@ -51,7 +51,6 @@ class Config:
         'web_ip': 'web',
         'web_cache_minutes': 'web',
         'web_show_stars': 'web',
-        'web_page_title': 'web',
         'web_light_foreground_color': 'web',
         'web_light_background_color': 'web',
         'web_dark_foreground_color': 'web',
@@ -111,9 +110,9 @@ class Config:
                         return self._DEFAULTS[prop_name]
                     raise ConfigurationError(f"Property '{prop_name}' not found in [{section}] section")
 
-                if prop_type == int:
+                if prop_type is int:
                     return self._config.getint(section, prop_name)
-                elif prop_type == bool:
+                elif prop_type is bool:
                     return self._config.getboolean(section, prop_name)
                 else:
                     return self._config.get(section, prop_name)
@@ -133,9 +132,9 @@ class Config:
                         return self._DEFAULTS[prop_name]
                     raise ConfigurationError(f"Property '{prop_name}' not found in [{expected_section}] section")
 
-                if prop_type == int:
+                if prop_type is int:
                     return self._config.getint(expected_section, prop_name)
-                elif prop_type == bool:
+                elif prop_type is bool:
                     return self._config.getboolean(expected_section, prop_name)
                 else:
                     return self._config.get(expected_section, prop_name)

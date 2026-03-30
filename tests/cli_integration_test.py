@@ -389,7 +389,6 @@ def test_lint_on_add_false_skips_lint_integration(tmp_path):
 
 def test_missing_property_shows_friendly_error(tmp_path):
     """Missing configuration property shows friendly error, not stack trace."""
-    quote_file = _copy_quotes(tmp_path)
     jotquote_dir = tmp_path / '.jotquote'
     jotquote_dir.mkdir(exist_ok=True)
 
