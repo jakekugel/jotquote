@@ -112,9 +112,9 @@ def test_io_errors(flask_client):
         assert quotes is not None
 
 
-def test_web_cache_minutes(flask_client, config):
-    """Cache-Control max-age respects web_cache_minutes config property."""
-    config[api.SECTION_WEB]['cache_minutes'] = '1'
+def test_web_cache_seconds(flask_client, config):
+    """Cache-Control max-age respects web_cache_seconds config property."""
+    config[api.SECTION_WEB]['cache_seconds'] = '60'
     client, quote_file = flask_client
     rv = client.get('/')
     cc = rv.headers.get('Cache-Control', '')
@@ -122,8 +122,8 @@ def test_web_cache_minutes(flask_client, config):
     assert max_age <= 60
 
 
-def test_web_cache_minutes_default(flask_client, config):
-    """Cache-Control max-age uses 240-minute default when web_cache_minutes is not set."""
+def test_web_cache_seconds_default(flask_client, config):
+    """Cache-Control max-age uses 14400-second default when web_cache_seconds is not set."""
     client, quote_file = flask_client
     rv = client.get('/')
     cc = rv.headers.get('Cache-Control', '')
@@ -428,9 +428,9 @@ def test_mode_random_no_permalink(flask_client, config, tmp_path):
 
 
 def test_mode_random_no_midnight_cap(flask_client, config):
-    """mode=random uses cache_minutes directly without midnight cap."""
+    """mode=random uses cache_seconds directly without midnight cap."""
     config[api.SECTION_WEB]['mode'] = 'random'
-    config[api.SECTION_WEB]['cache_minutes'] = '1'
+    config[api.SECTION_WEB]['cache_seconds'] = '60'
     client, quote_file = flask_client
     rv = client.get('/')
     cc = rv.headers.get('Cache-Control', '')

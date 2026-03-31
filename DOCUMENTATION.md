@@ -237,7 +237,7 @@ The web server instructs the browser to automatically reload the page after the 
 The `mode` property in the `[web]` section controls how quotes are selected:
 
 - **`daily`** (default): A deterministic daily quote is selected using a seeded random number generator. The same quote is shown all day and changes at midnight. The quotemap (if configured) takes precedence for mapped dates.
-- **`random`**: A truly random quote is selected on each page load. The quotemap is bypassed and permalinks are disabled. The cache expiration is based solely on `cache_minutes` without the midnight cap.
+- **`random`**: A truly random quote is selected on each page load. The quotemap is bypassed and permalinks are disabled. The cache expiration is based solely on `cache_seconds` without the midnight cap.
 
 ---
 
@@ -434,7 +434,7 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 | `quotemap_file` | _(empty)_ | Path to an optional quotemap file (see [Quotemap](#quotemap)) |
 | `port` | `5544` | Port the web server listens on |
 | `ip` | `127.0.0.1` | IP address the web server binds to |
-| `cache_minutes` | `240` | How long (in minutes) the web server caches the quote list after a file change |
+| `cache_seconds` | `14400` | How long (in seconds) the web server caches the quote list after a file change |
 | `page_title` | `jotquote` | HTML page title shown in the browser tab |
 | `show_stars` | `false` | If `true`, shows star ratings on the web server |
 | `light_foreground_color` | `#000000` | Text color in light mode |

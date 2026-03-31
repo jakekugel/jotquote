@@ -12,10 +12,28 @@
     localStorage.getItem('jotquote-theme') || 'dark'
   );
 </script>
+<noscript>
+<style>
+    :root {
+        --fg:           {{ dark_fg }};
+        --bg:           {{ dark_bg }};
+        --horiz-line:   #555555;
+        --cmd-bg:       #505050;
+        --cmd-fg:       #e8e8e8;
+        --muted-fg:     #999999;
+    }
+</style>
+</noscript>
 <style>
 
 @view-transition {
     navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 2s;
+    animation-timing-function: ease-in-out;
 }
 
 @font-face {
@@ -249,8 +267,9 @@ body {
             const cacheExpiry = new Date(expiresAt).getTime();
 
             // Add random jitter (60–120 seconds) to ensure the cache has expired
-            const jitterSeconds = Math.floor(Math.random() * 61) + 60;
-            const reloadTime = cacheExpiry + jitterSeconds * 1000;
+            // const jitterSeconds = Math.floor(Math.random() * 61) + 60;
+            // const reloadTime = cacheExpiry + jitterSeconds * 1000;
+            const reloadTime = cacheExpiry;
 
             // Clamp delay to zero if the reload time has already passed
             const delay = Math.max(reloadTime - Date.now(), 0);
@@ -262,7 +281,7 @@ body {
             // Schedule the reload
             setTimeout(() => {
                 console.log('Refreshing now.');
-                location.reload();
+                navigation.navigate(location.href);
             }, delay);
         }
 

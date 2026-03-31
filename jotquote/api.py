@@ -406,7 +406,7 @@ _WEB_KEYS = frozenset(
         'quotemap_file',
         'web_port',
         'web_ip',
-        'web_cache_minutes',
+        'web_cache_seconds',
         'web_page_title',
         'web_show_stars',
         'web_light_foreground_color',

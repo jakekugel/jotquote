@@ -74,7 +74,7 @@ def showpage(date_path_param=None):
     midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     seconds_until_midnight = int((midnight - now).total_seconds())
     config, _ = api.get_config()
-    cap_minutes = int(config[api.SECTION_WEB].get('cache_minutes', '240'))
+    cap_seconds = int(config[api.SECTION_WEB].get('cache_seconds', '14400'))
     page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
     show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
     mode = config[api.SECTION_WEB].get('mode', 'daily')
@@ -83,9 +83,9 @@ def showpage(date_path_param=None):
     dark_fg = config[api.SECTION_WEB].get('dark_foreground_color', '#ffffff')
     dark_bg = config[api.SECTION_WEB].get('dark_background_color', '#000000')
     if mode == 'random':
-        max_age = cap_minutes * 60
+        max_age = cap_seconds
     else:
-        max_age = min(cap_minutes * 60, seconds_until_midnight)
+        max_age = min(cap_seconds, seconds_until_midnight)
 
     # Compute cache expiration time for auto-refresh (root route only)
     if date_path_param is None:
