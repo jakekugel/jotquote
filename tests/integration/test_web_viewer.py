@@ -438,8 +438,9 @@ def test_expires_at_in_server_log(tmp_path):
         assert wait_for_server(TEST_URL), 'Server did not start within timeout'
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
             assert resp.status == 200
-        assert wait_for_log_line(stderr_lines, 'expires_at='), \
-            'Expected expires_at in stderr; got: {}'.format(stderr_lines)
+        assert wait_for_log_line(stderr_lines, 'expires_at='), 'Expected expires_at in stderr; got: {}'.format(
+            stderr_lines
+        )
     finally:
         proc.terminate()
         proc.wait(timeout=10)
