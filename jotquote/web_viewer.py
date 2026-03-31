@@ -33,12 +33,22 @@ def _sanitize_for_log(value):
 
 @app.after_request
 def log_request(response):
-    _access_logger.info(
-        '%s %s %s',
-        request.method,
-        _sanitize_for_log(request.full_path.rstrip('?')),
-        response.status_code,
-    )
+    expires_at = getattr(g, 'expires_at', None)
+    if expires_at:
+        _access_logger.info(
+            '%s %s %s expires_at=%s',
+            request.method,
+            _sanitize_for_log(request.full_path.rstrip('?')),
+            response.status_code,
+            expires_at,
+        )
+    else:
+        _access_logger.info(
+            '%s %s %s',
+            request.method,
+            _sanitize_for_log(request.full_path.rstrip('?')),
+            response.status_code,
+        )
     return response
 
 
@@ -67,11 +77,23 @@ def showpage(date_path_param=None):
     cap_minutes = int(config[api.SECTION_WEB].get('cache_minutes', '240'))
     page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
     show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
+    mode = config[api.SECTION_WEB].get('mode', 'daily')
     light_fg = config[api.SECTION_WEB].get('light_foreground_color', '#000000')
     light_bg = config[api.SECTION_WEB].get('light_background_color', '#ffffff')
     dark_fg = config[api.SECTION_WEB].get('dark_foreground_color', '#ffffff')
     dark_bg = config[api.SECTION_WEB].get('dark_background_color', '#000000')
-    max_age = min(cap_minutes * 60, seconds_until_midnight)
+    if mode == 'random':
+        max_age = cap_minutes * 60
+    else:
+        max_age = min(cap_minutes * 60, seconds_until_midnight)
+
+    # Compute cache expiration time for auto-refresh (root route only)
+    if date_path_param is None:
+        expires_at_dt = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=max_age)
+        expires_at = expires_at_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+    else:
+        expires_at = None
+    g.expires_at = expires_at
 
     # Determine display date
     if date_path_param:
@@ -90,6 +112,7 @@ def showpage(date_path_param=None):
                 'unavailable.html',
                 date1=date1,
                 page_title=page_title,
+                expires_at=expires_at,
                 light_fg=light_fg,
                 light_bg=light_bg,
                 dark_fg=dark_fg,
@@ -99,44 +122,49 @@ def showpage(date_path_param=None):
         response.headers['Cache-Control'] = f'public, max-age={max_age}'
         return response
 
-    # Try to load quotemap and find a mapped quote
+    # Select quote based on mode
     permalink = None
-    quotemap_file = config[api.SECTION_WEB].get('quotemap_file', '')
-    quotemap = {}
-    if quotemap_file:
-        try:
-            quotemap = quotemapmod.read_quotemap(quotemap_file)
-        except click.ClickException as e:
-            app.logger.error('quotemap error: %s', e.format_message())
-            if date_path_param:
-                abort(404)
-
-    lookup_date = date_path_param if date_path_param else now.strftime('%Y%m%d')
-    mapped_quote = None
-    if lookup_date in quotemap:
-        hash_value = quotemap[lookup_date]['hash']
-        mapped_quote = api.get_first_match(quotes, hash_arg=hash_value)
-        if mapped_quote is None:
-            app.logger.warning("quotemap hash '%s' for date %s not found in quotes", hash_value, lookup_date)
-            if date_path_param:
-                abort(404)
-
-    if mapped_quote:
-        quote = mapped_quote
+    if mode == 'random' and date_path_param is None:
+        quote = api.get_first_match(quotes, rand=True)
         index = quotes.index(quote)
-        # Show permalink on root page when today's quote comes from quotemap
-        if date_path_param is None:
-            permalink = f'/{lookup_date}'
-        # For date URLs, content is static — use full cache cap
-        if date_path_param:
-            max_age = cap_minutes * 60
-    elif date_path_param:
-        # Date route requested but date not in quotemap — 404
-        abort(404)
     else:
-        # Root route, fall back to seeded RNG
-        index = api.get_random_choice(len(quotes))
-        quote = quotes[index]
+        # Try to load quotemap and find a mapped quote
+        quotemap_file = config[api.SECTION_WEB].get('quotemap_file', '')
+        quotemap = {}
+        if quotemap_file:
+            try:
+                quotemap = quotemapmod.read_quotemap(quotemap_file)
+            except click.ClickException as e:
+                app.logger.error('quotemap error: %s', e.format_message())
+                if date_path_param:
+                    abort(404)
+
+        lookup_date = date_path_param if date_path_param else now.strftime('%Y%m%d')
+        mapped_quote = None
+        if lookup_date in quotemap:
+            hash_value = quotemap[lookup_date]['hash']
+            mapped_quote = api.get_first_match(quotes, hash_arg=hash_value)
+            if mapped_quote is None:
+                app.logger.warning("quotemap hash '%s' for date %s not found in quotes", hash_value, lookup_date)
+                if date_path_param:
+                    abort(404)
+
+        if mapped_quote:
+            quote = mapped_quote
+            index = quotes.index(quote)
+            # Show permalink on root page when today's quote comes from quotemap
+            if date_path_param is None:
+                permalink = f'/{lookup_date}'
+            # For date URLs, content is static — use full cache cap
+            if date_path_param:
+                max_age = cap_minutes * 60
+        elif date_path_param:
+            # Date route requested but date not in quotemap — 404
+            abort(404)
+        else:
+            # Root route, fall back to seeded RNG
+            index = api.get_random_choice(len(quotes))
+            quote = quotes[index]
 
     stars = quote.get_num_stars()
     response = make_response(
@@ -149,6 +177,7 @@ def showpage(date_path_param=None):
             quotenum=(index + 1),
             totalquotes=len(quotes),
             page_title=page_title,
+            expires_at=expires_at,
             stars=stars,
             show_stars=show_stars,
             permalink=permalink,

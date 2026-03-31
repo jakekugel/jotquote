@@ -418,3 +418,28 @@ def test_web_theme_colors_config(tmp_path):
     finally:
         proc.terminate()
         proc.wait(timeout=10)
+
+
+def test_expires_at_in_server_log(tmp_path):
+    """Server access log includes expires_at= for root route requests."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            assert resp.status == 200
+        assert wait_for_log_line(stderr_lines, 'expires_at='), \
+            'Expected expires_at in stderr; got: {}'.format(stderr_lines)
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)

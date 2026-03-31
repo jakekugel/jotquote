@@ -364,3 +364,83 @@ def test_run_server_no_warning_when_not_migrated(flask_client, config, monkeypat
         web.run_server()
 
     assert len(warning_messages) == 0
+
+
+# ---------------------------------------------------------------------------
+# Auto-refresh and expires_at
+# ---------------------------------------------------------------------------
+
+
+def test_expires_at_present_on_root(flask_client, config):
+    """Root page includes expires_at value for auto-refresh scheduling."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'scheduleAutoRefresh' in rv.data
+    # expires_at should be a non-null ISO 8601 string in the JS
+    assert b'const expiresAt = null' not in rv.data
+    assert b'expires_at' not in rv.data or b'T' in rv.data  # contains ISO 8601 timestamp
+
+
+def test_expires_at_null_on_date_route(flask_client, config, tmp_path):
+    """Date route pages have null expires_at (no auto-refresh)."""
+    client, quote_file = flask_client
+    quotemap_file = tmp_path / 'quotemap.txt'
+    quotemap_file.write_text('20260319: 25382c2519fb23bd\n', encoding='utf-8')
+    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
+    rv = client.get('/20260319')
+    assert rv.status_code == 200
+    assert b'const expiresAt = null' in rv.data
+
+
+def test_view_transition_css(flask_client):
+    """View Transitions CSS rule is present in the page."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'@view-transition' in rv.data
+
+
+# ---------------------------------------------------------------------------
+# Mode config property
+# ---------------------------------------------------------------------------
+
+
+def test_mode_random_returns_quote(flask_client, config):
+    """mode=random on root returns 200 with a quote."""
+    config[api.SECTION_WEB]['mode'] = 'random'
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'<!DOCTYPE html>' in rv.data
+    assert b'<div class="quote">' in rv.data
+
+
+def test_mode_random_no_permalink(flask_client, config, tmp_path):
+    """mode=random suppresses permalink even when quotemap has today."""
+    today = datetime.datetime.now().strftime('%Y%m%d')
+    quotemap_file = tmp_path / 'quotemap.txt'
+    quotemap_file.write_text(f'{today}: 25382c2519fb23bd\n', encoding='utf-8')
+    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
+    config[api.SECTION_WEB]['mode'] = 'random'
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'id="permalink-btn"' not in rv.data
+
+
+def test_mode_random_no_midnight_cap(flask_client, config):
+    """mode=random uses cache_minutes directly without midnight cap."""
+    config[api.SECTION_WEB]['mode'] = 'random'
+    config[api.SECTION_WEB]['cache_minutes'] = '1'
+    client, quote_file = flask_client
+    rv = client.get('/')
+    cc = rv.headers.get('Cache-Control', '')
+    max_age = int(cc.split('=')[1])
+    assert max_age == 60
+
+
+def test_mode_daily_default(flask_client, config):
+    """Default mode (daily) returns a quote without permalink (no quotemap)."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'id="permalink-btn"' not in rv.data

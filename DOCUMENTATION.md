@@ -228,6 +228,17 @@ When a quotemap is configured, the quotemap takes precedence over the seeded alg
 
 The web server supports light and dark mode. Colors are controlled via properties in the `[web]` section of `settings.conf` (`light_foreground_color`, `light_background_color`, `dark_foreground_color`, `dark_background_color`). See the [settings.conf](#settingsconf) section for defaults.
 
+### Auto-refresh
+
+The web server instructs the browser to automatically reload the page after the HTTP cache expires. The server passes the cache expiration time (UTC ISO 8601) to the browser, which adds a random delay of 60–120 seconds before reloading to ensure the cache has expired. On browsers that support the View Transitions API, the reload includes a smooth cross-fade animation. Date permalink pages (`/<YYYYMMDD>`) do not auto-refresh.
+
+### Mode
+
+The `mode` property in the `[web]` section controls how quotes are selected:
+
+- **`daily`** (default): A deterministic daily quote is selected using a seeded random number generator. The same quote is shown all day and changes at midnight. The quotemap (if configured) takes precedence for mapped dates.
+- **`random`**: A truly random quote is selected on each page load. The quotemap is bypassed and permalinks are disabled. The cache expiration is based solely on `cache_minutes` without the midnight cap.
+
 ---
 
 ## Quotemap
@@ -430,6 +441,7 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 | `light_background_color` | `#ffffff` | Background color in light mode |
 | `dark_foreground_color` | `#ffffff` | Text color in dark mode |
 | `dark_background_color` | `#000000` | Background color in dark mode |
+| `mode` | `daily` | Quote selection mode. `daily` shows a deterministic daily quote (changes at midnight). `random` shows a truly random quote on each page load, disabling the permalink feature. |
 
 ### Legacy format
 
