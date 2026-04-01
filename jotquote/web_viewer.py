@@ -157,7 +157,7 @@ def showpage(date_path_param=None):
                 permalink = f'/{lookup_date}'
             # For date URLs, content is static — use full cache cap
             if date_path_param:
-                max_age = cap_minutes * 60
+                max_age = cap_seconds
         elif date_path_param:
             # Date route requested but date not in quotemap — 404
             abort(404)
