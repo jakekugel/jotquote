@@ -1025,7 +1025,7 @@ def test_migrate_legacy_section_prefix_stripping():
     config['jotquote']['lint_required_group_stars'] = '1star, 2stars'
     config['jotquote']['web_port'] = '8080'
     config['jotquote']['web_ip'] = '0.0.0.0'
-    config['jotquote']['web_cache_minutes'] = '60'
+    config['jotquote']['web_cache_seconds'] = '3600'
     config['jotquote']['quotemap_file'] = '/path/quotemap.txt'
     config['jotquote']['show_author_count'] = 'true'
 
@@ -1042,7 +1042,7 @@ def test_migrate_legacy_section_prefix_stripping():
     # Web section (prefix stripped)
     assert config.get(api.SECTION_WEB, 'port') == '8080'
     assert config.get(api.SECTION_WEB, 'ip') == '0.0.0.0'
-    assert config.get(api.SECTION_WEB, 'cache_minutes') == '60'
+    assert config.get(api.SECTION_WEB, 'cache_seconds') == '3600'
     assert config.get(api.SECTION_WEB, 'quotemap_file') == '/path/quotemap.txt'
     # Old section removed
     assert not config.has_section('jotquote')

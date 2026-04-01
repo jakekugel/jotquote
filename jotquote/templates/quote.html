@@ -12,7 +12,29 @@
     localStorage.getItem('jotquote-theme') || 'dark'
   );
 </script>
+<noscript>
 <style>
+    :root {
+        --fg:           {{ dark_fg }};
+        --bg:           {{ dark_bg }};
+        --horiz-line:   #555555;
+        --cmd-bg:       #505050;
+        --cmd-fg:       #e8e8e8;
+        --muted-fg:     #999999;
+    }
+</style>
+</noscript>
+<style>
+
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 2s;
+    animation-timing-function: ease-in-out;
+}
 
 @font-face {
     font-family: 'Open Sans';
@@ -234,6 +256,36 @@ body {
                 btn.classList.remove('icon-btn-outline');
             }, 2000);
         }
+
+        // Schedule an automatic page refresh after the server's cache expires.
+        // Called once when the page loads.
+        function scheduleAutoRefresh() {
+            const expiresAt = {{ expires_at | tojson }};
+            if (!expiresAt) return;
+
+            // Parse the server-provided UTC expiration time
+            const cacheExpiry = new Date(expiresAt).getTime();
+
+            // Add random jitter (60–120 seconds) to ensure the cache has expired
+            // const jitterSeconds = Math.floor(Math.random() * 61) + 60;
+            // const reloadTime = cacheExpiry + jitterSeconds * 1000;
+            const reloadTime = cacheExpiry;
+
+            // Clamp delay to zero if the reload time has already passed
+            const delay = Math.max(reloadTime - Date.now(), 0);
+
+            // Log the scheduled reload time in local time
+            const reloadDate = new Date(reloadTime);
+            console.log('The page will refresh automatically on ' + reloadDate.toLocaleString() + '.');
+
+            // Schedule the reload
+            setTimeout(() => {
+                console.log('Refreshing now.');
+                navigation.navigate(location.href);
+            }, delay);
+        }
+
+        scheduleAutoRefresh();
     </script>
 </body>
 </html>

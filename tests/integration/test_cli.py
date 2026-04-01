@@ -110,11 +110,11 @@ def _collect_stderr(proc, lines):
         lines.append(line.decode('utf-8', errors='replace').rstrip())
 
 
-def test_web_cache_minutes(tmp_path):
-    """jotquote webserver respects web_cache_minutes config: max-age capped at 1 minute."""
+def test_web_cache_seconds(tmp_path):
+    """jotquote webserver respects web_cache_seconds config: max-age capped at 60 seconds."""
     url = 'http://127.0.0.1:{}/'.format(CLI_TEST_PORT)
     quote_file = _copy_quotes(tmp_path)
-    env = _make_env(tmp_path, quote_file, web_cache_minutes='1')
+    env = _make_env(tmp_path, quote_file, web_cache_seconds='60')
 
     proc = subprocess.Popen(
         [_script('jotquote'), 'webserver'],
