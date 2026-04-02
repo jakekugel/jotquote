@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{% include '_head_common.html' %}
+<noscript>
+<style>
+    :root {
+        --fg:           {{ dark_fg }};
+        --bg:           {{ dark_bg }};
+        --horiz-line:   #555555;
+        --input-bg:     #2a2a2a;
+        --border-color: #555555;
+        --btn-bg:       #444444;
+        --muted-fg:     #999999;
+    }
+</style>
+</noscript>
+<style>
+
+@font-face {
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 400;
+    src: url("{{ url_for('static', filename='fonts/OpenSans-Regular.ttf') }}") format('truetype');
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 700;
+    src: url("{{ url_for('static', filename='fonts/OpenSans-Bold.ttf') }}") format('truetype');
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    font-style: italic;
+    font-weight: 400;
+    src: url("{{ url_for('static', filename='fonts/OpenSans-Italic.ttf') }}") format('truetype');
+}
+
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    src: url("{{ url_for('static', filename='fonts/Inter-VariableFont_opsz,wght.ttf') }}") format('truetype');
+}
+
+@font-face {
+    font-family: 'Inter';
+    font-style: italic;
+    font-weight: 100 900;
+    src: url("{{ url_for('static', filename='fonts/Inter-Italic-VariableFont_opsz,wght.ttf') }}") format('truetype');
+}
+
+[data-theme="dark"] {
+    --fg:           {{ dark_fg }};
+    --bg:           {{ dark_bg }};
+    --horiz-line:   #555555;
+    --input-bg:     #2a2a2a;
+    --border-color: #555555;
+    --btn-bg:       #444444;
+    --muted-fg:     #999999;
+}
+
+[data-theme="light"] {
+    --fg:           {{ light_fg }};
+    --bg:           {{ light_bg }};
+    --horiz-line:   #aaaaaa;
+    --input-bg:     #f4f4f4;
+    --border-color: #bbbbbb;
+    --btn-bg:       #dddddd;
+    --muted-fg:     #555555;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--fg);
+}
+
+.container {
+    width: 50em;
+    margin: 2em auto;
+    font-family: "Open Sans", Palatino, serif;
+}
+
+.editor-table {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-collapse: collapse;
+}
+
+.editor-table td {
+    border: 1px solid var(--border-color);
+    padding: 8px;
+    vertical-align: top;
+}
+
+.editor-table td:first-child {
+    font-weight: bold;
+    white-space: nowrap;
+    width: 1%;
+}
+
+.editor-table td:last-child {
+    width: 30%;
+    font-size: 90%;
+}
+
+.edit-field {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: "Open Sans", Palatino, serif;
+    font-size: 95%;
+    padding: 4px 6px;
+    resize: vertical;
+    background-color: var(--input-bg);
+    color: var(--fg);
+    border: 1px solid var(--border-color);
+}
+
+.lint-error {
+    color: #cc6666;
+    margin-bottom: 4px;
+}
+
+.button-row {
+    display: flex;
+    gap: 0.5em;
+    margin-top: 0.8em;
+    justify-content: flex-end;
+}
+
+.save-button {
+    background-color: var(--btn-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--fg);
+    font-family: "Open Sans", Palatino, serif;
+    font-size: 90%;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 4px 10px;
+}
+
+.save-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.error-message {
+    color: #cc6666;
+    margin-top: 0.8em;
+    font-weight: bold;
+}
+
+.icon-btn {
+    display: flex;
+    align-items: center;
+    background: var(--fg);
+    border: none;
+    cursor: pointer;
+    font-size: 102%;
+    padding: 0.15em 0.5em;
+    border-radius: 4px;
+}
+
+.icon-btn:hover { opacity: 0.7; }
+
+.theme-icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: middle;
+    background-color: var(--bg);
+    mask-image: url("{{ url_for('static', filename='icons/night-mode.svg') }}");
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+}
+
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1em;
+}
+
+.quote-counter {
+    font-family: "Inter", sans-serif;
+    color: var(--fg);
+}
+
+/* Modify CSS for small screens */
+@media screen and (max-width: 700px) {
+    .container {
+        width: 90%;
+    }
+}
+
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            {% if line_number and totalquotes %}
+            <span class="quote-counter">Editing quote {{ line_number }} of {{ totalquotes }}</span>
+            {% else %}
+            <span></span>
+            {% endif %}
+        </div>
+        <form method="POST" action="/{{ line_number }}">
+            <input type="hidden" name="sha256" value="{{ sha256 }}">
+            <table class="editor-table">
+                <tr>
+                    <td>Quote</td>
+                    <td><textarea name="quote" id="field-quote" rows="4" class="edit-field">{{ quote }}</textarea></td>
+                    <td>
+                        {% for issue in lint_issues if issue.field == 'quote' %}
+                            <div class="lint-error">{{ issue.message }}</div>
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Author</td>
+                    <td><textarea name="author" id="field-author" rows="1" class="edit-field">{{ author }}</textarea></td>
+                    <td>
+                        {% for issue in lint_issues if issue.field == 'author' %}
+                            <div class="lint-error">{{ issue.message }}</div>
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Publication</td>
+                    <td><textarea name="publication" id="field-publication" rows="1" class="edit-field">{{ publication or '' }}</textarea></td>
+                    <td>
+                        {% for issue in lint_issues if issue.field == 'publication' %}
+                            <div class="lint-error">{{ issue.message }}</div>
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Tags</td>
+                    <td><textarea name="tags" id="field-tags" rows="1" class="edit-field">{{ tags | join(', ') }}</textarea></td>
+                    <td>
+                        {% for issue in lint_issues if issue.field == 'tags' %}
+                            <div class="lint-error">{{ issue.message }}</div>
+                        {% endfor %}
+                    </td>
+                </tr>
+            </table>
+            <div class="button-row">
+                {% include '_theme_toggle.html' %}
+                <button type="button" class="save-button" id="prev-btn"
+                        onclick="window.location='/{{ prev_line_num }}'"
+                        {% if not prev_line_num %}disabled{% endif %}>&lt; Previous</button>
+                <button type="button" class="save-button" id="prev-error-btn"
+                        onclick="window.location='/{{ prev_error_line_num }}'"
+                        {% if not prev_error_line_num %}disabled{% endif %}>&lt; Previous with error</button>
+                <button type="submit" class="save-button" id="save-btn" disabled>Save</button>
+                <button type="button" class="save-button" id="next-error-btn"
+                        onclick="window.location='/{{ next_error_line_num }}'"
+                        {% if not next_error_line_num %}disabled{% endif %}>Next with error &gt;</button>
+                <button type="button" class="save-button" id="next-btn"
+                        onclick="window.location='/{{ next_line_num }}'"
+                        {% if not next_line_num %}disabled{% endif %}>Next &gt;</button>
+            </div>
+            {% if error %}
+                <div class="error-message">{{ error }}</div>
+            {% endif %}
+        </form>
+    </div>
+    <script>
+        function toggleTheme() {
+            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('jotquote-theme', next);
+        }
+
+        (function() {
+            var fields = document.querySelectorAll('.edit-field');
+            var originals = {};
+            fields.forEach(function(f) {
+                originals[f.name] = f.value;
+                f.addEventListener('input', checkChanges);
+            });
+            function checkChanges() {
+                var changed = false;
+                fields.forEach(function(f) {
+                    if (f.value !== originals[f.name]) changed = true;
+                });
+                document.getElementById('save-btn').disabled = !changed;
+            }
+        })();
+    </script>
+</body>
+</html>

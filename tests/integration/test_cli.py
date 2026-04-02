@@ -365,36 +365,22 @@ def test_lint_on_add_false_skips_lint_integration(tmp_path):
     assert '1 quote added' in output
 
 
-LEGACY_SETTINGS_CONF_TEMPLATE = """\
-[jotquote]
-quote_file = {quote_file}
-web_port = {port}
-web_ip = 127.0.0.1
-line_separator = platform
-{extra}"""
-
-
-def _make_legacy_env(tmp_path, quote_file, **extra_props):
-    """Build a legacy [jotquote] settings.conf in tmp_path and return a subprocess env dict."""
-    extra = '\n'.join('{} = {}'.format(k, v) for k, v in extra_props.items())
+def test_legacy_jotquote_section_still_works(tmp_path):
+    """jotquote list works with the legacy [jotquote] section and emits a deprecation warning."""
+    # Copy the legacy config template to the jotquote config directory
     jotquote_dir = tmp_path / '.jotquote'
-    jotquote_dir.mkdir(exist_ok=True)
-    conf_path = jotquote_dir / 'settings.conf'
-    conf_path.write_text(
-        LEGACY_SETTINGS_CONF_TEMPLATE.format(quote_file=str(quote_file), port=CLI_TEST_PORT, extra=extra),
-        encoding='utf-8',
-    )
+    jotquote_dir.mkdir()
+    templates_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'jotquote', 'templates'))
+    shutil.copy(os.path.join(templates_dir, 'settings.legacy.conf'), jotquote_dir / 'settings.conf')
+
+    # Copy the quote fixture so the relative quote_file path resolves correctly
+    src = os.path.join(os.path.dirname(__file__), '..', 'testdata', 'quotes1.txt')
+    shutil.copy(src, jotquote_dir / 'quotes.txt')
+
     env = os.environ.copy()
     env['HOME'] = str(tmp_path)
     env['USERPROFILE'] = str(tmp_path)
     env['PYTHONUNBUFFERED'] = '1'
-    return env
-
-
-def test_legacy_jotquote_section_still_works(tmp_path):
-    """jotquote list works with the legacy [jotquote] section and emits a deprecation warning."""
-    quote_file = _copy_quotes(tmp_path)
-    env = _make_legacy_env(tmp_path, quote_file)
 
     result = subprocess.run(
         [_script('jotquote'), 'list'],

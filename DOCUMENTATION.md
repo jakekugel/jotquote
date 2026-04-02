@@ -138,6 +138,20 @@ $ jotquote webserver
 
 ---
 
+### `webeditor`
+
+Starts a local web server for editing quotes. Displays one quote at a time with editable fields for the quote text, author, publication, and tags. Lint issues for the displayed quote are shown inline. Host and port are read from `settings.conf` (`editor_ip` and `editor_port`; defaults: `127.0.0.1:5545`).
+
+```bash
+$ jotquote webeditor
+```
+
+> **Security Warning**
+>
+> The editor has **no authentication or access control**. Anyone who can reach the server can read and modify your quote file. **Only run this server bound to `127.0.0.1` (localhost).** Never expose it on a network interface accessible to other machines.
+
+---
+
 ### `lint`
 
 Checks the quote file for quality issues. By default, the checks configured in `lint_enabled_checks` are used; if that property is absent, all checks run.
@@ -432,8 +446,10 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 | Property | Default | Description |
 |---|---|---|
 | `quotemap_file` | _(empty)_ | Path to an optional quotemap file (see [Quotemap](#quotemap)) |
-| `port` | `5544` | Port the web server listens on |
-| `ip` | `127.0.0.1` | IP address the web server binds to |
+| `port` | `5544` | Port the web server (`jotquote webserver`) listens on |
+| `ip` | `127.0.0.1` | IP address the web server (`jotquote webserver`) binds to |
+| `editor_port` | `5545` | Port the web editor (`jotquote webeditor`) listens on |
+| `editor_ip` | `127.0.0.1` | IP address the web editor (`jotquote webeditor`) binds to |
 | `cache_seconds` | `14400` | How long (in seconds) the web server caches the quote list after a file change |
 | `page_title` | `jotquote` | HTML page title shown in the browser tab |
 | `show_stars` | `false` | If `true`, shows star ratings on the web server |

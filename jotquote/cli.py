@@ -74,7 +74,7 @@ def jotquote(ctx, quotefile):
 
         # All subcommands except webserver require quotefile to exist.  The
         # webserver subcommand lazy-loads when user views page.
-        if ctx.invoked_subcommand not in ('webserver', 'quotemap') and not os.path.exists(quotefile):
+        if ctx.invoked_subcommand not in ('webserver', 'webeditor', 'quotemap') and not os.path.exists(quotefile):
             config_dir = click.get_app_dir(api.APP_NAME, roaming=True, force_posix=False)
             config_path = os.path.join(config_dir, 'settings.conf')
             print(
@@ -169,6 +169,17 @@ def webserver(ctx):
     import jotquote.web_viewer
 
     jotquote.web_viewer.run_server()
+
+
+@jotquote.command()
+@click.pass_context
+def webeditor(ctx):
+    """Start a local web server for editing quotes."""
+
+    # Lazy import to avoid importing web packages when using pure cli
+    import jotquote.web_editor
+
+    jotquote.web_editor.run_server()
 
 
 @jotquote.command()
@@ -280,14 +291,14 @@ def lint(ctx, fix, select_checks, ignore_checks):
 
     checks = _get_active_checks(select_checks, ignore_checks, config)
 
-    quotes = api.read_quotes(quotefile)
+    quotes, sha256 = api.read_quotes_with_hash(quotefile)
     issues = lintmod.lint_quotes(quotes, checks, config)
 
     fix_count = 0
     if fix:
         quotes, fix_count = lintmod.apply_fixes(quotes, issues)
         if fix_count > 0:
-            api.write_quotes(quotefile, quotes)
+            api.write_quotes(quotefile, quotes, expected_sha256=sha256)
             quotes = api.read_quotes(quotefile)
             issues = lintmod.lint_quotes(quotes, checks, config)
 

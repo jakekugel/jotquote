@@ -3,6 +3,7 @@
 # file in the root of this repository for complete details.
 
 import datetime as real_datetime
+import hashlib
 import os
 import re
 from configparser import ConfigParser
@@ -1046,3 +1047,185 @@ def test_migrate_legacy_section_prefix_stripping():
     assert config.get(api.SECTION_WEB, 'quotemap_file') == '/path/quotemap.txt'
     # Old section removed
     assert not config.has_section('jotquote')
+
+
+class TestGetSha256:
+    def test_get_sha256(self, tmp_path):
+        """get_sha256 returns correct hex digest for a known file."""
+        f = tmp_path / 'test.txt'
+        f.write_bytes(b'hello world\n')
+        expected = hashlib.sha256(b'hello world\n').hexdigest()
+        assert api.get_sha256(str(f)) == expected
+
+    def test_get_sha256_changes_after_write(self, tmp_path):
+        """Checksum changes after the file is modified."""
+        f = tmp_path / 'test.txt'
+        f.write_bytes(b'original')
+        sha1 = api.get_sha256(str(f))
+        f.write_bytes(b'modified')
+        sha2 = api.get_sha256(str(f))
+        assert sha1 != sha2
+
+
+class TestSetQuote:
+    def test_set_quote_success(self, tmp_path):
+        """set_quote updates the quote at the given line number."""
+        quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+        quotes = api.read_quotes(quote_file)
+        original_quote = quotes[0]
+        line_num = original_quote.get_line_number()
+        sha256 = api.get_sha256(quote_file)
+
+        new_quote = api.Quote('New text', 'New Author', None, ['newtag'])
+        api.set_quote(quote_file, line_num, new_quote, sha256)
+
+        updated_quotes = api.read_quotes(quote_file)
+        updated = updated_quotes[0]
+        assert updated.quote == 'New text'
+        assert updated.author == 'New Author'
+        assert updated.publication in (None, '')
+        assert updated.tags == ['newtag']
+
+    def test_set_quote_sha256_mismatch(self, tmp_path):
+        """set_quote raises ClickException when SHA256 does not match."""
+        quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+        quotes = api.read_quotes(quote_file)
+        line_num = quotes[0].get_line_number()
+
+        new_quote = api.Quote('New text', 'New Author', None, [])
+        with pytest.raises(click.ClickException, match='modified since it was last read'):
+            api.set_quote(quote_file, line_num, new_quote, 'bogus_sha256')
+
+    def test_set_quote_invalid_line_number(self, tmp_path):
+        """set_quote raises ClickException for a nonexistent line number."""
+        quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+        sha256 = api.get_sha256(quote_file)
+
+        new_quote = api.Quote('New text', 'New Author', None, [])
+        with pytest.raises(click.ClickException, match='No quote found at line number'):
+            api.set_quote(quote_file, 999, new_quote, sha256)
+
+
+# ---------------------------------------------------------------------------
+# read_quotes_with_hash tests
+# ---------------------------------------------------------------------------
+
+
+def test_read_quotes_with_hash_returns_correct_quotes_and_hash(tmp_path):
+    """read_quotes_with_hash() returns quotes and a matching SHA-256 hash."""
+    quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    quotes, sha256_hex = api.read_quotes_with_hash(quote_file)
+    assert len(quotes) == 4
+    with open(quote_file, 'rb') as f:
+        expected_hash = hashlib.sha256(f.read()).hexdigest()
+    assert sha256_hex == expected_hash
+
+
+def test_read_quotes_with_hash_changes_on_file_change(tmp_path):
+    """Hash changes when the file content changes."""
+    quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    _, hash1 = api.read_quotes_with_hash(quote_file)
+    with open(quote_file, 'a', encoding='utf-8') as f:
+        f.write('Extra quote | Extra Author | | tag1\n')
+    _, hash2 = api.read_quotes_with_hash(quote_file)
+    assert hash1 != hash2
+
+
+def test_read_quotes_with_hash_file_not_found(tmp_path):
+    """read_quotes_with_hash() raises ClickException for nonexistent file."""
+    path = os.path.join(str(tmp_path), 'nonexistent.txt')
+    with pytest.raises(click.ClickException, match='was not found'):
+        api.read_quotes_with_hash(path)
+
+
+def test_read_quotes_with_hash_consistent_with_read_quotes(tmp_path):
+    """read_quotes() returns the same quotes as read_quotes_with_hash()."""
+    quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    quotes_plain = api.read_quotes(quote_file)
+    quotes_hash, _ = api.read_quotes_with_hash(quote_file)
+    assert quotes_plain == quotes_hash
+
+
+# ---------------------------------------------------------------------------
+# write_quotes expected_sha256 tests
+# ---------------------------------------------------------------------------
+
+
+def test_write_quotes_succeeds_with_matching_hash(tmp_path):
+    """write_quotes() succeeds when expected_sha256 matches the file."""
+    quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    quotes, sha256 = api.read_quotes_with_hash(quote_file)
+    quotes[0].set_tags(['newtag'])
+    api.write_quotes(quote_file, quotes, expected_sha256=sha256)
+    updated = api.read_quotes(quote_file)
+    assert updated[0].tags == ['newtag']
+
+
+def test_write_quotes_fails_with_mismatched_hash(tmp_path):
+    """write_quotes() raises ClickException when expected_sha256 does not match."""
+    quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    quotes, sha256 = api.read_quotes_with_hash(quote_file)
+    # Modify file externally
+    with open(quote_file, 'a', encoding='utf-8') as f:
+        f.write('Injected quote | Injected Author | | tag1\n')
+    with pytest.raises(click.ClickException, match='modified by another process'):
+        api.write_quotes(quote_file, quotes, expected_sha256=sha256)
+
+
+def test_write_quotes_succeeds_with_none_hash(tmp_path):
+    """write_quotes() succeeds when expected_sha256 is None (backwards compatible)."""
+    quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    quotes = api.read_quotes(quote_file)
+    quotes[0].set_tags(['newtag'])
+    api.write_quotes(quote_file, quotes)
+    updated = api.read_quotes(quote_file)
+    assert updated[0].tags == ['newtag']
+
+
+# ---------------------------------------------------------------------------
+# Concurrent modification detection in settags / add_quotes
+# ---------------------------------------------------------------------------
+
+
+def test_settags_fails_on_concurrent_modification(tmp_path, config):
+    """settags() raises ClickException when quote file is modified externally."""
+    quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.SECTION_GENERAL]['quote_file'] = str(quote_file)
+
+    # Monkey-patch read_quotes_with_hash to modify the file after reading
+    original_fn = api.read_quotes_with_hash
+
+    def _modified_read(filename):
+        quotes, sha256 = original_fn(filename)
+        with open(filename, 'a', encoding='utf-8') as f:
+            f.write('Injected quote | Injected Author | | tag1\n')
+        return quotes, sha256
+
+    api.read_quotes_with_hash = _modified_read
+    try:
+        with pytest.raises(click.ClickException, match='modified by another process'):
+            api.settags(quote_file, 1, None, ['newtag'])
+    finally:
+        api.read_quotes_with_hash = original_fn
+
+
+def test_add_quotes_fails_on_concurrent_modification(tmp_path, config):
+    """add_quotes() raises ClickException when quote file is modified externally."""
+    quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.SECTION_GENERAL]['quote_file'] = str(quote_file)
+
+    original_fn = api.read_quotes_with_hash
+
+    def _modified_read(filename):
+        quotes, sha256 = original_fn(filename)
+        with open(filename, 'a', encoding='utf-8') as f:
+            f.write('Injected quote | Injected Author | | tag1\n')
+        return quotes, sha256
+
+    api.read_quotes_with_hash = _modified_read
+    try:
+        new_quote = api.Quote('Brand new quote', 'Brand New Author', None, [])
+        with pytest.raises(click.ClickException, match='modified by another process'):
+            api.add_quotes(quote_file, [new_quote])
+    finally:
+        api.read_quotes_with_hash = original_fn

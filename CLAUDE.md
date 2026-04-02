@@ -105,6 +105,11 @@ Config is in `pyproject.toml` under `[tool.ruff]`: line length max 120; E501 and
 
 Prefer modern Python patterns and keep code as simple as possible. Favour the standard library and built-in language features over custom abstractions. When two approaches produce equivalent results, always choose the simpler one.
 
+- **Docstrings**: Public functions must have a docstring that describes the function's purpose and documents the types of all input parameters and return values.
+- **Module ordering**: Public functions come first in a module, followed by private helper functions (prefixed with `_`).
+- **DRY**: Avoid code duplication. When substantially similar logic appears in multiple places, extract it into a shared helper function.
+- **Block comments**: Functions with more than a few statements should have a single-line comment before each logical block, explaining its purpose in plain English.
+
 ### settings.conf
 
 Properties in `settings.conf` are organized into three sections: `[general]`, `[lint]`, and `[web]`. The old single-section `[jotquote]` format is still supported via automatic in-memory migration with a deprecation warning. If `settings.conf` properties are added, removed, or changed, the table in [DOCUMENTATION.md](DOCUMENTATION.md) must be updated. Not all documented properties appear in the template `settings.conf` — the code sets in-memory defaults (e.g. `enabled_checks` in `[lint]`) when the property is absent from the file. [DOCUMENTATION.md](DOCUMENTATION.md) is the authoritative reference for all available properties.

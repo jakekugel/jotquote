@@ -331,31 +331,13 @@ def test_permalink_button_present(flask_client, config, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_run_server_logs_migration_warning(flask_client, config, monkeypatch):
-    """run_server() logs a warning via app.logger when migration occurs."""
+def test_run_server_no_migration_warning(flask_client, config, monkeypatch):
+    """run_server() never logs a migration warning; the CLI handles that."""
     from unittest.mock import Mock, patch
 
     config[api.SECTION_WEB]['port'] = '5544'
     config[api.SECTION_WEB]['ip'] = '127.0.0.1'
     monkeypatch.setattr(api, 'get_config', Mock(return_value=(config, True)))
-
-    warning_messages = []
-    monkeypatch.setattr(web.app.logger, 'warning', lambda msg: warning_messages.append(msg))
-
-    with patch('waitress.serve'):
-        web.run_server()
-
-    assert len(warning_messages) == 1
-    assert 'deprecated' in warning_messages[0].lower()
-
-
-def test_run_server_no_warning_when_not_migrated(flask_client, config, monkeypatch):
-    """run_server() does not log a warning when migration did not occur."""
-    from unittest.mock import Mock, patch
-
-    config[api.SECTION_WEB]['port'] = '5544'
-    config[api.SECTION_WEB]['ip'] = '127.0.0.1'
-    monkeypatch.setattr(api, 'get_config', Mock(return_value=(config, False)))
 
     warning_messages = []
     monkeypatch.setattr(web.app.logger, 'warning', lambda msg: warning_messages.append(msg))

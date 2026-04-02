@@ -1,0 +1,11 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ page_title }}</title>
+
+<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<script>
+  document.documentElement.setAttribute(
+    'data-theme',
+    localStorage.getItem('jotquote-theme') || 'dark'
+  );
+</script>

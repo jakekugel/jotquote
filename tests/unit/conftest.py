@@ -7,6 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
+import tests.test_util
 from jotquote import api
 
 
@@ -25,3 +26,16 @@ def config(monkeypatch):
     cfg[api.SECTION_WEB]['ip'] = '0.0.0.0'
     monkeypatch.setattr(api, 'get_config', Mock(return_value=(cfg, False)))
     return cfg
+
+
+@pytest.fixture
+def editor_client(tmp_path, config):
+    """Provide a Flask test client for the web editor with a temporary quote file."""
+    from jotquote import web_editor
+
+    quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.SECTION_GENERAL]['quote_file'] = str(quote_file)
+    web_editor._lint_cache = {'sha256': None, 'checks': None, 'issues': []}
+    web_editor.app.testing = True
+    with web_editor.app.test_client() as client:
+        yield client, quote_file

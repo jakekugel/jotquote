@@ -126,16 +126,28 @@ def read_quotes(filename):
     """Given a path to quote file, this function returns a list of Quote objects containing
     the quotes.
     """
+    quotes, _ = read_quotes_with_hash(filename)
+    return quotes
 
+
+def read_quotes_with_hash(filename):
+    """Read quotes and compute SHA-256 hash of the file in a single read.
+
+    Returns (quotes, sha256_hex) where quotes is a list of Quote objects
+    and sha256_hex is the hex digest of the file contents.
+    """
     if not os.path.exists(filename):
         raise click.ClickException("The quote file '{0}' was not found.".format(filename))
 
-    with click.open_file(filename, mode='r', encoding='utf-8') as infile:
-        quotes = parse_quotes(infile, filename, simple_format=False)
+    with open(filename, 'rb') as f:
+        raw = f.read()
 
+    sha256_hex = hashlib.sha256(raw).hexdigest()
+    lines = raw.decode('utf-8').splitlines()
+    quotes = parse_quotes(lines, filename, simple_format=False)
     _check_for_duplicates(quotes, filename)
 
-    return quotes
+    return quotes, sha256_hex
 
 
 def read_tags(quotefile):
@@ -191,7 +203,7 @@ def settags(quotefile, n, hash, newtags):
     if n is None and hash is None:
         raise click.ClickException('either the -n or the -s argument must be included.')
 
-    quotes = read_quotes(quotefile)
+    quotes, sha256 = read_quotes_with_hash(quotefile)
 
     if n is not None:
         if n < 1 or n > len(quotes):
@@ -204,7 +216,7 @@ def settags(quotefile, n, hash, newtags):
         quote = matched[0]
 
     quote.set_tags(newtags)
-    write_quotes(quotefile, quotes)
+    write_quotes(quotefile, quotes, expected_sha256=sha256)
 
 
 def parse_quotes(rawlines, filename, encoding=None, simple_format=True):
@@ -535,6 +547,43 @@ def get_filename():
     return filename
 
 
+def get_sha256(filename):
+    """Return the SHA256 hex digest of the given file."""
+    h = hashlib.sha256()
+    with open(filename, 'rb') as f:
+        for chunk in iter(lambda: f.read(8192), b''):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def set_quote(quotefile, line_num, quote, sha256):
+    """Replace the quote at line_num with the given Quote object.
+
+    Reads the file, verifies the SHA256 checksum matches sha256 (to detect
+    concurrent modifications), replaces the quote at the matching line_number,
+    and writes the file atomically via write_quotes().
+
+    Raises ClickException if the checksum does not match or line_num is invalid.
+    """
+    quotes, current_sha = read_quotes_with_hash(quotefile)
+    if current_sha != sha256:
+        raise click.ClickException(
+            'The quote file has been modified since it was last read. Please reload the page and try again.'
+        )
+    target = None
+    for q in quotes:
+        if q.line_number == line_num:
+            target = q
+            break
+    if target is None:
+        raise click.ClickException('No quote found at line number {}.'.format(line_num))
+    target.quote = quote.quote
+    target.author = quote.author
+    target.publication = quote.publication
+    target.set_tags(quote.tags)
+    write_quotes(quotefile, quotes, expected_sha256=current_sha)
+
+
 def add_quote(filename, quote):
     """Rewrites the quote file with given file name, adding the given new quote.
     Returns total number of quotes including new quote.
@@ -564,7 +613,7 @@ def add_quotes(filename, newquotes):
     _check_for_duplicates(newquotes, 'stdin')
 
     # Read in quotes from the quote file given.  Exception raised on I/O error
-    quotes = read_quotes(filename)
+    quotes, sha256 = read_quotes_with_hash(filename)
 
     # Loop through existing quotes and check against new quotes for any duplicates
     for existing_quote in quotes:
@@ -576,18 +625,28 @@ def add_quotes(filename, newquotes):
 
     # Rewrite quote file with any additional quotes
     quotes.extend(newquotes)
-    write_quotes(filename, quotes)
+    write_quotes(filename, quotes, expected_sha256=sha256)
     return len(quotes)
 
 
-def write_quotes(quote_path, quotes):
+def write_quotes(quote_path, quotes, expected_sha256=None):
     """Writes the given list of quotes to quote_path.
 
     Atomically overwrites quote_path with the quotes in the list.  If more than one
     process calls this function at the same time, the results are undefined.
+
+    If expected_sha256 is provided, verifies the current file's SHA-256 matches
+    before writing. Raises ClickException if the file has been modified.
     """
     if not os.path.exists(quote_path):
         raise click.ClickException("the quote file '{0}' was not found.".format(quote_path))
+
+    if expected_sha256 is not None:
+        current_sha = get_sha256(quote_path)
+        if current_sha != expected_sha256:
+            raise click.ClickException(
+                'the quote file was modified by another process during this operation. No changes were saved.'
+            )
 
     newline = _get_newline()
 
