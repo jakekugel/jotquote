@@ -42,7 +42,7 @@ def log_request(response):
     return response
 
 
-@app.route('/')
+@app.route('/', methods=['GET'])
 def index():
     """Render the editor page for the first quote in the collection.
 
@@ -106,11 +106,12 @@ def save_quote(line_num):
         quote_obj = api.Quote(quote_text, author, publication if publication else None, tags)
         api.set_quote(quotefile, line_num, quote_obj, sha256)
         return redirect(f'/{line_num}')
-    # Save failed — lint the edited quote and re-render the editor with the error
+    # Save failed — re-render using the cached lint issues for this quote
     except click.ClickException as e:
         checks = web_core.get_enabled_checks(config)
-        lint_issues = lint.lint_quotes([quote_obj], checks, config)
         quotes = api.read_quotes(quotefile)
+        all_issues = _get_lint_issues(quotes, checks, config, sha256)
+        lint_issues = [issue for issue in all_issues if issue.line_number == line_num]
         return _render_editor(
             config,
             quotes,

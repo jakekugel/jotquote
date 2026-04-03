@@ -673,14 +673,29 @@ def write_quotes(quote_path, quotes, expected_sha256=None):
                 output_bytes = format_quote(quote).encode('utf-8') + newline.encode('utf-8')
                 outfile.write(output_bytes)
 
-        # Sanity check backup size before overwriting backup
+        # Sanity check backup size and line count before overwriting backup
         if os.path.exists(backup_path):
-            if os.path.getsize(backup_path) > os.path.getsize(temp_path):
+            backup_size = os.path.getsize(backup_path)
+            temp_size = os.path.getsize(temp_path)
+            if backup_size > temp_size + 1000:
                 os.remove(temp_path)
                 raise click.ClickException(
-                    "the backup file '{0}' is larger than the quote file '{1}' would be after this operation.  "
-                    'This is suspicious, the quote file was not modified.  If this was expected, '
-                    'delete the backup file and try again.'.format(backup_file, quote_file)
+                    "the backup file '{0}' is more than 1,000 bytes larger than the quote file '{1}' would be "
+                    'after this operation.  This is suspicious, the quote file was not modified.  '
+                    'If this was expected, delete the backup file and try again.'.format(backup_file, quote_file)
+                )
+            with open(backup_path, 'rb') as f:
+                backup_lines = f.read().count(b'\n')
+            with open(temp_path, 'rb') as f:
+                temp_lines = f.read().count(b'\n')
+            if backup_lines > temp_lines:
+                os.remove(temp_path)
+                raise click.ClickException(
+                    "the backup file '{0}' has {1} lines but the quote file '{2}' would have {3} lines after "
+                    'this operation.  This is suspicious, the quote file was not modified.  '
+                    'If this was expected, delete the backup file and try again.'.format(
+                        backup_file, backup_lines, quote_file, temp_lines
+                    )
                 )
 
         # Create a backup (overwriting existing backup)

@@ -488,11 +488,10 @@ def test__write_quotes__should_return_good_exception_when_backup_larger_than_quo
     with pytest.raises(click.ClickException) as excinfo:
         api.write_quotes(quote_path, quotes)
 
-    # Then an error message returned indicating backup file larger than new quotes5.txt
-    assert (
-        "the backup file '.quotes5.txt.jotquote.bak' is larger than the quote file 'quotes5.txt' would be after this operation.  This is suspicious, the quote file was not modified.  If this was expected, delete the backup file and try again."
-        == str(excinfo.value)
-    )
+    # Then an error message returned indicating backup has more lines than new quotes5.txt
+    assert "the backup file '.quotes5.txt.jotquote.bak' has" in str(excinfo.value)
+    assert 'lines but the quote file' in str(excinfo.value)
+    assert 'This is suspicious' in str(excinfo.value)
     assert tests.test_util.compare_quotes(quotes, api.read_quotes(quote_path))
 
 

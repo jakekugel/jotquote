@@ -72,8 +72,9 @@ def jotquote(ctx, quotefile):
     if quotefile is None:
         quotefile = config.get(api.SECTION_GENERAL, 'quote_file')
 
-        # All subcommands except webserver require quotefile to exist.  The
-        # webserver subcommand lazy-loads when user views page.
+        # All subcommands require quotefile to exist except: quotemap (manages the
+        # quotemap file independently), and webserver/webeditor (lazy-load the quote
+        # file on first page view so the server can start even if the file is missing).
         if ctx.invoked_subcommand not in ('webserver', 'webeditor', 'quotemap') and not os.path.exists(quotefile):
             config_dir = click.get_app_dir(api.APP_NAME, roaming=True, force_posix=False)
             config_path = os.path.join(config_dir, 'settings.conf')

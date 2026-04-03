@@ -17,40 +17,7 @@
 </noscript>
 <style>
 
-@font-face {
-    font-family: 'Open Sans';
-    font-style: normal;
-    font-weight: 400;
-    src: url("{{ url_for('static', filename='fonts/OpenSans-Regular.ttf') }}") format('truetype');
-}
-
-@font-face {
-    font-family: 'Open Sans';
-    font-style: normal;
-    font-weight: 700;
-    src: url("{{ url_for('static', filename='fonts/OpenSans-Bold.ttf') }}") format('truetype');
-}
-
-@font-face {
-    font-family: 'Open Sans';
-    font-style: italic;
-    font-weight: 400;
-    src: url("{{ url_for('static', filename='fonts/OpenSans-Italic.ttf') }}") format('truetype');
-}
-
-@font-face {
-    font-family: 'Inter';
-    font-style: normal;
-    font-weight: 100 900;
-    src: url("{{ url_for('static', filename='fonts/Inter-VariableFont_opsz,wght.ttf') }}") format('truetype');
-}
-
-@font-face {
-    font-family: 'Inter';
-    font-style: italic;
-    font-weight: 100 900;
-    src: url("{{ url_for('static', filename='fonts/Inter-Italic-VariableFont_opsz,wght.ttf') }}") format('truetype');
-}
+{% include '_font_faces.html' %}
 
 [data-theme="dark"] {
     --fg:           {{ dark_fg }};
@@ -276,7 +243,7 @@ body {
             localStorage.setItem('jotquote-theme', next);
         }
 
-        (function() {
+        function initSaveButton() {
             var fields = document.querySelectorAll('.edit-field');
             var originals = {};
             fields.forEach(function(f) {
@@ -290,7 +257,9 @@ body {
                 });
                 document.getElementById('save-btn').disabled = !changed;
             }
-        })();
+        }
+
+        initSaveButton();
     </script>
 </body>
 </html>
