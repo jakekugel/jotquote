@@ -3,6 +3,7 @@
 # file in the root of this repository for complete details.
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -110,8 +111,8 @@ def wait_for_log_line(lines, expected, timeout=5):
     return False
 
 
-def _start_review_server(tmp_path, quote_file, env):
-    """Launch the web_review server and return (proc, stderr_lines)."""
+def _start_editor_server(tmp_path, quote_file, env):
+    """Launch the web_editor server and return (proc, stderr_lines)."""
     cmd = [
         sys.executable,
         '-c',
@@ -143,7 +144,7 @@ def test_get_index(tmp_path):
     """GET / returns HTTP 200 with the jotquote page title."""
     quote_file = _copy_quotes(tmp_path)
     env = _make_env(tmp_path, quote_file)
-    proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
+    proc, stderr_lines = _start_editor_server(tmp_path, quote_file, env)
     try:
         _assert_server_started(proc, stderr_lines)
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
@@ -156,24 +157,15 @@ def test_get_index(tmp_path):
 
 
 def test_tags_displayed(tmp_path):
-    """GET / response contains radio groups for stars/visibility and a textarea for other tags."""
+    """GET / response contains a tags textarea with the tag value."""
     quote_file = _copy_quotes(tmp_path)
     env = _make_env(tmp_path, quote_file)
-    proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
+    proc, stderr_lines = _start_editor_server(tmp_path, quote_file, env)
     try:
         _assert_server_started(proc, stderr_lines)
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
             body = resp.read().decode('utf-8')
-        # Star rating radio group
-        assert 'name="star_tag"' in body
-        assert 'value="1star"' in body
-        assert 'value="5stars"' in body
-        # Visibility radio group
-        assert 'name="visibility_tag"' in body
-        assert 'value="personal"' in body
-        assert 'value="public"' in body
-        # Other tags textarea — quotes1.txt has the "U" tag on all quotes
-        assert 'name="other_tags"' in body
+        assert 'name="tags"' in body
         assert '>U<' in body
     finally:
         proc.terminate()
@@ -183,54 +175,62 @@ def test_tags_displayed(tmp_path):
 def test_page_title_config(tmp_path):
     """web_page_title config value appears in the HTML <title> tag."""
     quote_file = _copy_quotes(tmp_path)
-    env = _make_env(tmp_path, quote_file, web_page_title='My Review')
-    proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
+    env = _make_env(tmp_path, quote_file, web_page_title='My Editor')
+    proc, stderr_lines = _start_editor_server(tmp_path, quote_file, env)
     try:
         _assert_server_started(proc, stderr_lines)
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
             body = resp.read().decode('utf-8')
-        assert '<title>My Review</title>' in body
+        assert '<title>My Editor</title>' in body
     finally:
         proc.terminate()
         proc.wait(timeout=10)
 
 
-def test_post_settags(tmp_path):
-    """POST /settags updates tags on the quote and redirects to /."""
+def test_post_save_quote(tmp_path):
+    """POST /<line_num> updates the quote in the file and redirects to /."""
     quote_file = _copy_quotes(tmp_path)
     env = _make_env(tmp_path, quote_file)
-    proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
+    proc, stderr_lines = _start_editor_server(tmp_path, quote_file, env)
     try:
         _assert_server_started(proc, stderr_lines)
 
-        # Get the page first to find the hidden hash field
+        # Get the page to find line_number and sha256
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
             body = resp.read().decode('utf-8')
 
-        # Extract the hash value from the hidden input
-        import re
+        line_num_match = re.search(r'action="/(\d+)"', body)
+        assert line_num_match, 'Could not find form action with line number'
+        line_num = line_num_match.group(1)
 
-        match = re.search(r'<input type="hidden" name="hash" value="([0-9a-f]+)">', body)
-        assert match, 'Could not find hash hidden input in response body'
-        hash_val = match.group(1)
+        sha256_match = re.search(r'name="sha256" value="([0-9a-f]+)"', body)
+        assert sha256_match, 'Could not find sha256 hidden input'
+        sha256 = sha256_match.group(1)
 
-        # POST to /settags with a new tag via the other_tags textarea
-        post_data = urllib.parse.urlencode({'hash': hash_val, 'other_tags': 'newtag'}).encode('utf-8')
+        # POST to save updated quote
+        post_data = urllib.parse.urlencode(
+            {
+                'quote': 'Updated integration quote',
+                'author': 'Test Author',
+                'publication': '',
+                'tags': 'newtag',
+                'sha256': sha256,
+            }
+        ).encode('utf-8')
         req = urllib.request.Request(
-            'http://127.0.0.1:{}/settags'.format(TEST_PORT),
+            'http://127.0.0.1:{}/{}'.format(TEST_PORT, line_num),
             data=post_data,
             method='POST',
         )
-        # urllib follows redirects by default (302 → GET /), so we get the final page
         with urllib.request.urlopen(req, timeout=5) as resp:
-            assert resp.status == 200
+            assert resp.status == 200  # follows redirect to /
 
-        # Verify the quote file was updated
+        # Verify file was updated
         from jotquote import api
 
         quotes = api.read_quotes(str(quote_file))
-        updated = [q for q in quotes if q.get_hash() == hash_val]
-        assert updated, 'Quote with hash {} not found after POST'.format(hash_val)
+        updated = [q for q in quotes if q.quote == 'Updated integration quote']
+        assert updated, 'Updated quote not found in file'
         assert 'newtag' in updated[0].tags
     finally:
         proc.terminate()
@@ -242,13 +242,90 @@ def test_no_matching_quote(tmp_path):
     quote_file = tmp_path / 'empty_quotes.txt'
     quote_file.write_text('', encoding='utf-8')
     env = _make_env(tmp_path, quote_file)
-    proc, stderr_lines = _start_review_server(tmp_path, quote_file, env)
+    proc, stderr_lines = _start_editor_server(tmp_path, quote_file, env)
     try:
         _assert_server_started(proc, stderr_lines)
         with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
             assert resp.status == 200
             body = resp.read().decode('utf-8')
         assert 'No matching quote found' in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_editor_table_structure(tmp_path):
+    """GET / renders a three-column editor table."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+    proc, stderr_lines = _start_editor_server(tmp_path, quote_file, env)
+    try:
+        _assert_server_started(proc, stderr_lines)
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            body = resp.read().decode('utf-8')
+        assert 'class="editor-table"' in body
+        assert 'name="quote"' in body
+        assert 'name="author"' in body
+        assert 'name="publication"' in body
+        assert 'name="tags"' in body
+        assert 'id="save-btn"' in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_sha256_mismatch_error(tmp_path):
+    """POST with a stale SHA256 displays an error message."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+    proc, stderr_lines = _start_editor_server(tmp_path, quote_file, env)
+    try:
+        _assert_server_started(proc, stderr_lines)
+
+        # Get the page to find line_number
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            body = resp.read().decode('utf-8')
+
+        line_num_match = re.search(r'action="/(\d+)"', body)
+        assert line_num_match, 'Could not find form action with line number'
+        line_num = line_num_match.group(1)
+
+        # POST with bogus sha256
+        post_data = urllib.parse.urlencode(
+            {
+                'quote': 'Some quote',
+                'author': 'Some Author',
+                'publication': '',
+                'tags': '',
+                'sha256': 'bogus_sha256',
+            }
+        ).encode('utf-8')
+        req = urllib.request.Request(
+            'http://127.0.0.1:{}/{}'.format(TEST_PORT, line_num),
+            data=post_data,
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            assert resp.status == 200
+            body = resp.read().decode('utf-8')
+        assert 'modified since it was last read' in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_lint_issues_displayed(tmp_path):
+    """Lint issues appear in the editor page."""
+    # Create a quote file with a tagless quote to trigger no-tags check
+    quote_file = tmp_path / 'quotes.txt'
+    quote_file.write_text('A test quote|Test Author||\n', encoding='utf-8')
+    env = _make_env(tmp_path, quote_file, lint_enabled_checks='no-tags')
+    proc, stderr_lines = _start_editor_server(tmp_path, quote_file, env)
+    try:
+        _assert_server_started(proc, stderr_lines)
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            body = resp.read().decode('utf-8')
+        assert 'lint-error' in body
     finally:
         proc.terminate()
         proc.wait(timeout=10)

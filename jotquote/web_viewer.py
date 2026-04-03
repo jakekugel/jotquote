@@ -11,24 +11,18 @@ from flask import Flask, abort, g, make_response, render_template, request
 
 from jotquote import api
 from jotquote import quotemap as quotemapmod
+from jotquote.web import core as web_core
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 86400  # 24 hours
 
-_LOG_FORMAT = '%(levelname)s %(message)s'
-
 # Configure the root logger at module load time so the format applies regardless
 # of whether the app is launched via 'jotquote webserver' or a WSGI server directly.
-logging.basicConfig(level=logging.INFO, format=_LOG_FORMAT)
+logging.basicConfig(level=logging.INFO, format=web_core.LOG_FORMAT)
 
 # Named logger for HTTP access lines; propagates to the root handler configured above.
 _access_logger = logging.getLogger('jotquote.access')
 _access_logger.setLevel(logging.INFO)
-
-
-def _sanitize_for_log(value):
-    """Remove newline and carriage return characters to prevent log injection."""
-    return value.replace('\r', '').replace('\n', '')
 
 
 @app.after_request
@@ -38,7 +32,7 @@ def log_request(response):
         _access_logger.info(
             '%s %s %s expires_at=%s',
             request.method,
-            _sanitize_for_log(request.full_path.rstrip('?')),
+            web_core.sanitize_for_log(request.full_path.rstrip('?')),
             response.status_code,
             expires_at,
         )
@@ -46,7 +40,7 @@ def log_request(response):
         _access_logger.info(
             '%s %s %s',
             request.method,
-            _sanitize_for_log(request.full_path.rstrip('?')),
+            web_core.sanitize_for_log(request.full_path.rstrip('?')),
             response.status_code,
         )
     return response
@@ -78,10 +72,7 @@ def showpage(date_path_param=None):
     page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
     show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
     mode = config[api.SECTION_WEB].get('mode', 'daily')
-    light_fg = config[api.SECTION_WEB].get('light_foreground_color', '#000000')
-    light_bg = config[api.SECTION_WEB].get('light_background_color', '#ffffff')
-    dark_fg = config[api.SECTION_WEB].get('dark_foreground_color', '#ffffff')
-    dark_bg = config[api.SECTION_WEB].get('dark_background_color', '#000000')
+    colors = web_core.get_color_config(config)
     if mode == 'random':
         max_age = cap_seconds
     else:
@@ -113,10 +104,7 @@ def showpage(date_path_param=None):
                 date1=date1,
                 page_title=page_title,
                 expires_at=expires_at,
-                light_fg=light_fg,
-                light_bg=light_bg,
-                dark_fg=dark_fg,
-                dark_bg=dark_bg,
+                **colors,
             )
         )
         response.headers['Cache-Control'] = f'public, max-age={max_age}'
@@ -181,10 +169,7 @@ def showpage(date_path_param=None):
             stars=stars,
             show_stars=show_stars,
             permalink=permalink,
-            light_fg=light_fg,
-            light_bg=light_bg,
-            dark_fg=dark_fg,
-            dark_bg=dark_bg,
+            **colors,
         )
     )
     response.headers['Cache-Control'] = f'public, max-age={max_age}'
@@ -245,12 +230,7 @@ def run_server():
     """
 
     # Load needed configuration from settings.conf file
-    config, migrated = api.get_config()
-    if migrated:
-        app.logger.warning(
-            'settings.conf uses the deprecated [jotquote] section. '
-            'Please update to [general], [lint], and [web] sections.'
-        )
+    config, _ = api.get_config()
     listen_port = config.get(api.SECTION_WEB, 'port')
     listen_ip = config.get(api.SECTION_WEB, 'ip')
 

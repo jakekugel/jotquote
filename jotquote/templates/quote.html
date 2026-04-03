@@ -1,17 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{ page_title }}</title>
-
-<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-<script>
-  document.documentElement.setAttribute(
-    'data-theme',
-    localStorage.getItem('jotquote-theme') || 'dark'
-  );
-</script>
+{% include '_head_common.html' %}
 <noscript>
 <style>
     :root {
@@ -36,40 +26,7 @@
     animation-timing-function: ease-in-out;
 }
 
-@font-face {
-    font-family: 'Open Sans';
-    font-style: normal;
-    font-weight: 400;
-    src: url("{{ url_for('static', filename='fonts/OpenSans-Regular.ttf') }}") format('truetype');
-}
-
-@font-face {
-    font-family: 'Open Sans';
-    font-style: normal;
-    font-weight: 700;
-    src: url("{{ url_for('static', filename='fonts/OpenSans-Bold.ttf') }}") format('truetype');
-}
-
-@font-face {
-    font-family: 'Open Sans';
-    font-style: italic;
-    font-weight: 400;
-    src: url("{{ url_for('static', filename='fonts/OpenSans-Italic.ttf') }}") format('truetype');
-}
-
-@font-face {
-    font-family: 'Inter';
-    font-style: normal;
-    font-weight: 100 900;
-    src: url("{{ url_for('static', filename='fonts/Inter-VariableFont_opsz,wght.ttf') }}") format('truetype');
-}
-
-@font-face {
-    font-family: 'Inter';
-    font-style: italic;
-    font-weight: 100 900;
-    src: url("{{ url_for('static', filename='fonts/Inter-Italic-VariableFont_opsz,wght.ttf') }}") format('truetype');
-}
+{% include '_font_faces.html' %}
 
 [data-theme="dark"] {
     --fg:           {{ dark_fg }};
@@ -118,7 +75,7 @@ body {
 }
 
 .publication {
-    font-family: "Open Sans", Palatino, serif;
+    font-family: "Inter", sans-serif;
     font-size: 100%;
     text-align: right;
     font-style: italic;
@@ -232,10 +189,9 @@ body {
             <div class="btn-group">
               {% if permalink %}
                 <button class="icon-btn" id="permalink-btn" onclick="copyPermalink('{{ permalink }}')"
-                        title="Copy permalink" aria-label="Copy permalink"><span class="copy-link-icon"></span></button>
+                        title="Copy permalink" aria-label="Copy permalink" style="margin-right: 1.25em;"><span class="copy-link-icon"></span></button>
               {% endif %}
-              <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()"
-                      title="Toggle light/dark mode" aria-label="Toggle light/dark mode" style="margin-left: 1.25em;"><span class="theme-icon"></span></button>
+              {% include '_theme_toggle.html' %}
             </div>
             <div class="stars">{% if show_stars and stars > 0 %}{{ '★' * stars }}{{ '☆' * (5 - stars) }}{% endif %}</div>
             <div class="date">{{ date1 }}</div>
@@ -267,9 +223,8 @@ body {
             const cacheExpiry = new Date(expiresAt).getTime();
 
             // Add random jitter (60–120 seconds) to ensure the cache has expired
-            // const jitterSeconds = Math.floor(Math.random() * 61) + 60;
-            // const reloadTime = cacheExpiry + jitterSeconds * 1000;
-            const reloadTime = cacheExpiry;
+            const jitterSeconds = Math.floor(Math.random() * 61) + 60;
+            const reloadTime = cacheExpiry + jitterSeconds * 1000;
 
             // Clamp delay to zero if the reload time has already passed
             const delay = Math.max(reloadTime - Date.now(), 0);
