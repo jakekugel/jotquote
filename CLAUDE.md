@@ -10,6 +10,8 @@ The [plans/](plans/) folder stores implementation plans created by Claude for fu
 
 All non-trivial implementation plans must include an appropriate number of new unit tests. Integration tests should also be included wherever they add value — at minimum one, but additional integration tests should be added when they cover meaningful scenarios.
 
+When developing a code change with accompanying unit tests, use red/green TDD methodology: write a failing test first, confirm it fails, then write the implementation to make it pass.
+
 ## Commands
 
 ```bash

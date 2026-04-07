@@ -21,6 +21,6 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
       - name: Run tests
-        run: uv run pytest
+        run: uv run pytest --cov=jotquote --cov-fail-under=90
       - name: Lint
         run: uv run ruff check jotquote/ tests/
