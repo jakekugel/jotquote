@@ -289,6 +289,18 @@ def test_quotemap_hash_not_found_root(flask_client, config, tmp_path, monkeypatc
     assert b'<!DOCTYPE html>' in rv.data
 
 
+def test_date_route_corrupt_quotemap_returns_404(flask_client, config, tmp_path):
+    """A date route request returns 404 when the quotemap file has invalid syntax."""
+    client, _ = flask_client
+    quotemap_file = tmp_path / 'bad_quotemap.txt'
+    quotemap_file.write_text('THIS IS NOT VALID QUOTEMAP SYNTAX\n', encoding='utf-8')
+    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
+
+    rv = client.get('/20260101')
+
+    assert rv.status_code == 404
+
+
 def test_web_theme_colors_default(flask_client, config):
     """Default dark-mode color values appear in rendered HTML when no color config is set."""
     client, quote_file = flask_client
