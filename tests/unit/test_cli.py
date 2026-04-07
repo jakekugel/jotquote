@@ -6,6 +6,7 @@ import os
 import time
 from unittest.mock import Mock, patch
 
+import click
 from click.testing import CliRunner
 
 import tests.test_util
@@ -239,6 +240,43 @@ def test_random_with_keyword_nomatch(config, tmp_path):
     assert result.output == ''
 
 
+def test_today(config, tmp_path):
+    """today subcommand prints a quote from the file."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.SECTION_GENERAL]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['today'], obj={})
+
+    assert result.exit_code == 0
+    assert len(result.output.strip()) > 0
+
+
+def test_today_empty_file(config, tmp_path):
+    """today subcommand exits silently when the quote file is empty."""
+    empty = tmp_path / 'empty.txt'
+    empty.write_text('', encoding='utf-8')
+    config[api.SECTION_GENERAL]['quote_file'] = str(empty)
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['today'], obj={})
+
+    assert result.exit_code == 0
+    assert result.output.strip() == ''
+
+
+def test_quotefile_not_on_disk_shows_error(config, tmp_path):
+    """When the configured quote file path doesn't exist on disk, jotquote
+    prints a friendly error and exits non-zero."""
+    config[api.SECTION_GENERAL]['quote_file'] = str(tmp_path / 'nonexistent.txt')
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['list'], obj={})
+
+    assert result.exit_code != 0
+    assert 'nonexistent.txt' in result.output
+
+
 def test_add(config, tmp_path):
     """Test the add subcommand works with normal arguments"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
@@ -388,6 +426,29 @@ def test_bulk_add_from_stdin(config, tmp_path):
     result = runner.invoke(cli.jotquote, ['list', '-l'], obj={})
     assert result.exit_code == 0
     assert result.output == expected
+
+
+def test_bulk_add_stdin_lint_warnings_declined(config, tmp_path, monkeypatch):
+    """add - with lint_on_add shows warnings for bulk stdin input; aborts when user declines.
+
+    click.confirm is monkeypatched because stdin and interactive input share the same
+    stream in CliRunner, so the N response would otherwise be consumed by parse_quotes.
+    """
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.SECTION_GENERAL]['quote_file'] = path
+    config[api.SECTION_LINT]['lint_on_add'] = 'true'
+
+    # Smart apostrophe triggers a lint warning and is valid in the quote field.
+    # Simple format uses ' - ' as the quote/author separator.
+    stdin_input = 'It\u2019s a bulk quote - Bulk Author\n'
+    monkeypatch.setattr(click, 'confirm', lambda *a, **kw: False)
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['add', '-'], input=stdin_input, obj={})
+
+    assert result.exit_code == 1
+    assert 'Warning:' in result.output
+    assert 'quote added' not in result.output
 
 
 def test_add_extended_format(config, tmp_path):
@@ -671,6 +732,18 @@ def test_lint_unknown_check(config, tmp_path):
     assert 'Unknown check' in result.output
 
 
+def test_lint_ignore_unknown_check_raises_error(config, tmp_path):
+    """lint --ignore with an unrecognised check name raises a ClickException."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.SECTION_GENERAL]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--ignore', 'not-a-real-check'], obj={})
+
+    assert result.exit_code != 0
+    assert 'Unknown check' in result.output
+
+
 def test_lint_fix_smart_quotes(config, tmp_path):
     """lint --fix replaces smart quotes in the quote file."""
 
@@ -690,6 +763,35 @@ def test_lint_fix_smart_quotes(config, tmp_path):
     content = open(src, encoding='utf-8').read()
     assert '\u201c' not in content
     assert '\u201d' not in content
+
+
+def test_lint_fix_reports_fix_count(config, tmp_path):
+    """lint --fix writes fixes and prints the exact fix count."""
+    src = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    # Use a smart apostrophe; after fix it becomes a plain apostrophe which is valid.
+    with open(src, 'a', encoding='utf-8') as f:
+        f.write('It\u2019s a test quote | Test Author | | funny\n')
+    config[api.SECTION_GENERAL]['quote_file'] = src
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'smart-quotes', '--fix'], obj={})
+
+    assert result.exit_code == 0
+    assert '1 fix applied.' in result.output
+    assert '\u2019' not in open(src, encoding='utf-8').read()
+
+
+def test_lint_fix_no_fixes_needed(config, tmp_path):
+    """lint --fix with a clean file prints 'No issues found.' without a fix count."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.SECTION_GENERAL]['quote_file'] = path
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'smart-quotes', '--fix'], obj={})
+
+    assert result.exit_code == 0
+    assert 'No issues found.' in result.output
+    assert 'fix applied' not in result.output
 
 
 # ---------------------------------------------------------------------------
