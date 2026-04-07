@@ -2,9 +2,31 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
+import logging
+import time
+
 from jotquote import api
 
-LOG_FORMAT = '%(levelname)s %(name)s:%(message)s'
+LOG_FORMAT = '%(asctime)s %(levelname)s %(name)s:%(message)s'
+
+
+class TimestampFormatter(logging.Formatter):
+    """Formatter that produces timestamps like '2026/04/07 06:21:42.023 AM CDT'."""
+
+    def formatTime(self, record, datefmt=None):
+        """Return a formatted timestamp string with milliseconds, AM/PM, and timezone."""
+        ct = self.converter(record.created)
+        t = time.strftime('%Y/%m/%d %I:%M:%S', ct)
+        return '{}.{:03d} {}'.format(t, int(record.msecs), time.strftime('%p %Z', ct))
+
+
+def configure_logging():
+    """Set up the root logger with TimestampFormatter if not already configured."""
+    if not logging.root.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(TimestampFormatter(LOG_FORMAT))
+        logging.root.setLevel(logging.INFO)
+        logging.root.addHandler(handler)
 
 
 def sanitize_for_log(value):

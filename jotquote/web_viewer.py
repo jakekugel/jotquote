@@ -18,7 +18,7 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 86400  # 24 hours
 
 # Configure the root logger at module load time so the format applies regardless
 # of whether the app is launched via 'jotquote webserver' or a WSGI server directly.
-logging.basicConfig(level=logging.INFO, format=web_core.LOG_FORMAT)
+web_core.configure_logging()
 
 # Named logger for HTTP access lines; propagates to the root handler configured above.
 _access_logger = logging.getLogger('jotquote.access')

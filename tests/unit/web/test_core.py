@@ -2,12 +2,29 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
+import logging
+import re
 from configparser import ConfigParser
 
 import pytest
 
 from jotquote import api
-from jotquote.web.core import get_color_config, sanitize_for_log
+from jotquote.web.core import LOG_FORMAT, TimestampFormatter, get_color_config, sanitize_for_log
+
+# ---------------------------------------------------------------------------
+# TimestampFormatter
+# ---------------------------------------------------------------------------
+
+
+def test_timestamp_formatter_format():
+    """TimestampFormatter produces YYYY/MM/DD HH:MM:SS.mmm AM/PM TZ prefix."""
+    formatter = TimestampFormatter(LOG_FORMAT)
+    record = logging.LogRecord('test.logger', logging.INFO, '', 0, 'hello', [], None)
+    record.msecs = 42.0
+    formatted = formatter.format(record)
+    # e.g. "2026/04/07 06:21:42.042 AM CDT INFO test.logger:hello"
+    assert re.match(r'\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [AP]M \S+ ', formatted)
+
 
 # ---------------------------------------------------------------------------
 # sanitize_for_log
