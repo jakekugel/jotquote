@@ -131,7 +131,7 @@ body {
     align-items: center;
 }
 
-.theme-icon, .copy-link-icon {
+.theme-icon, .copy-link-icon, .about-icon {
     display: inline-block;
     width: 1.25em;
     height: 1.25em;
@@ -148,6 +148,10 @@ body {
 
 .copy-link-icon {
     mask-image: url("{{ url_for('static', filename='icons/copy-link.svg') }}");
+}
+
+.about-icon {
+    mask-image: url("{{ url_for('static', filename='icons/about.svg') }}");
 }
 
 /* Modify CSS for small screens */
@@ -190,6 +194,10 @@ body {
               {% if permalink %}
                 <button class="icon-btn" id="permalink-btn" onclick="copyPermalink('{{ permalink }}')"
                         title="Copy permalink" aria-label="Copy permalink" style="margin-right: 1.25em;"><span class="copy-link-icon"></span></button>
+              {% endif %}
+              {% if about_text %}
+                <a class="icon-btn" href="/about" title="About" aria-label="About"
+                   style="margin-right: 1.25em;"><span class="about-icon"></span></a>
               {% endif %}
               {% include '_theme_toggle.html' %}
             </div>

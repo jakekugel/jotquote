@@ -12,3 +12,15 @@ Collection: Fluent UI Icons Outlined
 License:   MIT License
 Author:    Microsoft
 --------------------------------------------------------------------------------
+Arrow Left Icon
+Source:    https://www.svgrepo.com/svg/348232/arrow-left
+Collection: Ikonate Bold Interface Icons
+License:   MIT License
+Author:    Mikolaj Dobrucki
+--------------------------------------------------------------------------------
+About SVG Vector 6
+Source:    https://www.svgrepo.com/svg/486514/about-filled
+Collection: Industrial Sharp UI Icons
+License:   MIT License
+Author:    Siemens
+--------------------------------------------------------------------------------
