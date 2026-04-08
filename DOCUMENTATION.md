@@ -458,6 +458,7 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 | `dark_foreground_color` | `#ffffff` | Text color in dark mode |
 | `dark_background_color` | `#000000` | Background color in dark mode |
 | `mode` | `daily` | Quote selection mode. `daily` shows a deterministic daily quote (changes at midnight). `random` shows a truly random quote on each page load, disabling the permalink feature. |
+| `about` | _(empty)_ | Text displayed on the `/about` page. If empty, the `/about` route returns 404. When set, an `@` button appears on the quote page linking to the about page. |
 
 ### Legacy format
 

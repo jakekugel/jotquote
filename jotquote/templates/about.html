@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{% include '_head_common.html' %}
+<noscript>
+<style>
+    :root {
+        --fg:           {{ dark_fg }};
+        --bg:           {{ dark_bg }};
+        --horiz-line:   #555555;
+    }
+</style>
+</noscript>
+<style>
+
+{% include '_font_faces.html' %}
+
+[data-theme="dark"] {
+    --fg:           {{ dark_fg }};
+    --bg:           {{ dark_bg }};
+    --horiz-line:   #555555;
+}
+
+[data-theme="light"] {
+    --fg:           {{ light_fg }};
+    --bg:           {{ light_bg }};
+    --horiz-line:   #aaaaaa;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--fg);
+}
+
+.container {
+    width: 40em;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.title {
+    font-family: "Inter", sans-serif;
+    font-size: 175%;
+    font-weight: bold;
+    margin-bottom: 0.75em;
+}
+
+.about-text {
+    font-family: "Inter", sans-serif;
+    font-size: 12pt;
+    line-height: 1.6;
+}
+
+.horiz-line {
+    height: 2px;
+    background: var(--horiz-line);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.icon-btn {
+    display: flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 102%;
+    padding: 0;
+    border-radius: 4px;
+}
+
+.icon-btn:hover { opacity: 0.7; }
+
+.theme-icon, .back-icon {
+    display: inline-block;
+    width: 1.25em;
+    height: 1.25em;
+    vertical-align: middle;
+    background-color: var(--fg);
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+}
+
+.theme-icon {
+    mask-image: url("{{ url_for('static', filename='icons/night-mode.svg') }}");
+}
+
+.back-icon {
+    mask-image: url("{{ url_for('static', filename='icons/arrow-left.svg') }}");
+}
+
+.footer-row {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    margin-top: 0.5em;
+}
+
+@media screen and (max-width: 700px) {
+    .container {
+        width: 80%;
+    }
+
+    .title {
+        font-size: 150%;
+    }
+}
+
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="horiz-line"></div>
+        <div class="title">{{ page_title }}</div>
+        <div class="about-text">{{ about_text }}</div>
+        <div class="horiz-line"></div>
+        <div class="footer-row">
+            <a class="icon-btn" href="/" title="Back" aria-label="Back"
+               style="margin-right: 1.25em;"><span class="back-icon"></span></a>
+            {% include '_theme_toggle.html' %}
+        </div>
+    </div>
+    <script>
+        function toggleTheme() {
+            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('jotquote-theme', next);
+        }
+    </script>
+</body>
+</html>

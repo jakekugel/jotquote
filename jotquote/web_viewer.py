@@ -51,6 +51,18 @@ def rootpage():
     return showpage()
 
 
+@app.route('/about')
+def aboutpage():
+    """Render the about page."""
+    config, _ = api.get_config()
+    about_text = config[api.SECTION_WEB].get('about', '')
+    if not about_text:
+        abort(404)
+    page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
+    colors = web_core.get_color_config(config)
+    return render_template('about.html', about_text=about_text, page_title=page_title, **colors)
+
+
 @app.route('/<date_path_param>')
 def datepage(date_path_param):
     # Validate: must be exactly 8 digits
@@ -72,6 +84,7 @@ def showpage(date_path_param=None):
     page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
     show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
     mode = config[api.SECTION_WEB].get('mode', 'daily')
+    about_text = config[api.SECTION_WEB].get('about', '')
     colors = web_core.get_color_config(config)
     if mode == 'random':
         max_age = cap_seconds
@@ -104,6 +117,7 @@ def showpage(date_path_param=None):
                 date1=date1,
                 page_title=page_title,
                 expires_at=expires_at,
+                about_text=about_text,
                 **colors,
             )
         )
@@ -169,6 +183,7 @@ def showpage(date_path_param=None):
             stars=stars,
             show_stars=show_stars,
             permalink=permalink,
+            about_text=about_text,
             **colors,
         )
     )

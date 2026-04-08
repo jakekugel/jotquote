@@ -438,3 +438,52 @@ def test_mode_daily_default(flask_client, config):
     rv = client.get('/')
     assert rv.status_code == 200
     assert b'id="permalink-btn"' not in rv.data
+
+
+# ---------------------------------------------------------------------------
+# About page
+# ---------------------------------------------------------------------------
+
+
+def test_about_route_returns_about_page(flask_client, config):
+    """GET /about with about property set returns 200 and displays the about text."""
+    config[api.SECTION_WEB]['about'] = 'Hello world'
+    client, quote_file = flask_client
+    rv = client.get('/about')
+    assert rv.status_code == 200
+    assert b'Hello world' in rv.data
+
+
+def test_about_route_404_when_empty(flask_client, config):
+    """GET /about with no about property returns 404."""
+    client, quote_file = flask_client
+    rv = client.get('/about')
+    assert rv.status_code == 404
+
+
+def test_about_page_has_page_title(flask_client, config):
+    """About page uses page_title from config."""
+    config[api.SECTION_WEB]['about'] = 'Some about text'
+    config[api.SECTION_WEB]['page_title'] = 'My Quotes'
+    client, quote_file = flask_client
+    rv = client.get('/about')
+    assert rv.status_code == 200
+    assert b'<title>My Quotes</title>' in rv.data
+
+
+def test_about_button_present_on_quote_page(flask_client, config):
+    """Quote page shows about icon linking to /about when about property is set."""
+    config[api.SECTION_WEB]['about'] = 'Some about text'
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'href="/about"' in rv.data
+    assert b'about-icon' in rv.data
+
+
+def test_about_button_absent_when_no_about(flask_client, config):
+    """Quote page does not show @ button when about property is not set."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'href="/about"' not in rv.data
