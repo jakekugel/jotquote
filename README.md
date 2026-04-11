@@ -1,9 +1,9 @@
 # jotquote
 
-[![Build Status](https://github.com/jakekugel/jotquote/actions/workflows/ci.yml/badge.svg)](https://github.com/jakekugel/jotquote/actions/workflows/ci.yml)
-[![Coverage](http://codecov.io/github/jakekugel/jotquote/coverage.svg?branch=main&precision=2)](http://codecov.io/github/jakekugel/jotquote?branch=main)
-[![PyPI version](https://badge.fury.io/py/jotquote.svg)](https://pypi.org/project/jotquote/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
+[![PyPI version](https://img.shields.io/pypi/v/jotquote)](https://pypi.org/project/jotquote/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
+[![Python versions](https://img.shields.io/pypi/pyversions/jotquote)](https://pypi.org/project/jotquote/)
+[![CI](https://github.com/jakekugel/jotquote/actions/workflows/ci.yml/badge.svg)](https://github.com/jakekugel/jotquote/actions/workflows/ci.yml)
 
 jotquote is a command-line tool for building a collection of quotes,
 and it includes a simple web server to display a quote of the day.
