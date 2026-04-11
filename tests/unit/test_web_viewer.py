@@ -487,3 +487,57 @@ def test_about_button_absent_when_no_about(flask_client, config):
     rv = client.get('/')
     assert rv.status_code == 200
     assert b'href="/about"' not in rv.data
+
+
+# ---------------------------------------------------------------------------
+# Fullscreen button
+# ---------------------------------------------------------------------------
+
+
+def test_fullscreen_button_present(flask_client, config):
+    """Quote page always shows the fullscreen toggle button."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'id="fullscreen-btn"' in rv.data
+    assert b'toggleFullscreen' in rv.data
+    assert b'fullscreen-icon' in rv.data
+
+
+# ---------------------------------------------------------------------------
+# Expand/collapse buttons
+# ---------------------------------------------------------------------------
+
+
+def test_expand_btn_present(flask_client):
+    """Quote page renders the expand button with the right-chevron icon."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'id="expand-btn"' in rv.data
+    assert b'expand-icon' in rv.data
+
+
+def test_collapse_btn_present(flask_client):
+    """Quote page renders the collapse button with the left-chevron icon."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'id="collapse-btn"' in rv.data
+    assert b'collapse-icon' in rv.data
+
+
+def test_expandable_btns_container_present(flask_client):
+    """Quote page renders the expandable buttons container."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'id="expandable-btns"' in rv.data
+
+
+def test_toggle_buttons_function_present(flask_client):
+    """Quote page includes the toggleButtons JavaScript function."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'toggleButtons' in rv.data

@@ -1,10 +1,9 @@
 --------------------------------------------------------------------------------
-Night Mode Icon
-Source:    https://www.svgrepo.com/svg/348420/night-mode
-Collection: Ikonate Bold Interface Icons
+Dark Mode SVG Vector 5
+Source:    https://www.svgrepo.com/svg/445683/dark-mode
+Collection: Denali Line Interface Icons
 License:   MIT License
-           https://creativecommons.org/publicdomain/zero/1.0/
-Author:    Mikolaj Dobrucki
+Author:    Denali Design
 --------------------------------------------------------------------------------
 Copy Link Icon
 Source:    https://www.svgrepo.com/svg/309484/copy-link
@@ -23,4 +22,22 @@ Source:    https://www.svgrepo.com/svg/486514/about-filled
 Collection: Industrial Sharp UI Icons
 License:   MIT License
 Author:    Siemens
+--------------------------------------------------------------------------------
+Full Screen Circle Icon
+Source:    https://www.svgrepo.com/svg/523421/full-screen-circle
+Collection: Solar Outline Icons
+License:   CC Attribution License
+Author:    Solar Icons
+--------------------------------------------------------------------------------
+Circled Right Chevron SVG Vector
+Source:    https://www.svgrepo.com/svg/509841/circled-right-chevron
+Collection: Zest Interface Icons
+License:   MIT License
+Author:    zest
+--------------------------------------------------------------------------------
+Circled Left Chevron SVG Vector
+Source:    https://www.svgrepo.com/svg/509835/circled-left-chevron
+Collection: Zest Interface Icons
+License:   MIT License
+Author:    zest
 --------------------------------------------------------------------------------
