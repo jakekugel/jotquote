@@ -131,7 +131,7 @@ body {
     align-items: center;
 }
 
-.theme-icon, .copy-link-icon, .about-icon {
+.theme-icon, .copy-link-icon, .about-icon, .fullscreen-icon, .expand-icon, .collapse-icon {
     display: inline-block;
     width: 1.25em;
     height: 1.25em;
@@ -143,7 +143,7 @@ body {
 }
 
 .theme-icon {
-    mask-image: url("{{ url_for('static', filename='icons/night-mode.svg') }}");
+    mask-image: url("{{ url_for('static', filename='icons/dark-mode.svg') }}");
 }
 
 .copy-link-icon {
@@ -152,6 +152,18 @@ body {
 
 .about-icon {
     mask-image: url("{{ url_for('static', filename='icons/about.svg') }}");
+}
+
+.fullscreen-icon {
+    mask-image: url("{{ url_for('static', filename='icons/full-screen-circle.svg') }}");
+}
+
+.expand-icon {
+    mask-image: url("{{ url_for('static', filename='icons/circled-right-chevron.svg') }}");
+}
+
+.collapse-icon {
+    mask-image: url("{{ url_for('static', filename='icons/circled-left-chevron.svg') }}");
 }
 
 /* Modify CSS for small screens */
@@ -191,15 +203,25 @@ body {
         <div class="horiz-line"></div>
         <div class="footer-row">
             <div class="btn-group">
-              {% if permalink %}
-                <button class="icon-btn" id="permalink-btn" onclick="copyPermalink('{{ permalink }}')"
-                        title="Copy permalink" aria-label="Copy permalink" style="margin-right: 1.25em;"><span class="copy-link-icon"></span></button>
-              {% endif %}
-              {% if about_text %}
-                <a class="icon-btn" href="/about" title="About" aria-label="About"
-                   style="margin-right: 1.25em;"><span class="about-icon"></span></a>
-              {% endif %}
-              {% include '_theme_toggle.html' %}
+              <button class="icon-btn" id="expand-btn" onclick="toggleButtons()"
+                      title="Show buttons" aria-label="Show buttons"><span class="expand-icon"></span></button>
+              <span id="expandable-btns" style="display: none; align-items: center;">
+                {% if permalink %}
+                  <button class="icon-btn" id="permalink-btn" onclick="copyPermalink('{{ permalink }}')"
+                          title="Copy permalink" aria-label="Copy permalink" style="margin-right: 1.25em;"><span class="copy-link-icon"></span></button>
+                {% endif %}
+                {% if about_text %}
+                  <a class="icon-btn" href="/about" title="About" aria-label="About"
+                     style="margin-right: 1.25em;"><span class="about-icon"></span></a>
+                {% endif %}
+                {% include '_theme_toggle.html' %}
+                <button class="icon-btn" id="fullscreen-btn" onclick="toggleFullscreen()"
+                        title="Toggle full screen" aria-label="Toggle full screen"
+                        style="margin-left: 1.25em;"><span class="fullscreen-icon"></span></button>
+                <button class="icon-btn" id="collapse-btn" onclick="toggleButtons()"
+                        title="Hide buttons" aria-label="Hide buttons"
+                        style="margin-left: 1.25em;"><span class="collapse-icon"></span></button>
+              </span>
             </div>
             <div class="stars">{% if show_stars and stars > 0 %}{{ '★' * stars }}{{ '☆' * (5 - stars) }}{% endif %}</div>
             <div class="date">{{ date1 }}</div>
@@ -212,6 +234,14 @@ body {
             localStorage.setItem('jotquote-theme', next);
         }
 
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
         function copyPermalink(path) {
             navigator.clipboard.writeText(window.location.origin + path);
             var btn = document.getElementById('permalink-btn');
@@ -219,6 +249,18 @@ body {
             setTimeout(function() {
                 btn.classList.remove('icon-btn-outline');
             }, 2000);
+        }
+
+        function toggleButtons() {
+            var container = document.getElementById('expandable-btns');
+            var expandBtn = document.getElementById('expand-btn');
+            if (container.style.display === 'none') {
+                container.style.display = 'flex';
+                expandBtn.style.display = 'none';
+            } else {
+                container.style.display = 'none';
+                expandBtn.style.display = 'flex';
+            }
         }
 
         // Schedule an automatic page refresh after the server's cache expires.
