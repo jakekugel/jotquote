@@ -43,7 +43,7 @@ def _log_startup_info():
     quote_file = config.get(api.SECTION_GENERAL, 'quote_file')
     _logger.info('path to settings.conf file: %s', config_file)
     _logger.info('path to the quote file: %s', quote_file)
-    _logger.info('version: %s', jotquote.__version__)
+    _logger.info('jotquote package version: %s', jotquote.__version__)
 
 
 _log_startup_info()

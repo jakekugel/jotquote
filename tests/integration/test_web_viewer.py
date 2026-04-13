@@ -493,7 +493,7 @@ def _run_startup_log_test(tmp_path, cmd):
         assert wait_for_log_line(stderr_lines, 'path to the quote file:'), 'Expected quotes log line in stderr; got: {}'.format(
             stderr_lines
         )
-        assert wait_for_log_line(stderr_lines, 'version:'), 'Expected version log line in stderr; got: {}'.format(
+        assert wait_for_log_line(stderr_lines, 'jotquote package version:'), 'Expected version log line in stderr; got: {}'.format(
             stderr_lines
         )
     finally:
