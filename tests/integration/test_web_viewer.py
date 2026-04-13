@@ -469,3 +469,53 @@ def test_about_page(tmp_path):
     finally:
         proc.terminate()
         proc.wait(timeout=10)
+
+
+def _run_startup_log_test(tmp_path, cmd):
+    """Start a server, wait for it to serve, then verify all three startup log lines appear."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+
+    proc = subprocess.Popen(
+        cmd,
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        assert wait_for_log_line(stderr_lines, 'settings:'), 'Expected settings log line in stderr; got: {}'.format(
+            stderr_lines
+        )
+        assert wait_for_log_line(stderr_lines, 'quotes:'), 'Expected quotes log line in stderr; got: {}'.format(
+            stderr_lines
+        )
+        assert wait_for_log_line(stderr_lines, 'version:'), 'Expected version log line in stderr; got: {}'.format(
+            stderr_lines
+        )
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_webserver_startup_logs(tmp_path):
+    """jotquote webserver logs settings path, quotes path, and version at startup."""
+    _run_startup_log_test(tmp_path, cmd=[_script('jotquote'), 'webserver'])
+
+
+def test_waitress_serve_startup_logs(tmp_path):
+    """waitress-serve logs settings path, quotes path, and version at startup."""
+    _run_startup_log_test(
+        tmp_path,
+        cmd=[
+            _script('waitress-serve'),
+            '--host',
+            '127.0.0.1',
+            '--port',
+            str(TEST_PORT),
+            'jotquote.web_viewer:app',
+        ],
+    )

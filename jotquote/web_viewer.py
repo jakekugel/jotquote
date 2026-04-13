@@ -24,6 +24,30 @@ web_core.configure_logging()
 _access_logger = logging.getLogger('jotquote.access')
 _access_logger.setLevel(logging.INFO)
 
+# Named logger for startup messages.
+_logger = logging.getLogger(__name__)
+
+
+def _log_startup_info():
+    """Log settings file path, quote file path, and package version at startup.
+
+    Called once at module load time so the messages appear regardless of whether
+    the server is launched via 'jotquote webserver' or directly via a WSGI server
+    such as waitress-serve.
+    """
+    import jotquote
+
+    # Compute config file path using the same logic as api.get_config()
+    config_file = os.environ.get('JOTQUOTE_CONFIG') or api.CONFIG_FILE
+    config, _ = api.get_config()
+    quote_file = config.get(api.SECTION_GENERAL, 'quote_file')
+    _logger.info('settings: %s', config_file)
+    _logger.info('quotes: %s', quote_file)
+    _logger.info('version: %s', jotquote.__version__)
+
+
+_log_startup_info()
+
 
 @app.after_request
 def log_request(response):
