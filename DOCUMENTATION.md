@@ -261,7 +261,7 @@ Add the `quote_resolver` property to `~/.jotquote/settings.conf` with the dotted
 quote_resolver = mypackage.my_resolver
 ```
 
-The module must be importable by the Python environment running the web server.
+The module must be importable by the Python environment running the web server. If you installed jotquote with `pip` or `uv`, install your resolver module into the same environment (e.g., `pip install mypackage` or `uv pip install mypackage`). If your resolver is a standalone script rather than an installed package, add its parent directory to `PYTHONPATH` before starting the server (e.g., `PYTHONPATH=/path/to/mymodules jotquote webserver`).
 
 ### Web Server Behavior
 
