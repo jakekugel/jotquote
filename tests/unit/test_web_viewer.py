@@ -509,21 +509,13 @@ def test_fullscreen_button_present(flask_client, config):
 # ---------------------------------------------------------------------------
 
 
-def test_expand_btn_present(flask_client):
-    """Quote page renders the expand button with the right-chevron icon."""
+def test_toggle_btn_present(flask_client):
+    """Quote page renders the toggle button with the right-chevron icon in its initial collapsed state."""
     client, quote_file = flask_client
     rv = client.get('/')
     assert rv.status_code == 200
-    assert b'id="expand-btn"' in rv.data
+    assert b'id="toggle-btn"' in rv.data
     assert b'expand-icon' in rv.data
-
-
-def test_collapse_btn_present(flask_client):
-    """Quote page renders the collapse button with the left-chevron icon."""
-    client, quote_file = flask_client
-    rv = client.get('/')
-    assert rv.status_code == 200
-    assert b'id="collapse-btn"' in rv.data
     assert b'collapse-icon' in rv.data
 
 
