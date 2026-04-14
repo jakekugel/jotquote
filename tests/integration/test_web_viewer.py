@@ -46,7 +46,7 @@ ip = 127.0.0.1
 {web_extra}"""
 
 _GENERAL_KEYS = {'show_author_count'}
-_WEB_NO_PREFIX = {'quotemap_file'}
+_WEB_NO_PREFIX = {'quote_resolver'}
 
 
 def _make_env(tmp_path, quote_file, **extra_props):
@@ -274,13 +274,12 @@ def test_gunicorn_launch(tmp_path):
     )
 
 
-def test_quotemap_date_route(tmp_path):
-    """Webserver with quotemap configured serves the mapped quote for /<date>."""
+def test_resolver_date_route(tmp_path):
+    """Webserver with quote resolver serves the resolved quote for /<date>."""
     quote_file = _copy_quotes(tmp_path)
-    quotemap_file = tmp_path / 'quotemap.txt'
+    env = _make_env(tmp_path, quote_file, quote_resolver='tests.fixtures.test_resolver')
     # 25382c2519fb23bd is the hash for the Ben Franklin quote in quotes1.txt
-    quotemap_file.write_text('20260319: 25382c2519fb23bd\n', encoding='utf-8')
-    env = _make_env(tmp_path, quote_file, quotemap_file=str(quotemap_file))
+    env['TEST_RESOLVER_MAP'] = '20260319=25382c2519fb23bd'
 
     proc = subprocess.Popen(
         [_script('jotquote'), 'webserver'],
@@ -304,13 +303,12 @@ def test_quotemap_date_route(tmp_path):
         proc.wait(timeout=10)
 
 
-def test_quotemap_root_permalink(tmp_path):
-    """Webserver with quotemap containing today's date shows permalink on /."""
+def test_resolver_root_permalink(tmp_path):
+    """Webserver with resolver returning hash for today shows permalink on /."""
     quote_file = _copy_quotes(tmp_path)
     today = datetime.datetime.now().strftime('%Y%m%d')
-    quotemap_file = tmp_path / 'quotemap.txt'
-    quotemap_file.write_text('{}: 25382c2519fb23bd\n'.format(today), encoding='utf-8')
-    env = _make_env(tmp_path, quote_file, quotemap_file=str(quotemap_file))
+    env = _make_env(tmp_path, quote_file, quote_resolver='tests.fixtures.test_resolver')
+    env['TEST_RESOLVER_MAP'] = '{}=25382c2519fb23bd'.format(today)
 
     proc = subprocess.Popen(
         [_script('jotquote'), 'webserver'],

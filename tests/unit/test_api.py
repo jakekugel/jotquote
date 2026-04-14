@@ -953,7 +953,7 @@ def test_get_config_legacy_format_migrates(tmp_path, monkeypatch):
         'lint_max_quote_length = 150\n'
         'web_port = 9090\n'
         'web_page_title = Legacy Title\n'
-        'quotemap_file = /some/quotemap.txt\n'
+        'quote_resolver = mypackage.resolver\n'
         'show_author_count = true\n',
         encoding='utf-8',
     )
@@ -971,8 +971,8 @@ def test_get_config_legacy_format_migrates(tmp_path, monkeypatch):
     # Web properties (prefix stripped)
     assert config.get(api.SECTION_WEB, 'port') == '9090'
     assert config.get(api.SECTION_WEB, 'page_title') == 'Legacy Title'
-    # quotemap_file has no web_ prefix but goes to [web]
-    assert os.path.isabs(config.get(api.SECTION_WEB, 'quotemap_file'))
+    # quote_resolver has no web_ prefix but goes to [web]
+    assert config.get(api.SECTION_WEB, 'quote_resolver') == 'mypackage.resolver'
     # Old section should be removed
     assert not config.has_section('jotquote')
 
@@ -1026,7 +1026,7 @@ def test_migrate_legacy_section_prefix_stripping():
     config['jotquote']['web_port'] = '8080'
     config['jotquote']['web_ip'] = '0.0.0.0'
     config['jotquote']['web_cache_seconds'] = '3600'
-    config['jotquote']['quotemap_file'] = '/path/quotemap.txt'
+    config['jotquote']['quote_resolver'] = 'mypackage.resolver'
     config['jotquote']['show_author_count'] = 'true'
 
     api._migrate_legacy_section(config)
@@ -1043,7 +1043,7 @@ def test_migrate_legacy_section_prefix_stripping():
     assert config.get(api.SECTION_WEB, 'port') == '8080'
     assert config.get(api.SECTION_WEB, 'ip') == '0.0.0.0'
     assert config.get(api.SECTION_WEB, 'cache_seconds') == '3600'
-    assert config.get(api.SECTION_WEB, 'quotemap_file') == '/path/quotemap.txt'
+    assert config.get(api.SECTION_WEB, 'quote_resolver') == 'mypackage.resolver'
     # Old section removed
     assert not config.has_section('jotquote')
 

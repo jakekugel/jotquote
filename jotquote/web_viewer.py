@@ -3,14 +3,13 @@
 # file in the root of this repository for complete details.
 
 import datetime
+import importlib
 import logging
 import os
 
-import click
 from flask import Flask, abort, g, make_response, render_template, request
 
 from jotquote import api
-from jotquote import quotemap as quotemapmod
 from jotquote.web import core as web_core
 
 app = Flask(__name__)
@@ -47,6 +46,10 @@ def _log_startup_info():
 
 
 _log_startup_info()
+
+# Cached quote resolver function, loaded lazily on first request.
+_resolver_fn = None
+_resolver_loaded = False
 
 
 @app.after_request
@@ -154,38 +157,34 @@ def showpage(date_path_param=None):
         quote = api.get_first_match(quotes, rand=True)
         index = quotes.index(quote)
     else:
-        # Try to load quotemap and find a mapped quote
-        quotemap_file = config[api.SECTION_WEB].get('quotemap_file', '')
-        quotemap = {}
-        if quotemap_file:
-            try:
-                quotemap = quotemapmod.read_quotemap(quotemap_file)
-            except click.ClickException as e:
-                app.logger.error('quotemap error: %s', e.format_message())
-                if date_path_param:
-                    abort(404)
-
+        # Try the configured quote resolver
+        resolver = _get_resolver(config)
         lookup_date = date_path_param if date_path_param else now.strftime('%Y%m%d')
-        mapped_quote = None
-        if lookup_date in quotemap:
-            hash_value = quotemap[lookup_date]['hash']
-            mapped_quote = api.get_first_match(quotes, hash_arg=hash_value)
-            if mapped_quote is None:
-                app.logger.warning("quotemap hash '%s' for date %s not found in quotes", hash_value, lookup_date)
-                if date_path_param:
-                    abort(404)
+        resolved_hash = None
+        if resolver:
+            try:
+                resolved_hash = resolver(lookup_date)
+            except Exception:
+                app.logger.exception('quote resolver error for date %s', lookup_date)
 
-        if mapped_quote:
-            quote = mapped_quote
-            index = quotes.index(quote)
-            # Show permalink on root page when today's quote comes from quotemap
-            if date_path_param is None:
-                permalink = f'/{lookup_date}'
-            # For date URLs, content is static — use full cache cap
-            if date_path_param:
-                max_age = cap_seconds
+        if resolved_hash:
+            quote = api.get_first_match(quotes, hash_arg=resolved_hash)
+            if quote:
+                index = quotes.index(quote)
+                # Show permalink on root page when resolver maps today's quote
+                if date_path_param is None:
+                    permalink = f'/{lookup_date}'
+                # For date URLs, content is static — use full cache cap
+                if date_path_param:
+                    max_age = cap_seconds
+            elif date_path_param:
+                abort(404)
+            else:
+                # Hash not found, fall back to seeded RNG
+                index = api.get_random_choice(len(quotes))
+                quote = quotes[index]
         elif date_path_param:
-            # Date route requested but date not in quotemap — 404
+            # Date route requested but no resolver or resolver returned None — 404
             abort(404)
         else:
             # Root route, fall back to seeded RNG
@@ -213,6 +212,42 @@ def showpage(date_path_param=None):
     )
     response.headers['Cache-Control'] = f'public, max-age={max_age}'
     return response
+
+
+def _get_resolver(config):
+    """Return the cached quote resolver function, or None.
+
+    Loads the resolver module specified by the ``quote_resolver`` property in the
+    ``[web]`` section of settings.conf.  The module must define a ``resolve``
+    function that accepts a date string (YYYYMMDD) and returns a 16-char MD5 hash
+    string or None.
+
+    config (ConfigParser) -- the application configuration object.
+    Returns callable or None.
+    """
+    global _resolver_fn, _resolver_loaded
+    if _resolver_loaded:
+        return _resolver_fn
+    _resolver_loaded = True
+    module_path = config[api.SECTION_WEB].get('quote_resolver', '')
+    if not module_path:
+        return None
+    try:
+        mod = importlib.import_module(module_path)
+        _resolver_fn = getattr(mod, 'resolve')
+    except (ImportError, AttributeError) as e:
+        app.logger.error('failed to load quote resolver %r: %s', module_path, e)
+    return _resolver_fn
+
+
+def _reset_resolver():
+    """Clear cached resolver state so the next call to _get_resolver reloads.
+
+    Intended for use in tests only.
+    """
+    global _resolver_fn, _resolver_loaded
+    _resolver_fn = None
+    _resolver_loaded = False
 
 
 def get_quotes():
