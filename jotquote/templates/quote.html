@@ -131,6 +131,20 @@ body {
     align-items: center;
 }
 
+#expandable-btns {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    overflow: hidden;
+    max-width: 0;
+    transition: max-width 1.0s ease-out;
+}
+
+#expandable-btns.expanded {
+    max-width: 500px;
+    transition: max-width 1.0s ease-in;
+}
+
 .theme-icon, .copy-link-icon, .about-icon, .fullscreen-icon, .expand-icon, .collapse-icon {
     display: inline-block;
     width: 1.25em;
@@ -203,9 +217,7 @@ body {
         <div class="horiz-line"></div>
         <div class="footer-row">
             <div class="btn-group">
-              <button class="icon-btn" id="expand-btn" onclick="toggleButtons()"
-                      title="Show buttons" aria-label="Show buttons"><span class="expand-icon"></span></button>
-              <span id="expandable-btns" style="display: none; align-items: center;">
+              <span id="expandable-btns">
                 {% if permalink %}
                   <button class="icon-btn" id="permalink-btn" onclick="copyPermalink('{{ permalink }}')"
                           title="Copy permalink" aria-label="Copy permalink" style="margin-right: 1.25em;"><span class="copy-link-icon"></span></button>
@@ -217,11 +229,10 @@ body {
                 {% include '_theme_toggle.html' %}
                 <button class="icon-btn" id="fullscreen-btn" onclick="toggleFullscreen()"
                         title="Toggle full screen" aria-label="Toggle full screen"
-                        style="margin-left: 1.25em;"><span class="fullscreen-icon"></span></button>
-                <button class="icon-btn" id="collapse-btn" onclick="toggleButtons()"
-                        title="Hide buttons" aria-label="Hide buttons"
-                        style="margin-left: 1.25em;"><span class="collapse-icon"></span></button>
+                        style="margin-left: 1.25em; margin-right: 1.25em;"><span class="fullscreen-icon"></span></button>
               </span>
+              <button class="icon-btn" id="toggle-btn" onclick="toggleButtons()"
+                      title="Toggle buttons" aria-label="Toggle buttons"><span class="expand-icon"></span></button>
             </div>
             <div class="stars">{% if show_stars and stars > 0 %}{{ '★' * stars }}{{ '☆' * (5 - stars) }}{% endif %}</div>
             <div class="date">{{ date1 }}</div>
@@ -253,14 +264,10 @@ body {
 
         function toggleButtons() {
             var container = document.getElementById('expandable-btns');
-            var expandBtn = document.getElementById('expand-btn');
-            if (container.style.display === 'none') {
-                container.style.display = 'flex';
-                expandBtn.style.display = 'none';
-            } else {
-                container.style.display = 'none';
-                expandBtn.style.display = 'flex';
-            }
+            var toggleBtn = document.getElementById('toggle-btn');
+            var expanding = !container.classList.contains('expanded');
+            container.classList.toggle('expanded');
+            toggleBtn.querySelector('span').className = expanding ? 'collapse-icon' : 'expand-icon';
         }
 
         // Schedule an automatic page refresh after the server's cache expires.

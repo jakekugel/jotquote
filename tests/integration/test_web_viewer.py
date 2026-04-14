@@ -487,14 +487,14 @@ def _run_startup_log_test(tmp_path, cmd):
     reader.start()
     try:
         assert wait_for_server(TEST_URL), 'Server did not start within timeout'
-        assert wait_for_log_line(stderr_lines, 'path to settings.conf file:'), 'Expected settings log line in stderr; got: {}'.format(
-            stderr_lines
+        assert wait_for_log_line(stderr_lines, 'path to settings.conf file:'), (
+            'Expected settings log line in stderr; got: {}'.format(stderr_lines)
         )
-        assert wait_for_log_line(stderr_lines, 'path to the quote file:'), 'Expected quotes log line in stderr; got: {}'.format(
-            stderr_lines
+        assert wait_for_log_line(stderr_lines, 'path to the quote file:'), (
+            'Expected quotes log line in stderr; got: {}'.format(stderr_lines)
         )
-        assert wait_for_log_line(stderr_lines, 'jotquote package version:'), 'Expected version log line in stderr; got: {}'.format(
-            stderr_lines
+        assert wait_for_log_line(stderr_lines, 'jotquote package version:'), (
+            'Expected version log line in stderr; got: {}'.format(stderr_lines)
         )
     finally:
         proc.terminate()
