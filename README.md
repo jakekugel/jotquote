@@ -101,7 +101,7 @@ jotquote is tested on Python 3.9 through 3.14 on Windows, Mac, and Linux.
 [DOCUMENTATION.md](DOCUMENTATION.md) contains full reference documentation for the package, including:
 
 - Complete CLI command reference with all options and examples
-- The quotemap feature for scheduling specific quotes on specific dates
+- The quote resolver extension point for mapping dates to specific quotes
 - The review app for managing quote tags from a browser
 - Full settings.conf property reference
 

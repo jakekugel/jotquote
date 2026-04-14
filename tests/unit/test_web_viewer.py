@@ -195,20 +195,19 @@ def test_no_stars_when_untagged(flask_client, config):
     assert '\u2605'.encode('utf-8') not in rv.data
 
 
-def test_date_route_with_quotemap(flask_client, config, tmp_path):
-    """/<date> with quotemap entry returns the mapped quote."""
+def test_date_route_with_resolver(flask_client, config, monkeypatch):
+    """/<date> with resolver returning a hash serves the mapped quote."""
     client, quote_file = flask_client
-    quotemap_file = tmp_path / 'quotemap.txt'
-    quotemap_file.write_text('20260319: 25382c2519fb23bd\n', encoding='utf-8')
-    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: '25382c2519fb23bd' if d == '20260319' else None)
+    monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/20260319')
     assert rv.status_code == 200
     assert b'Ben Franklin' in rv.data
     assert b'March 19, 2026' in rv.data
 
 
-def test_date_route_without_quotemap(flask_client, config):
-    """/<date> with no quotemap configured returns 404."""
+def test_date_route_without_resolver(flask_client, config):
+    """/<date> with no resolver configured returns 404."""
     client, quote_file = flask_client
     rv = client.get('/20260319')
     assert rv.status_code == 404
@@ -234,13 +233,12 @@ def test_date_route_invalid_calendar_date(flask_client):
     assert rv.status_code == 404
 
 
-def test_root_with_quotemap_today(flask_client, config, tmp_path, monkeypatch):
-    """/ with today in quotemap returns mapped quote and permalink button."""
+def test_root_with_resolver_today(flask_client, config, monkeypatch):
+    """/ with resolver returning hash for today shows mapped quote and permalink."""
     client, quote_file = flask_client
     today = datetime.datetime.now().strftime('%Y%m%d')
-    quotemap_file = tmp_path / 'quotemap.txt'
-    quotemap_file.write_text(f'{today}: 25382c2519fb23bd\n', encoding='utf-8')
-    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: '25382c2519fb23bd')
+    monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/')
     assert rv.status_code == 200
     assert b'Ben Franklin' in rv.data
@@ -248,56 +246,86 @@ def test_root_with_quotemap_today(flask_client, config, tmp_path, monkeypatch):
     assert b'permalink-btn' in rv.data
 
 
-def test_root_without_quotemap(flask_client, config):
-    """/ without quotemap returns RNG quote, no permalink link."""
+def test_root_without_resolver(flask_client, config):
+    """/ without resolver returns RNG quote, no permalink link."""
     client, quote_file = flask_client
     rv = client.get('/')
     assert rv.status_code == 200
     assert b'>permalink</a>' not in rv.data
 
 
-def test_date_route_no_permalink(flask_client, config, tmp_path):
+def test_date_route_no_permalink(flask_client, config, monkeypatch):
     """/<date> does not show permalink link (already on permalink)."""
     client, quote_file = flask_client
-    quotemap_file = tmp_path / 'quotemap.txt'
-    quotemap_file.write_text('20260319: 25382c2519fb23bd\n', encoding='utf-8')
-    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: '25382c2519fb23bd' if d == '20260319' else None)
+    monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/20260319')
     assert rv.status_code == 200
     assert b'>permalink</a>' not in rv.data
 
 
-def test_quotemap_hash_not_found_date_route(flask_client, config, tmp_path):
-    """Quotemap entry with hash that doesn't match any quote returns 404 on date route."""
+def test_resolver_hash_not_found_date_route(flask_client, config, monkeypatch):
+    """Resolver returning a hash that doesn't match any quote returns 404 on date route."""
     client, quote_file = flask_client
-    quotemap_file = tmp_path / 'quotemap.txt'
-    quotemap_file.write_text('20260319: aaaaaaaaaaaaaaaa\n', encoding='utf-8')
-    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'aaaaaaaaaaaaaaaa')
+    monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/20260319')
     assert rv.status_code == 404
 
 
-def test_quotemap_hash_not_found_root(flask_client, config, tmp_path, monkeypatch):
-    """Quotemap entry with hash that doesn't match any quote falls back to RNG on root."""
+def test_resolver_hash_not_found_root(flask_client, config, monkeypatch):
+    """Resolver returning a hash that doesn't match any quote falls back to RNG on root."""
     client, quote_file = flask_client
-    today = datetime.datetime.now().strftime('%Y%m%d')
-    quotemap_file = tmp_path / 'quotemap.txt'
-    quotemap_file.write_text(f'{today}: aaaaaaaaaaaaaaaa\n', encoding='utf-8')
-    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'aaaaaaaaaaaaaaaa')
+    monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/')
     assert rv.status_code == 200
     assert b'<!DOCTYPE html>' in rv.data
 
 
-def test_date_route_corrupt_quotemap_returns_404(flask_client, config, tmp_path):
-    """A date route request returns 404 when the quotemap file has invalid syntax."""
-    client, _ = flask_client
-    quotemap_file = tmp_path / 'bad_quotemap.txt'
-    quotemap_file.write_text('THIS IS NOT VALID QUOTEMAP SYNTAX\n', encoding='utf-8')
-    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
+def test_resolver_returns_none_root(flask_client, config, monkeypatch):
+    """Resolver returning None on root falls back to seeded RNG."""
+    client, quote_file = flask_client
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: None)
+    monkeypatch.setattr(web, '_resolver_loaded', True)
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'<!DOCTYPE html>' in rv.data
 
-    rv = client.get('/20260101')
 
+def test_resolver_returns_none_date_route(flask_client, config, monkeypatch):
+    """Resolver returning None on date route returns 404."""
+    client, quote_file = flask_client
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: None)
+    monkeypatch.setattr(web, '_resolver_loaded', True)
+    rv = client.get('/20260319')
+    assert rv.status_code == 404
+
+
+def test_resolver_exception_root(flask_client, config, monkeypatch):
+    """Resolver raising an exception on root falls back to seeded RNG."""
+    client, quote_file = flask_client
+
+    def bad_resolver(d):
+        raise RuntimeError('boom')
+
+    monkeypatch.setattr(web, '_resolver_fn', bad_resolver)
+    monkeypatch.setattr(web, '_resolver_loaded', True)
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'<!DOCTYPE html>' in rv.data
+
+
+def test_resolver_exception_date_route(flask_client, config, monkeypatch):
+    """Resolver raising an exception on date route returns 404."""
+    client, quote_file = flask_client
+
+    def bad_resolver(d):
+        raise RuntimeError('boom')
+
+    monkeypatch.setattr(web, '_resolver_fn', bad_resolver)
+    monkeypatch.setattr(web, '_resolver_loaded', True)
+    rv = client.get('/20260319')
     assert rv.status_code == 404
 
 
@@ -326,13 +354,11 @@ def test_theme_toggle_button_present(flask_client):
     assert b'id="theme-toggle"' in rv.data
 
 
-def test_permalink_button_present(flask_client, config, tmp_path):
-    """Permalink clipboard button appears when quotemap has an entry for today."""
+def test_permalink_button_present(flask_client, config, monkeypatch):
+    """Permalink clipboard button appears when resolver returns a hash for today."""
     client, quote_file = flask_client
-    today = datetime.datetime.now().strftime('%Y%m%d')
-    quotemap_file = tmp_path / 'quotemap.txt'
-    quotemap_file.write_text(f'{today}: 25382c2519fb23bd\n', encoding='utf-8')
-    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: '25382c2519fb23bd')
+    monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/')
     assert b'id="permalink-btn"' in rv.data
     assert b'copyPermalink' in rv.data
@@ -375,12 +401,11 @@ def test_expires_at_present_on_root(flask_client, config):
     assert b'expires_at' not in rv.data or b'T' in rv.data  # contains ISO 8601 timestamp
 
 
-def test_expires_at_null_on_date_route(flask_client, config, tmp_path):
+def test_expires_at_null_on_date_route(flask_client, config, monkeypatch):
     """Date route pages have null expires_at (no auto-refresh)."""
     client, quote_file = flask_client
-    quotemap_file = tmp_path / 'quotemap.txt'
-    quotemap_file.write_text('20260319: 25382c2519fb23bd\n', encoding='utf-8')
-    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: '25382c2519fb23bd' if d == '20260319' else None)
+    monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/20260319')
     assert rv.status_code == 200
     assert b'const expiresAt = null' in rv.data
@@ -408,12 +433,10 @@ def test_mode_random_returns_quote(flask_client, config):
     assert b'<div class="quote">' in rv.data
 
 
-def test_mode_random_no_permalink(flask_client, config, tmp_path):
-    """mode=random suppresses permalink even when quotemap has today."""
-    today = datetime.datetime.now().strftime('%Y%m%d')
-    quotemap_file = tmp_path / 'quotemap.txt'
-    quotemap_file.write_text(f'{today}: 25382c2519fb23bd\n', encoding='utf-8')
-    config[api.SECTION_WEB]['quotemap_file'] = str(quotemap_file)
+def test_mode_random_no_permalink(flask_client, config, monkeypatch):
+    """mode=random suppresses permalink even when resolver returns a hash for today."""
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: '25382c2519fb23bd')
+    monkeypatch.setattr(web, '_resolver_loaded', True)
     config[api.SECTION_WEB]['mode'] = 'random'
     client, quote_file = flask_client
     rv = client.get('/')
@@ -433,7 +456,7 @@ def test_mode_random_no_midnight_cap(flask_client, config):
 
 
 def test_mode_daily_default(flask_client, config):
-    """Default mode (daily) returns a quote without permalink (no quotemap)."""
+    """Default mode (daily) returns a quote without permalink (no resolver)."""
     client, quote_file = flask_client
     rv = client.get('/')
     assert rv.status_code == 200

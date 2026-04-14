@@ -174,28 +174,6 @@ Available checks: `ascii`, `smart-quotes`, `smart-dashes`, `double-spaces`, `quo
 
 ---
 
-### `quotemap rebuild`
-
-Auto-generates a quotemap for the next 10 years (3652 days by default) with even quote distribution. Prints to stdout; redirect to a file to save.
-
-```bash
-$ jotquote quotemap rebuild ~/.jotquote/quotes.txt quotemap_new.txt
-```
-
-Use `--oldquotemap` to preserve past entries and sticky future entries from an existing quotemap:
-
-```bash
-$ jotquote quotemap rebuild --oldquotemap ~/.jotquote/quotemap.txt ~/.jotquote/quotes.txt quotemap_new.txt
-```
-
-Use `--days` to control how many days are generated:
-
-```bash
-$ jotquote quotemap rebuild --days 365 ~/.jotquote/quotes.txt quotemap_new.txt
-```
-
-See the [Quotemap](#quotemap) section for full details.
-
 ---
 
 ## Quote File Format
@@ -236,7 +214,7 @@ Start the web server with `jotquote webserver`. It serves a quote of the day at 
 
 The daily quote is selected using a seeded random number generator. The seed is derived from the number of days since 2016-01-01, so the same quote is shown for the entire day — and the quote changes at midnight. This matches what `jotquote today` shows on the command line.
 
-When a quotemap is configured, the quotemap takes precedence over the seeded algorithm for dates that have an entry. See the [Quotemap](#quotemap) section.
+When a quote resolver is configured, the resolver takes precedence over the seeded algorithm for dates that it resolves. See the [Quote Resolver](#quote-resolver) section.
 
 ### Theming
 
@@ -250,116 +228,51 @@ The web server instructs the browser to automatically reload the page after the 
 
 The `mode` property in the `[web]` section controls how quotes are selected:
 
-- **`daily`** (default): A deterministic daily quote is selected using a seeded random number generator. The same quote is shown all day and changes at midnight. The quotemap (if configured) takes precedence for mapped dates.
-- **`random`**: A truly random quote is selected on each page load. The quotemap is bypassed and permalinks are disabled. The cache expiration is based solely on `cache_seconds` without the midnight cap.
+- **`daily`** (default): A deterministic daily quote is selected using a seeded random number generator. The same quote is shown all day and changes at midnight. A quote resolver (if configured) takes precedence for mapped dates.
+- **`random`**: A truly random quote is selected on each page load. The quote resolver is bypassed and permalinks are disabled. The cache expiration is based solely on `cache_seconds` without the midnight cap.
 
 ---
 
-## Quotemap
+## Quote Resolver
 
-The quotemap file assigns specific quotes to specific dates for display by the jotquote web server. When configured, the web server checks the quotemap before falling back to the default seeded random selection. The quotemap also enables permalink URLs (`/<YYYYMMDD>`) so that a specific date's quote can be shared and revisited.
+The quote resolver is a pluggable extension point that allows you to control which quote is displayed on a given date. When configured, the web server calls the resolver before falling back to the default seeded random selection. A resolver also enables permalink URLs (`/<YYYYMMDD>`) so that a specific date's quote can be shared and revisited.
 
-### File Format
+### How It Works
 
-The quotemap file is a plain text file (UTF-8) where each line maps a date to a quote hash:
+A quote resolver is a Python module that you write and install. The module must define a `resolve` function with this signature:
 
+```python
+def resolve(date_str: str) -> str | None:
+    """Return a 16-char MD5 hash identifying the quote, or None."""
 ```
-YYYYMMDD: <16-char-hex-hash>  # optional comment
-```
 
-- The date must be exactly 8 digits (`YYYYMMDD`)
-- The hash must be exactly 16 lowercase hexadecimal characters
-- Everything after `#` on a data line is treated as a comment and ignored
-- Blank lines and lines starting with `#` are ignored
-- If any line fails validation, the entire file is rejected
-
-Example:
-
-```
-# Quotes for March 2026
-20260319: a1b2c3d4e5f67890  # "The only way to do great work..." - Steve Jobs
-20260320: 25382c2519fb23bd  # "Be yourself; everyone else is taken." - Oscar Wilde
-
-# Quotes for April 2026
-20260401: 9f8e7d6c5b4a3210  # April Fools quote
-```
+- `date_str` is a date in `YYYYMMDD` format (e.g., `20260319`)
+- Return a 16-character MD5 hash string to select a specific quote
+- Return `None` to fall back to the default seeded random selection
 
 To find a quote's hash, use `jotquote list -l` or `jotquote list -s <hash>`.
 
 ### Configuration
 
-Add the `quotemap_file` property to `~/.jotquote/settings.conf`:
+Add the `quote_resolver` property to `~/.jotquote/settings.conf` with the dotted Python module path:
 
 ```ini
 [web]
-quotemap_file = ~/.jotquote/quotemap.txt
+quote_resolver = mypackage.my_resolver
 ```
+
+The module must be importable by the Python environment running the web server.
 
 ### Web Server Behavior
 
-- `/` — If today's date has an entry in the quotemap, that quote is shown along with a permalink. Otherwise, the default seeded random selection is used.
-- `/<YYYYMMDD>` — Shows the quote mapped to that date. Returns 404 if the date is not in the quotemap.
+- `/` — If the resolver returns a hash for today, that quote is shown along with a permalink. If the resolver returns `None` or is not configured, the default seeded random selection is used.
+- `/<YYYYMMDD>` — Calls the resolver for that date. If the resolver returns a hash, shows that quote. Returns 404 if the resolver returns `None`, is not configured, or the hash doesn't match any quote.
 
-### Rebuild Command
+### Error Handling
 
-The `jotquote quotemap rebuild` command auto-generates a quotemap for the next 10 years, cycling through quotes with even distribution.
-
-#### Usage
-
-```bash
-jotquote quotemap rebuild <quotefile> <newquotemap>
-```
-
-The command writes the rebuilt quotemap to `<newquotemap>` (the file must not already exist).
-
-Use `--oldquotemap` to read an existing quotemap file (preserving past and sticky entries):
-
-```bash
-jotquote quotemap rebuild --oldquotemap quotemap.txt quotes.txt quotemap_new.txt
-```
-
-Use `--days` to control how many days into the future are generated (default: 3652, about 10 years):
-
-```bash
-jotquote quotemap rebuild --days 365 quotes.txt quotemap_new.txt
-```
-
-#### How It Works
-
-1. Reads all quotes from the quote file
-2. If `--oldquotemap` is given, reads existing entries:
-   - **Past/today entries** are preserved verbatim
-   - **Future sticky entries** (lines with `# Sticky:` in the comment) are preserved
-   - All other future entries are discarded and regenerated
-3. Validates that every preserved hash maps to a quote in the quote file
-4. For each future date without a sticky entry, assigns a quote using even distribution:
-   - Tracks how many times each quote hash has been used
-   - Selects from the least-used quotes
-   - Uses a deterministic seed so rebuilds produce the same output
-
-#### Sticky Entries
-
-To mark an entry as sticky (so it won't be overwritten during a rebuild), add `# Sticky:` to the inline comment:
-
-```
-20260401: 9f8e7d6c5b4a3210  # Sticky: April Fools quote
-```
-
-**Auto-sticky for new quotes:** When a quote's hash has never appeared in the old quotemap file, the rebuild automatically marks its first occurrence as Sticky. This preserves the debut date for newly added quotes across future rebuilds. Only the first occurrence is marked; subsequent assignments of the same hash are normal.
-
-#### Example Workflow
-
-```bash
-# Generate a fresh quotemap
-jotquote quotemap rebuild --oldquotemap ~/.jotquote/quotemap.txt \
-    ~/.jotquote/quotes.txt /tmp/quotemap_new.txt
-
-# Review the output
-less /tmp/quotemap_new.txt
-
-# Replace the old quotemap
-cp /tmp/quotemap_new.txt ~/.jotquote/quotemap.txt
-```
+- If the resolver module cannot be imported, an error is logged and the server falls back to seeded random selection for all requests.
+- If the resolver's `resolve` function raises an exception, the error is logged and the server falls back to seeded random selection on the root route, or returns 404 on date routes.
+- The resolver module is loaded once and cached for the lifetime of the server process.
 
 ---
 
@@ -445,7 +358,7 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 
 | Property | Default | Description |
 |---|---|---|
-| `quotemap_file` | _(empty)_ | Path to an optional quotemap file (see [Quotemap](#quotemap)) |
+| `quote_resolver` | _(empty)_ | Dotted Python module path for a quote resolver (see [Quote Resolver](#quote-resolver)) |
 | `port` | `5544` | Port the web server (`jotquote webserver`) listens on |
 | `ip` | `127.0.0.1` | IP address the web server (`jotquote webserver`) binds to |
 | `editor_port` | `5545` | Port the web editor (`jotquote webeditor`) listens on |

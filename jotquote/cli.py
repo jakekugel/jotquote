@@ -10,7 +10,6 @@ import time
 import click
 
 from jotquote import api
-from jotquote import quotemap as quotemapmod
 
 HELP_MAIN_F_ARG = (
     'optional path to quote file (if not provided, the command will check ~/.jotquote/settings.conf for path)'
@@ -72,10 +71,10 @@ def jotquote(ctx, quotefile):
     if quotefile is None:
         quotefile = config.get(api.SECTION_GENERAL, 'quote_file')
 
-        # All subcommands require quotefile to exist except: quotemap (manages the
-        # quotemap file independently), and webserver/webeditor (lazy-load the quote
-        # file on first page view so the server can start even if the file is missing).
-        if ctx.invoked_subcommand not in ('webserver', 'webeditor', 'quotemap') and not os.path.exists(quotefile):
+        # All subcommands require quotefile to exist except webserver/webeditor
+        # (lazy-load the quote file on first page view so the server can start
+        # even if the file is missing).
+        if ctx.invoked_subcommand not in ('webserver', 'webeditor') and not os.path.exists(quotefile):
             config_dir = click.get_app_dir(api.APP_NAME, roaming=True, force_posix=False)
             config_path = os.path.join(config_dir, 'settings.conf')
             print(
@@ -232,29 +231,6 @@ def info(ctx):
         quotes = api.read_quotes(quotefile)
         print('Number of quotes: {}'.format(str(len(quotes))))
         print('Time quote file last modified: {}'.format(time.ctime(os.path.getmtime(quotefile))))
-
-
-@jotquote.group()
-def quotemap():
-    """Manage the quotemap file."""
-    pass
-
-
-@quotemap.command()
-@click.argument('quotefile', type=click.Path(exists=True))
-@click.argument('newquotemap', type=click.Path())
-@click.option('--oldquotemap', type=click.Path(), default=None, help='Path to existing quotemap file to read from.')
-@click.option('--days', default=3652, type=int, help='Number of days into the future to generate (default: 3652).')
-def rebuild(quotefile, newquotemap, oldquotemap, days):
-    """Rebuild a quotemap file for the given number of days.
-
-    NEWQUOTEMAP is the path to write the rebuilt quotemap; must not already exist.
-    """
-    if oldquotemap and not os.path.exists(oldquotemap):
-        raise click.ClickException("the quotemap file '{}' was not found.".format(oldquotemap))
-    if os.path.exists(newquotemap):
-        raise click.ClickException("the output file '{}' already exists.".format(newquotemap))
-    quotemapmod.rebuild_quotemap(quotefile, oldquotemap, newquotemap, days=days)
 
 
 @jotquote.command()

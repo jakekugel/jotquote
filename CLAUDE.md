@@ -57,7 +57,7 @@ Because the template `settings.conf` uses `quote_file = ./quotes.txt` (a relativ
 
 - [jotquote/api.py](jotquote/api.py) — All business logic and data access. The `Quote` class is the central data model. Key functions: `read_quotes()`, `parse_quote()`, `add_quote()`, `write_quotes()`, `get_config()`. Configuration lives at `~/.jotquote/settings.conf`; quote data at `~/.jotquote/quotes.txt`.
 
-- [jotquote/cli.py](jotquote/cli.py) — Click-based CLI. Entry point is `main`. Subcommands: `add`, `list`, `random`, `today`, `showalltags`, `settags`, `info`, `webserver`, `lint`, `quotemap` (with sub-subcommand `rebuild`). The quote file path flows via Click's context object (`ctx.obj['QUOTEFILE']`).
+- [jotquote/cli.py](jotquote/cli.py) — Click-based CLI. Entry point is `main`. Subcommands: `add`, `list`, `random`, `today`, `showalltags`, `settags`, `info`, `webserver`, `lint`. The quote file path flows via Click's context object (`ctx.obj['QUOTEFILE']`).
 
 - [jotquote/web.py](jotquote/web.py) — Flask web server (`jotquote webserver`). Displays a deterministic daily quote. Caches quotes in Flask's `g` object and reloads when quote file mtime changes. Flask is lazily imported in `cli.py` so it doesn't load for pure CLI usage.
 
@@ -80,7 +80,7 @@ There are two input formats for the `add` command:
 - **Atomic writes**: `write_quotes()` writes to a randomly-named temp file, sanity-checks it against the backup size, creates a backup, then uses `os.replace()` to atomically swap it in.
 - **Duplicate detection**: `add_quotes()` compares quote text (not hash) against existing quotes before appending.
 - **Config auto-creation**: First run copies `jotquote/templates/settings.conf` to `~/.jotquote/settings.conf` and copies `jotquote/templates/quotes.txt` alongside it. The config file location can be overridden with the `JOTQUOTE_CONFIG` environment variable. Relative paths in `settings.conf` (e.g. `quote_file = ./quotes.txt`) are resolved relative to the directory containing the config file.
-- **Quotemap**: Optional `quotemap_file` config property pointing to a date-to-hash mapping file. Format: `YYYYMMDD: <16-char-hash>  # optional comment`, one per line. When configured, the web server checks this file before falling back to the seeded RNG. The `/<date>` route serves a specific date's mapped quote. Parsed by `read_quotemap()` in `api.py`; raises `ClickException` on any validation failure. `read_quotemap()` returns `dict[str, dict]` where each value has keys `hash`, `sticky`, `raw_line`. The `jotquote quotemap rebuild` subcommand auto-generates entries for approximately 10 years (3652 days) with even distribution; see [DOCUMENTATION.md](DOCUMENTATION.md#quotemap).
+- **Quote resolver**: Optional `quote_resolver` config property in `[web]` specifying a dotted Python module path. The module must define `resolve(date_str: str) -> str | None` returning a 16-char MD5 hash or None. When configured, the web server calls the resolver before falling back to the seeded RNG. The `/<date>` route serves a specific date's resolved quote. The resolver is loaded lazily via `importlib.import_module()` and cached for the server lifetime. See [DOCUMENTATION.md](DOCUMENTATION.md#quote-resolver).
 - **Version**: Defined in `pyproject.toml` as `version`. `jotquote/__init__.py` exposes it as `__version__` via `importlib.metadata`. Convention is `X.Y.Z.dev0` between releases; strip `.dev0` when releasing and tag the commit.
 
 ### Test infrastructure
@@ -90,14 +90,13 @@ There are two input formats for the `add` command:
 - `tests/testdata/` — nine quote fixture files (`quotes1.txt`–`quotes9.txt`).
 - `tests/api_test.py` — unittest-style API tests.
 - `tests/api_pytest_test.py` — pytest-style API tests using `monkeypatch` and `tmp_path`.
-- `tests/api_quotemap_rebuild_test.py` — quotemap rebuild API tests.
 - `tests/cli_test.py` — CLI unit tests.
 - `tests/cli_integration_test.py` — CLI integration tests.
 - `tests/lint_test.py` — lint module unit tests.
-- `tests/quotemap_test.py` — quotemap functionality tests.
 - `tests/web_test.py` — web server unit tests.
 - `tests/web_integration_test.py` — web server integration tests.
 - `tests/web_review_integration_test.py` — review app integration tests.
+- `tests/fixtures/test_resolver.py` — test quote resolver for integration tests.
 
 ### Ruff rules
 
