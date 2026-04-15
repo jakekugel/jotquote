@@ -103,11 +103,34 @@ class Quote:
                 raise click.ClickException('The quote object was not given a list for tags parameter.')
             self.tags = tags
 
-    # Returns first 64 bits of MD5 hash for quote.  Since there is chance of hash collision,
-    # should check if more than one quote matches hash.
     def get_hash(self):
+        """Return a 16-character hex hash for this quote.
+
+        The hash is computed in a single pass over the quote text: the first
+        (lowercased) letter of each alphabetic word is collected, and the
+        resulting string is hashed with MD5.  Non-alphabetic characters act as
+        word separators and are otherwise ignored.  Since there is a chance of
+        hash collision, callers should verify that only one quote matches.
+
+        The intent of this hash is to tolerate minor edits to the quote text
+        while still matching the same quote.  The first letter of a word is
+        usually less prone to a typo than other characters, and ignoring
+        non-alphabetic characters also makes the hash more robust to formatting
+        changes.
+        """
+        # Single pass: record the first lowercase letter of every alphabetic word.
+        first_letters = []
+        in_word = False
+        for ch in self.quote:
+            if ch.isalpha():
+                if not in_word:
+                    first_letters.append(ch.lower())
+                    in_word = True
+            else:
+                in_word = False
+        acronym = ''.join(first_letters)
         m = hashlib.md5()
-        m.update(self.quote.encode('utf-8'))
+        m.update(acronym.encode('utf-8'))
         return m.hexdigest()[0:16]
 
     def get_num_stars(self):

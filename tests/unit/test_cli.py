@@ -105,7 +105,7 @@ def test_list_by_hash(config, tmp_path):
     config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['list', '--hash', '763188b907212a72'], obj={})
+    result = runner.invoke(cli.jotquote, ['list', '--hash', 'a3bff52cabf7e859'], obj={})
 
     assert result.exit_code == 0
     assert result.output.strip() == 'Ask for what you want and be prepared to get it.  - Maya Angelou'
@@ -156,7 +156,7 @@ def test_list_extended(config, tmp_path):
     config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['list', '--hash', '763188b907212a72', '-e'], obj={})
+    result = runner.invoke(cli.jotquote, ['list', '--hash', 'a3bff52cabf7e859', '-e'], obj={})
 
     assert result.exit_code == 0
     assert result.output.strip() == 'Ask for what you want and be prepared to get it. | Maya Angelou |  | life'
@@ -378,7 +378,7 @@ def test_add_with_publication(config, tmp_path):
         + '    author: Stephen Chbosky\n'
         + '    publication: Publication\n'
         + '    tags: \n'
-        + '    hash: 53e070059e1c14f7\n'
+        + '    hash: e6254ea79f660279\n'
     )
     assert result.output == expected
 
@@ -406,22 +406,22 @@ def test_bulk_add_from_stdin(config, tmp_path):
         + '    author: Ben Franklin\n'
         + '    publication: \n'
         + '    tags: U\n'
-        + '    hash: 25382c2519fb23bd\n'
+        + '    hash: d4a5c5a909517953\n'
         + "2: The Linux philosophy is 'Laugh in the face of danger'. Oops. Wrong One. 'Do it yourself'. Yes, that's it.\n"
         + '    author: Linus Torvalds\n'
         + '    publication: \n'
         + '    tags: \n'
-        + '    hash: bbfc7839cd5c3559\n'
+        + '    hash: 25946c5c8114e6c2\n'
         + "3: The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall.\n"
         + '    author: Mitch Hedberg\n'
         + '    publication: \n'
         + '    tags: \n'
-        + '    hash: 3002f948f63dad3d\n'
+        + '    hash: 24a8161b6fe22414\n'
         + '4: Ask for what you want and be prepared to get it.\n'
         + '    author: Maya Angelou\n'
         + '    publication: \n'
         + '    tags: \n'
-        + '    hash: 763188b907212a72\n'
+        + '    hash: a3bff52cabf7e859\n'
     )
     result = runner.invoke(cli.jotquote, ['list', '-l'], obj={})
     assert result.exit_code == 0
@@ -573,7 +573,7 @@ def test_settags(config, tmp_path):
     config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['settags', '-s', '763188b907212a72', 'tag1,tag2'], obj={})
+    result = runner.invoke(cli.jotquote, ['settags', '-s', 'a3bff52cabf7e859', 'tag1,tag2'], obj={})
 
     assert result.exit_code == 0
     assert result.output == ''

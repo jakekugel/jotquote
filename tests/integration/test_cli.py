@@ -334,3 +334,42 @@ def test_missing_quote_file_friendly_error(tmp_path):
     assert 'quote_file' in stderr
     assert 'NoOptionError' not in stderr
     assert 'Traceback' not in stderr
+
+
+def _acronym_from_index(i):
+    """Return a 5-letter string that uniquely encodes integer i in base-26.
+
+    Maps i=0 -> 'aaaaa', i=1 -> 'aaaab', ..., ensuring each index produces a
+    distinct string for i in [0, 26^5).
+    """
+    letters = []
+    for _ in range(5):
+        letters.append(chr(ord('a') + i % 26))
+        i //= 26
+    return ''.join(reversed(letters))
+
+
+def test_hash_stress(tmp_path):
+    """Generate 10,000 quotes with unique acronyms and verify zero hash collisions.
+
+    Each quote's 5 words have first letters that uniquely encode the quote index
+    in base-26, guaranteeing distinct acronyms and therefore distinct hashes.
+    """
+    lines = []
+    for i in range(10_000):
+        acronym = _acronym_from_index(i)
+        # Build 5 words whose first letters spell out the unique acronym
+        words = [letter + 'xample' for letter in acronym]
+        quote_text = ' '.join(words)
+        lines.append('{} | Author {} | | stress'.format(quote_text, i))
+
+    quote_file = tmp_path / 'stress.txt'
+    quote_file.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+    env = _make_env(tmp_path, quote_file)
+
+    # Collect all hashes via the CLI
+    hashes = _get_hashes(quote_file, env)
+
+    assert len(hashes) == 10_000, 'Expected 10,000 hashes, got {}'.format(len(hashes))
+    assert len(set(hashes)) == 10_000, 'Hash collisions detected: {} unique out of 10,000'.format(len(set(hashes)))

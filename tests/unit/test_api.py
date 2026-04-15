@@ -654,7 +654,7 @@ def test_settags_by_hash(config, tmp_path):
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
 
     # Hash for "Ask for what you want and be prepared to get it." (quote 3)
-    api.settags(path, n=None, hash='763188b907212a72', newtags=['newtag1', 'newtag2'])
+    api.settags(path, n=None, hash='a3bff52cabf7e859', newtags=['newtag1', 'newtag2'])
 
     quotes = api.read_quotes(path)
     assert quotes[2].tags == ['newtag1', 'newtag2']
@@ -692,7 +692,7 @@ def test_settags_both_n_and_hash_raises(config, tmp_path):
     with pytest.raises(
         click.ClickException, match=re.escape('both the -s and -n option were included, but only one allowed.')
     ):
-        api.settags(path, n=1, hash='763188b907212a72', newtags=['tag1'])
+        api.settags(path, n=1, hash='a3bff52cabf7e859', newtags=['tag1'])
 
 
 def test_settags_neither_n_nor_hash_raises(config, tmp_path):
@@ -809,6 +809,47 @@ def test_get_first_match_hash_arg_no_match(sample_quotes):
     """hash_arg with no match returns None."""
     result = api.get_first_match(sample_quotes, hash_arg='0000000000000000')
     assert result is None
+
+
+def test_get_hash_acronym_algorithm():
+    """get_hash() uses the first letter of each word (lowercased) as the hash input."""
+    import hashlib
+
+    q = api.Quote('Hello World foo', 'Author', None, [])
+    # words: 'Hello' -> 'h', 'World' -> 'w', 'foo' -> 'f'  =>  acronym = 'hwf'
+    expected = hashlib.md5('hwf'.encode()).hexdigest()[:16]
+    assert q.get_hash() == expected
+
+
+def test_get_hash_ignores_non_alpha():
+    """get_hash() treats non-alphabetic characters as word separators and ignores them."""
+    import hashlib
+
+    # Digits and punctuation between words are separators; leading/trailing punctuation stripped
+    q = api.Quote('Hello, World! 123 foo', 'Author', None, [])
+    # words: 'Hello' -> 'h', 'World' -> 'w', 'foo' -> 'f'  =>  acronym = 'hwf'
+    expected = hashlib.md5('hwf'.encode()).hexdigest()[:16]
+    assert q.get_hash() == expected
+
+
+def test_get_hash_empty_quote():
+    """get_hash() returns consistent result for a quote with no alphabetic characters."""
+    import hashlib
+
+    q = api.Quote('123', 'Author', None, [])
+    # No alphabetic chars -> acronym = ''
+    expected = hashlib.md5(b'').hexdigest()[:16]
+    assert q.get_hash() == expected
+
+
+def test_get_hash_single_pass():
+    """get_hash() takes only the FIRST letter of each word, not all letters."""
+    import hashlib
+
+    q = api.Quote('The quick brown fox', 'Author', None, [])
+    # Each word contributes only its first letter: 't', 'q', 'b', 'f'
+    expected = hashlib.md5('tqbf'.encode()).hexdigest()[:16]
+    assert q.get_hash() == expected
 
 
 def test_get_first_match_excluded_tags_skips_first(sample_quotes):
