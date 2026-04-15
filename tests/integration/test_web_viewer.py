@@ -161,9 +161,8 @@ def test_webserver_command(tmp_path):
     _run_server_test(
         tmp_path,
         cmd=[_script('jotquote'), 'webserver'],
-        startup_log='Serving on http://127.0.0.1:{}'.format(TEST_PORT),
+        startup_log='Running on http://127.0.0.1:{}'.format(TEST_PORT),
     )
-
 
 
 def test_web_page_title(tmp_path):
@@ -240,7 +239,6 @@ def test_static_asset_cache_header(tmp_path):
     finally:
         proc.terminate()
         proc.wait(timeout=10)
-
 
 
 def test_resolver_date_route(tmp_path):
@@ -471,4 +469,3 @@ def _run_startup_log_test(tmp_path, cmd):
 def test_webserver_startup_logs(tmp_path):
     """jotquote webserver logs settings path, quotes path, and version at startup."""
     _run_startup_log_test(tmp_path, cmd=[_script('jotquote'), 'webserver'])
-
