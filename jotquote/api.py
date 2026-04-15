@@ -438,6 +438,7 @@ _LINT_KEYS = frozenset(
 
 _WEB_KEYS = frozenset(
     {
+        'header_provider',
         'quote_resolver',
         'web_port',
         'web_ip',

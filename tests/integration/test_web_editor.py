@@ -34,7 +34,7 @@ ip = 127.0.0.1
 {web_extra}"""
 
 _GENERAL_KEYS = {'show_author_count'}
-_WEB_NO_PREFIX = {'quote_resolver'}
+_WEB_NO_PREFIX = {'header_provider', 'quote_resolver'}
 
 
 def _make_env(tmp_path, quote_file, **extra_props):

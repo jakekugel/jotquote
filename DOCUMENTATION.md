@@ -276,6 +276,53 @@ The module must be importable by the Python environment running the web server. 
 
 ---
 
+## Header Provider
+
+The header provider is a pluggable extension point that controls which HTTP response headers the web server applies to quote page responses. The base package does not set any cache headers by default; configure a header provider to add `Cache-Control` or other headers.
+
+### How It Works
+
+A header provider is a Python module that you write and install. The module must define a `get_headers` function with this signature:
+
+```python
+def get_headers(max_age: int) -> dict[str, str]:
+    """Return HTTP response headers given the computed max-age value."""
+```
+
+- `max_age` is the cache duration in seconds, computed by the web server based on mode (`daily` vs `random`) and the `cache_seconds` configuration.
+- Return a dictionary mapping header names to header values.
+- The returned headers are applied to every quote page response.
+
+### Configuration
+
+Add the `header_provider` property to `~/.jotquote/settings.conf` with the dotted Python module path:
+
+```ini
+[web]
+header_provider = mypackage.my_headers
+```
+
+The module must be importable by the Python environment running the web server. If you installed jotquote with `pip` or `uv`, install your header provider module into the same environment. If your provider is a standalone script rather than an installed package, add its parent directory to `PYTHONPATH` before starting the server (e.g., `PYTHONPATH=/path/to/mymodules jotquote webserver`).
+
+When `header_provider` is not set, no custom HTTP headers are applied to responses.
+
+### Example
+
+A simple header provider that sets `Cache-Control`:
+
+```python
+def get_headers(max_age):
+    return {'Cache-Control': f'public, max-age={max_age}'}
+```
+
+### Error Handling
+
+- If the provider module cannot be imported, an error is logged and no custom headers are applied.
+- If the `get_headers` function raises an exception, the error is logged and no custom headers are applied to the response.
+- The provider module is loaded once and cached for the lifetime of the server process.
+
+---
+
 ## Review App
 
 The review app (`web_review.py`) is a Flask web server intended to help manage tags on quotes. It displays the quote of the day alongside the full list of tags in your quote file, letting you update the quote's tags directly from the browser.
@@ -358,6 +405,7 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 
 | Property | Default | Description |
 |---|---|---|
+| `header_provider` | _(empty)_ | Dotted Python module path for a header provider (see [Header Provider](#header-provider)) |
 | `quote_resolver` | _(empty)_ | Dotted Python module path for a quote resolver (see [Quote Resolver](#quote-resolver)) |
 | `port` | `5544` | Port the web server (`jotquote webserver`) listens on |
 | `ip` | `127.0.0.1` | IP address the web server (`jotquote webserver`) binds to |

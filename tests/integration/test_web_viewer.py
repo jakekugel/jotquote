@@ -46,7 +46,7 @@ ip = 127.0.0.1
 {web_extra}"""
 
 _GENERAL_KEYS = {'show_author_count'}
-_WEB_NO_PREFIX = {'quote_resolver'}
+_WEB_NO_PREFIX = {'header_provider', 'quote_resolver'}
 
 
 def _make_env(tmp_path, quote_file, **extra_props):
@@ -254,6 +254,32 @@ def test_static_asset_cache_header(tmp_path):
             assert resp.status == 200
             cc = resp.headers.get('Cache-Control', '')
         assert 'max-age=86400' in cc
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_header_provider(tmp_path):
+    """Webserver with header_provider configured applies custom headers to the response."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file, header_provider='tests.fixtures.test_header_provider')
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            assert resp.status == 200
+            assert resp.headers.get('X-Custom-Test') == 'hello'
+            cc = resp.headers.get('Cache-Control', '')
+            assert 'max-age=' in cc
     finally:
         proc.terminate()
         proc.wait(timeout=10)

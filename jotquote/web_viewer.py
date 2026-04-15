@@ -51,6 +51,10 @@ _log_startup_info()
 _resolver_fn = None
 _resolver_loaded = False
 
+# Cached header-provider function, loaded lazily on first request.
+_header_fn = None
+_header_loaded = False
+
 
 @app.after_request
 def log_request(response):
@@ -148,7 +152,7 @@ def showpage(date_path_param=None):
                 **colors,
             )
         )
-        response.headers['Cache-Control'] = f'public, max-age={max_age}'
+        _apply_headers(response, config, max_age)
         return response
 
     # Select quote based on mode
@@ -210,7 +214,7 @@ def showpage(date_path_param=None):
             **colors,
         )
     )
-    response.headers['Cache-Control'] = f'public, max-age={max_age}'
+    _apply_headers(response, config, max_age)
     return response
 
 
@@ -248,6 +252,60 @@ def _reset_resolver():
     global _resolver_fn, _resolver_loaded
     _resolver_fn = None
     _resolver_loaded = False
+
+
+def _get_header_provider(config):
+    """Return the cached header-provider function, or None.
+
+    Loads the header-provider module specified by the ``header_provider``
+    property in the ``[web]`` section of settings.conf.  The module must
+    define a ``get_headers`` function that accepts an integer max_age and
+    returns a dict of HTTP header name/value pairs.
+
+    config (ConfigParser) -- the application configuration object.
+    Returns callable or None.
+    """
+    global _header_fn, _header_loaded
+    if _header_loaded:
+        return _header_fn
+    _header_loaded = True
+    module_path = config[api.SECTION_WEB].get('header_provider', '')
+    if not module_path:
+        return None
+    try:
+        mod = importlib.import_module(module_path)
+        _header_fn = getattr(mod, 'get_headers')
+    except (ImportError, AttributeError) as e:
+        app.logger.error('failed to load header provider %r: %s', module_path, e)
+    return _header_fn
+
+
+def _reset_header_provider():
+    """Clear cached header-provider state so the next call reloads.
+
+    Intended for use in tests only.
+    """
+    global _header_fn, _header_loaded
+    _header_fn = None
+    _header_loaded = False
+
+
+def _apply_headers(response, config, max_age):
+    """Apply extension-point HTTP headers to the response.
+
+    response (flask.Response) -- the response object to modify.
+    config (ConfigParser) -- the application configuration object.
+    max_age (int) -- cache duration in seconds.
+    """
+    header_provider = _get_header_provider(config)
+    if header_provider is None:
+        return
+    try:
+        headers = header_provider(max_age)
+    except Exception:
+        app.logger.exception('header provider error')
+        return
+    response.headers.update(headers)
 
 
 def get_quotes():
