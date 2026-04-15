@@ -161,7 +161,7 @@ def test_webserver_command(tmp_path):
     _run_server_test(
         tmp_path,
         cmd=[_script('jotquote'), 'webserver'],
-        startup_log='Running on http://127.0.0.1:{}'.format(TEST_PORT),
+        startup_log='Server started at http://127.0.0.1:{}'.format(TEST_PORT),
     )
 
 

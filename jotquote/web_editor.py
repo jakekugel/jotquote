@@ -17,6 +17,7 @@ app = Flask(__name__)
 web_core.configure_logging()
 
 # Named logger for HTTP access lines; propagates to the root handler configured above.
+_logger = logging.getLogger(__name__)
 _access_logger = logging.getLogger('jotquote.access')
 _access_logger.setLevel(logging.INFO)
 
@@ -144,8 +145,10 @@ def run_server():
     if not listen_ip:
         listen_ip = '127.0.0.1'
 
-    # Start the web server
-    app.run(host=listen_ip, port=int(listen_port), use_reloader=False, threaded=True)
+    # Start the server and log the address so callers can detect startup
+    server = web_core.make_server(listen_ip, int(listen_port), app)
+    _logger.info('Server started at http://%s:%s', listen_ip, listen_port)
+    server.serve_forever()
 
 
 def _load_quotes():

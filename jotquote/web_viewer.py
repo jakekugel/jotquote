@@ -293,7 +293,6 @@ def run_server():
     Returns:
         None
     """
-
     # Load needed configuration from settings.conf file
     config, _ = api.get_config()
     listen_port = config.get(api.SECTION_WEB, 'port')
@@ -305,4 +304,7 @@ def run_server():
     if not listen_ip:
         listen_ip = '127.0.0.1'
 
-    app.run(host=listen_ip, port=int(listen_port), use_reloader=False, threaded=True)
+    # Start the server and log the address so callers can detect startup
+    server = web_core.make_server(listen_ip, int(listen_port), app)
+    _logger.info('Server started at http://%s:%s', listen_ip, listen_port)
+    server.serve_forever()

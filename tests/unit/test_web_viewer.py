@@ -380,7 +380,8 @@ def test_run_server_no_migration_warning(flask_client, config, monkeypatch):
     warning_messages = []
     monkeypatch.setattr(web.app.logger, 'warning', lambda msg: warning_messages.append(msg))
 
-    with patch.object(web.app, 'run'):
+    with patch('jotquote.web.core.make_server') as mock_make_server:
+        mock_make_server.return_value = Mock()
         web.run_server()
 
     assert len(warning_messages) == 0

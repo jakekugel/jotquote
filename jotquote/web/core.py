@@ -3,7 +3,9 @@
 # file in the root of this repository for complete details.
 
 import logging
+import socketserver
 import time
+from wsgiref.simple_server import WSGIRequestHandler, WSGIServer
 
 from jotquote import api
 
@@ -45,6 +47,41 @@ def configure_logging():
         handler.setFormatter(TimestampFormatter(LOG_FORMAT))
         logging.root.setLevel(logging.INFO)
         logging.root.addHandler(handler)
+
+
+class _QuietHandler(WSGIRequestHandler):
+    """WSGI request handler that suppresses default per-request stderr logging.
+
+    jotquote logs every request through its own ``@app.after_request`` handler,
+    so the built-in wsgiref logging would produce duplicates.
+    """
+
+    def log_message(self, format, *args):
+        """Suppress all default request log messages."""
+
+
+class ThreadingWSGIServer(socketserver.ThreadingMixIn, WSGIServer):
+    """WSGI server that handles each request in a new daemon thread.
+
+    Combines the stdlib ``WSGIServer`` with ``ThreadingMixIn`` so concurrent
+    requests (e.g. the HTML page and a static asset) don't block each other.
+    The quiet request handler is used by default.
+    """
+
+    daemon_threads = True
+
+
+def make_server(host, port, app):
+    """Create a threaded WSGI server with quiet request logging.
+
+    :param host: str bind address (e.g. '127.0.0.1')
+    :param port: int port number
+    :param app: WSGI application callable
+    :return: ThreadingWSGIServer ready to serve
+    """
+    server = ThreadingWSGIServer((host, port), _QuietHandler)
+    server.set_app(app)
+    return server
 
 
 def sanitize_for_log(value):
