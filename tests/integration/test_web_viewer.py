@@ -278,8 +278,8 @@ def test_resolver_date_route(tmp_path):
     """Webserver with quote resolver serves the resolved quote for /<date>."""
     quote_file = _copy_quotes(tmp_path)
     env = _make_env(tmp_path, quote_file, quote_resolver='tests.fixtures.test_resolver')
-    # 25382c2519fb23bd is the hash for the Ben Franklin quote in quotes1.txt
-    env['TEST_RESOLVER_MAP'] = '20260319=25382c2519fb23bd'
+    # d4a5c5a909517953 is the hash for the Ben Franklin quote in quotes1.txt
+    env['TEST_RESOLVER_MAP'] = '20260319=d4a5c5a909517953'
 
     proc = subprocess.Popen(
         [_script('jotquote'), 'webserver'],
@@ -308,7 +308,7 @@ def test_resolver_root_permalink(tmp_path):
     quote_file = _copy_quotes(tmp_path)
     today = datetime.datetime.now().strftime('%Y%m%d')
     env = _make_env(tmp_path, quote_file, quote_resolver='tests.fixtures.test_resolver')
-    env['TEST_RESOLVER_MAP'] = '{}=25382c2519fb23bd'.format(today)
+    env['TEST_RESOLVER_MAP'] = '{}=d4a5c5a909517953'.format(today)
 
     proc = subprocess.Popen(
         [_script('jotquote'), 'webserver'],

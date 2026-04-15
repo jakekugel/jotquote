@@ -198,7 +198,7 @@ def test_no_stars_when_untagged(flask_client, config):
 def test_date_route_with_resolver(flask_client, config, monkeypatch):
     """/<date> with resolver returning a hash serves the mapped quote."""
     client, quote_file = flask_client
-    monkeypatch.setattr(web, '_resolver_fn', lambda d: '25382c2519fb23bd' if d == '20260319' else None)
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'd4a5c5a909517953' if d == '20260319' else None)
     monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/20260319')
     assert rv.status_code == 200
@@ -237,7 +237,7 @@ def test_root_with_resolver_today(flask_client, config, monkeypatch):
     """/ with resolver returning hash for today shows mapped quote and permalink."""
     client, quote_file = flask_client
     today = datetime.datetime.now().strftime('%Y%m%d')
-    monkeypatch.setattr(web, '_resolver_fn', lambda d: '25382c2519fb23bd')
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'd4a5c5a909517953')
     monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/')
     assert rv.status_code == 200
@@ -257,7 +257,7 @@ def test_root_without_resolver(flask_client, config):
 def test_date_route_no_permalink(flask_client, config, monkeypatch):
     """/<date> does not show permalink link (already on permalink)."""
     client, quote_file = flask_client
-    monkeypatch.setattr(web, '_resolver_fn', lambda d: '25382c2519fb23bd' if d == '20260319' else None)
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'd4a5c5a909517953' if d == '20260319' else None)
     monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/20260319')
     assert rv.status_code == 200
@@ -357,7 +357,7 @@ def test_theme_toggle_button_present(flask_client):
 def test_permalink_button_present(flask_client, config, monkeypatch):
     """Permalink clipboard button appears when resolver returns a hash for today."""
     client, quote_file = flask_client
-    monkeypatch.setattr(web, '_resolver_fn', lambda d: '25382c2519fb23bd')
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'd4a5c5a909517953')
     monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/')
     assert b'id="permalink-btn"' in rv.data
@@ -404,7 +404,7 @@ def test_expires_at_present_on_root(flask_client, config):
 def test_expires_at_null_on_date_route(flask_client, config, monkeypatch):
     """Date route pages have null expires_at (no auto-refresh)."""
     client, quote_file = flask_client
-    monkeypatch.setattr(web, '_resolver_fn', lambda d: '25382c2519fb23bd' if d == '20260319' else None)
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'd4a5c5a909517953' if d == '20260319' else None)
     monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/20260319')
     assert rv.status_code == 200
@@ -435,7 +435,7 @@ def test_mode_random_returns_quote(flask_client, config):
 
 def test_mode_random_no_permalink(flask_client, config, monkeypatch):
     """mode=random suppresses permalink even when resolver returns a hash for today."""
-    monkeypatch.setattr(web, '_resolver_fn', lambda d: '25382c2519fb23bd')
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'd4a5c5a909517953')
     monkeypatch.setattr(web, '_resolver_loaded', True)
     config[api.SECTION_WEB]['mode'] = 'random'
     client, quote_file = flask_client
