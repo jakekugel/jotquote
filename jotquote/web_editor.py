@@ -123,22 +123,11 @@ def save_quote(line_num):
 
 
 def run_server():
-    """Start the web editor using Waitress as the WSGI server.
+    """Start the web editor.
 
     This function is called when the 'jotquote webeditor' command is used.
-    Waitress is used as the WSGI server, which is suitable for local use.
     The host and port are read from the [web] section of settings.conf
     (editor_ip and editor_port properties).
-
-    Alternatively, any WSGI server can be pointed directly at the 'app' object
-    exported from this module.  For example:
-
-        waitress-serve --host 127.0.0.1 --port 5545 jotquote.web_editor:app
-        gunicorn --bind 127.0.0.1:5545 jotquote.web_editor:app  (Linux/Mac only)
-
-    When using a WSGI server directly, this function is not called and the
-    WSGI server determines the host and port.  Logging is configured at module
-    load time, so the format applies regardless of launch method.
 
     Returns:
         None
@@ -155,10 +144,8 @@ def run_server():
     if not listen_ip:
         listen_ip = '127.0.0.1'
 
-    # Start the Waitress WSGI server
-    from waitress import serve
-
-    serve(app, host=listen_ip, port=int(listen_port))
+    # Start the web server
+    app.run(host=listen_ip, port=int(listen_port), use_reloader=False, threaded=True)
 
 
 def _load_quotes():

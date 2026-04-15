@@ -61,7 +61,7 @@ Because the template `settings.conf` uses `quote_file = ./quotes.txt` (a relativ
 
 - [jotquote/web.py](jotquote/web.py) — Flask web server (`jotquote webserver`). Displays a deterministic daily quote. Caches quotes in Flask's `g` object and reloads when quote file mtime changes. Flask is lazily imported in `cli.py` so it doesn't load for pure CLI usage.
 
-- [jotquote/web_review.py](jotquote/web_review.py) — Separate Flask app for reviewing and updating quote tags. Serves the daily quote alongside a checkbox list of all tags; tag changes are saved via POST. Intended for local use only (no auth). Start with `waitress-serve --host 127.0.0.1 --port 5000 jotquote.web_review:app`.
+- [jotquote/web_review.py](jotquote/web_review.py) — Separate Flask app for reviewing and updating quote tags. Serves the daily quote alongside a checkbox list of all tags; tag changes are saved via POST. Intended for local use only (no auth). Start with `python -c "from jotquote.web_review import app; app.run(host='127.0.0.1', port=5000, use_reloader=False)"`.
 
 - [jotquote/lint.py](jotquote/lint.py) — All lint logic. `lint_quotes()` runs enabled checks against a list of quotes and returns a list of `LintIssue`. `apply_fixes()` applies auto-fixable issues in place. `ALL_CHECKS` frozenset is defined in `api.py` and imported by `lint.py`. Available checks: `ascii`, `smart-quotes`, `smart-dashes`, `double-spaces`, `quote-too-long`, `no-tags`, `no-author`, `author-antipatterns`, `required-tag-group`.
 

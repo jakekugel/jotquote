@@ -299,16 +299,10 @@ The review app (`web_review.py`) is a Flask web server intended to help manage t
 
 ### Launching the App
 
-If you installed jotquote with pip into your global Python environment:
-
-```bash
-waitress-serve --host 127.0.0.1 --port 5000 jotquote.web_review:app
-```
-
 If you are running from a local development checkout with uv:
 
 ```bash
-uv run waitress-serve --host 127.0.0.1 --port 5000 jotquote.web_review:app
+uv run python -c "from jotquote.web_review import app; app.run(host='127.0.0.1', port=5000, use_reloader=False)"
 ```
 
 Then open `http://127.0.0.1:5000` in your browser.

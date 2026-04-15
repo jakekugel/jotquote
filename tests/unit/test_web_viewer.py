@@ -380,7 +380,7 @@ def test_run_server_no_migration_warning(flask_client, config, monkeypatch):
     warning_messages = []
     monkeypatch.setattr(web.app.logger, 'warning', lambda msg: warning_messages.append(msg))
 
-    with patch('waitress.serve'):
+    with patch.object(web.app, 'run'):
         web.run_server()
 
     assert len(warning_messages) == 0

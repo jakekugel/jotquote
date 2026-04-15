@@ -12,8 +12,6 @@ import time
 import urllib.error
 import urllib.request
 
-import pytest
-
 TEST_PORT = 15544
 TEST_URL = 'http://127.0.0.1:{}/'.format(TEST_PORT)
 
@@ -167,21 +165,6 @@ def test_webserver_command(tmp_path):
     )
 
 
-def test_waitress_serve_command(tmp_path):
-    """waitress-serve starts, serves the jotquote WSGI app, and logs to stderr."""
-    _run_server_test(
-        tmp_path,
-        cmd=[
-            _script('waitress-serve'),
-            '--host',
-            '127.0.0.1',
-            '--port',
-            str(TEST_PORT),
-            'jotquote.web_viewer:app',
-        ],
-        startup_log='Serving on http://127.0.0.1:{}'.format(TEST_PORT),
-    )
-
 
 def test_web_page_title(tmp_path):
     """jotquote webserver uses web_page_title from config as the HTML page title."""
@@ -258,20 +241,6 @@ def test_static_asset_cache_header(tmp_path):
         proc.terminate()
         proc.wait(timeout=10)
 
-
-@pytest.mark.skipif(sys.platform == 'win32', reason='gunicorn not supported on Windows')
-def test_gunicorn_launch(tmp_path):
-    """gunicorn starts, serves the jotquote WSGI app, and logs to stderr (Linux/Mac only)."""
-    _run_server_test(
-        tmp_path,
-        cmd=[
-            _script('gunicorn'),
-            '--bind',
-            '127.0.0.1:{}'.format(TEST_PORT),
-            'jotquote.web_viewer:app',
-        ],
-        startup_log='Listening at: http://127.0.0.1:{}'.format(TEST_PORT),
-    )
 
 
 def test_resolver_date_route(tmp_path):
@@ -503,17 +472,3 @@ def test_webserver_startup_logs(tmp_path):
     """jotquote webserver logs settings path, quotes path, and version at startup."""
     _run_startup_log_test(tmp_path, cmd=[_script('jotquote'), 'webserver'])
 
-
-def test_waitress_serve_startup_logs(tmp_path):
-    """waitress-serve logs settings path, quotes path, and version at startup."""
-    _run_startup_log_test(
-        tmp_path,
-        cmd=[
-            _script('waitress-serve'),
-            '--host',
-            '127.0.0.1',
-            '--port',
-            str(TEST_PORT),
-            'jotquote.web_viewer:app',
-        ],
-    )

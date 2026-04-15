@@ -31,8 +31,7 @@ def _log_startup_info():
     """Log settings file path, quote file path, and package version at startup.
 
     Called once at module load time so the messages appear regardless of whether
-    the server is launched via 'jotquote webserver' or directly via a WSGI server
-    such as waitress-serve.
+    the server is launched via 'jotquote webserver' or directly via a WSGI server.
     """
     import jotquote
 
@@ -286,21 +285,13 @@ def get_quotes():
 
 
 def run_server():
-    """Start the web server using Waitress as the WSGI server.
+    """Start the web server.
 
     This function is called when the 'jotquote webserver' command is called.
-    Waitress is used as the WSGI server, which is suitable for production use.
     The host and port are read from the settings.conf configuration file.
 
-    Alternatively, any WSGI server can be pointed directly at the 'app' object
-    exported from this module.  For example:
-
-        waitress-serve --host 127.0.0.1 --port 5544 jotquote.web_viewer:app
-        gunicorn --bind 127.0.0.1:5544 jotquote.web_viewer:app  (Linux/Mac only)
-
-    When using a WSGI server directly, this function is not called and the
-    WSGI server determines the host and port.  Logging is configured at module
-    load time, so the format applies regardless of launch method.
+    Returns:
+        None
     """
 
     # Load needed configuration from settings.conf file
@@ -314,6 +305,4 @@ def run_server():
     if not listen_ip:
         listen_ip = '127.0.0.1'
 
-    from waitress import serve
-
-    serve(app, host=listen_ip, port=int(listen_port))
+    app.run(host=listen_ip, port=int(listen_port), use_reloader=False, threaded=True)

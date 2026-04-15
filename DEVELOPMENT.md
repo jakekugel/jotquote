@@ -60,27 +60,11 @@ $ uv run coverage report
 
 ## Running the web server
 
-**Method 1 — `jotquote webserver` command (all platforms)**
-
 ```bash
 $ uv run jotquote webserver
 ```
 
 This reads the host and port from `~/.jotquote/settings.conf` and starts the server.
-
-**Method 2 — WSGI server directly (Linux/Mac)**
-
-```bash
-$ uv run gunicorn --bind 127.0.0.1:5544 jotquote.web:app
-```
-
-This bypasses the `jotquote webserver` command and lets the WSGI server control the
-host, port, and worker configuration.  Waitress can be used as a cross-platform
-alternative:
-
-```bash
-$ uv run waitress-serve --host 127.0.0.1 --port 5544 jotquote.web:app
-```
 
 ## Running lint
 

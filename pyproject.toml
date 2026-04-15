@@ -31,7 +31,6 @@ requires-python = ">=3.9"
 dependencies = [
     "flask>=3.1",
     "click>=8.0",
-    "waitress>=3.0",
 ]
 
 [project.scripts]
@@ -50,7 +49,6 @@ dev = [
     "pytest-cov>=4.0",
     "ruff",
     "coverage>=7.0",
-    "gunicorn>=23.0",
 ]
 
 [tool.pytest.ini_options]
