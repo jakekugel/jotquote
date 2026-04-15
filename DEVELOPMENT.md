@@ -133,7 +133,7 @@ $ pip uninstall jotquote
 
 ## Submitting changes
 
-1. Open an issue or discuss your idea before writing code.
+1. Open an issue or discuss your idea before writing any code.
 2. Fork the repository and create a branch for your change.
 3. Ensure `uv run pytest` and `uv run ruff check jotquote/` both pass.
 4. Submit a pull request — CI must be green before merging.
