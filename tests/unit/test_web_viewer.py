@@ -57,8 +57,14 @@ def test_quote_caching(flask_client):
         assert cached_time_3 != cached_time_1
 
 
-def test_cache_control_header(flask_client):
+def _cache_control_provider(max_age):
+    return {'Cache-Control': f'public, max-age={max_age}'}
+
+
+def test_cache_control_header(flask_client, monkeypatch):
     """Cache-Control header is set and max-age is within expected bounds."""
+    monkeypatch.setattr(web, '_header_fn', _cache_control_provider)
+    monkeypatch.setattr(web, '_header_loaded', True)
     client, quote_file = flask_client
     rv = client.get('/')
     cc = rv.headers.get('Cache-Control', '')
@@ -67,8 +73,10 @@ def test_cache_control_header(flask_client):
     assert 0 < max_age <= 14400
 
 
-def test_cache_control_header_unavailable(flask_client):
+def test_cache_control_header_unavailable(flask_client, monkeypatch):
     """Cache-Control header is set even when quote file is unavailable."""
+    monkeypatch.setattr(web, '_header_fn', _cache_control_provider)
+    monkeypatch.setattr(web, '_header_loaded', True)
     client, quote_file = flask_client
     os.remove(quote_file)
     rv = client.get('/')
@@ -112,9 +120,11 @@ def test_io_errors(flask_client):
         assert quotes is not None
 
 
-def test_web_cache_seconds(flask_client, config):
-    """Cache-Control max-age respects web_cache_seconds config property."""
-    config[api.SECTION_WEB]['cache_seconds'] = '60'
+def test_web_cache_seconds(flask_client, config, monkeypatch):
+    """Cache-Control max-age respects expiration_seconds config property."""
+    monkeypatch.setattr(web, '_header_fn', _cache_control_provider)
+    monkeypatch.setattr(web, '_header_loaded', True)
+    config[api.SECTION_WEB]['expiration_seconds'] = '60'
     client, quote_file = flask_client
     rv = client.get('/')
     cc = rv.headers.get('Cache-Control', '')
@@ -122,13 +132,55 @@ def test_web_cache_seconds(flask_client, config):
     assert max_age <= 60
 
 
-def test_web_cache_seconds_default(flask_client, config):
+def test_web_cache_seconds_default(flask_client, config, monkeypatch):
     """Cache-Control max-age uses 14400-second default when web_cache_seconds is not set."""
+    monkeypatch.setattr(web, '_header_fn', _cache_control_provider)
+    monkeypatch.setattr(web, '_header_loaded', True)
     client, quote_file = flask_client
     rv = client.get('/')
     cc = rv.headers.get('Cache-Control', '')
     max_age = int(cc.split('=')[1])
     assert max_age <= 14400
+
+
+# ---------------------------------------------------------------------------
+# Header provider extension point
+# ---------------------------------------------------------------------------
+
+
+def test_no_header_provider_no_cache_control(flask_client, config, monkeypatch):
+    """No Cache-Control header when header_provider is not configured."""
+    monkeypatch.setattr(web, '_header_fn', None)
+    monkeypatch.setattr(web, '_header_loaded', False)
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert 'Cache-Control' not in rv.headers
+
+
+def test_custom_header_provider(flask_client, config, monkeypatch):
+    """Custom header provider headers appear on the response."""
+    monkeypatch.setattr(web, '_header_fn', lambda max_age: {'X-Custom': 'test', 'Cache-Control': f'public, max-age={max_age}'})
+    monkeypatch.setattr(web, '_header_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert rv.headers.get('X-Custom') == 'test'
+    assert 'max-age=' in rv.headers.get('Cache-Control', '')
+
+
+def test_header_provider_error_no_crash(flask_client, config, monkeypatch):
+    """Header provider that raises does not crash the server."""
+
+    def _bad_provider(max_age):
+        raise RuntimeError('provider error')
+
+    monkeypatch.setattr(web, '_header_fn', _bad_provider)
+    monkeypatch.setattr(web, '_header_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert 'X-Custom' not in rv.headers
 
 
 def test_web_page_title_custom(flask_client, config):
@@ -444,10 +496,12 @@ def test_mode_random_no_permalink(flask_client, config, monkeypatch):
     assert b'id="permalink-btn"' not in rv.data
 
 
-def test_mode_random_no_midnight_cap(flask_client, config):
-    """mode=random uses cache_seconds directly without midnight cap."""
+def test_mode_random_no_midnight_cap(flask_client, config, monkeypatch):
+    """mode=random uses expiration_seconds directly without midnight cap."""
+    monkeypatch.setattr(web, '_header_fn', _cache_control_provider)
+    monkeypatch.setattr(web, '_header_loaded', True)
     config[api.SECTION_WEB]['mode'] = 'random'
-    config[api.SECTION_WEB]['cache_seconds'] = '60'
+    config[api.SECTION_WEB]['expiration_seconds'] = '60'
     client, quote_file = flask_client
     rv = client.get('/')
     cc = rv.headers.get('Cache-Control', '')

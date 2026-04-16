@@ -41,7 +41,7 @@ ip = 127.0.0.1
 {web_extra}"""
 
 _GENERAL_KEYS = {'show_author_count'}
-_WEB_NO_PREFIX = {'quote_resolver'}
+_WEB_NO_PREFIX = {'header_provider_extension', 'quote_resolver_extension'}
 
 
 def _make_env(tmp_path, quote_file, **extra_props):
@@ -114,7 +114,7 @@ def test_web_cache_seconds(tmp_path):
     """jotquote webserver respects web_cache_seconds config: max-age capped at 60 seconds."""
     url = 'http://127.0.0.1:{}/'.format(CLI_TEST_PORT)
     quote_file = _copy_quotes(tmp_path)
-    env = _make_env(tmp_path, quote_file, web_cache_seconds='60')
+    env = _make_env(tmp_path, quote_file, web_expiration_seconds='60', header_provider_extension='tests.fixtures.test_header_provider')
 
     proc = subprocess.Popen(
         [_script('jotquote'), 'webserver'],
