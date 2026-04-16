@@ -229,7 +229,7 @@ The web server instructs the browser to automatically reload the page after the 
 The `mode` property in the `[web]` section controls how quotes are selected:
 
 - **`daily`** (default): A deterministic daily quote is selected using a seeded random number generator. The same quote is shown all day and changes at midnight. A quote resolver (if configured) takes precedence for mapped dates.
-- **`random`**: A truly random quote is selected on each page load. The quote resolver is bypassed and permalinks are disabled. The cache expiration is based solely on `cache_seconds` without the midnight cap.
+- **`random`**: A truly random quote is selected on each page load. The quote resolver is bypassed and permalinks are disabled. The cache expiration is based solely on `expiration_seconds` without the midnight cap.
 
 ---
 
@@ -254,11 +254,11 @@ To find a quote's hash, use `jotquote list -l` or `jotquote list -s <hash>`.
 
 ### Configuration
 
-Add the `quote_resolver` property to `~/.jotquote/settings.conf` with the dotted Python module path:
+Add the `quote_resolver_extension` property to `~/.jotquote/settings.conf` with the dotted Python module path:
 
 ```ini
 [web]
-quote_resolver = mypackage.my_resolver
+quote_resolver_extension = mypackage.my_resolver
 ```
 
 The module must be importable by the Python environment running the web server. If you installed jotquote with `pip` or `uv`, install your resolver module into the same environment (e.g., `pip install mypackage` or `uv pip install mypackage`). If your resolver is a standalone script rather than an installed package, add its parent directory to `PYTHONPATH` before starting the server (e.g., `PYTHONPATH=/path/to/mymodules jotquote webserver`).
@@ -289,22 +289,22 @@ def get_headers(max_age: int) -> dict[str, str]:
     """Return HTTP response headers given the computed max-age value."""
 ```
 
-- `max_age` is the cache duration in seconds, computed by the web server based on mode (`daily` vs `random`) and the `cache_seconds` configuration.
+- `max_age` is the cache duration in seconds, computed by the web server based on mode (`daily` vs `random`) and the `expiration_seconds` configuration.
 - Return a dictionary mapping header names to header values.
 - The returned headers are applied to every quote page response.
 
 ### Configuration
 
-Add the `header_provider` property to `~/.jotquote/settings.conf` with the dotted Python module path:
+Add the `header_provider_extension` property to `~/.jotquote/settings.conf` with the dotted Python module path:
 
 ```ini
 [web]
-header_provider = mypackage.my_headers
+header_provider_extension = mypackage.my_headers
 ```
 
 The module must be importable by the Python environment running the web server. If you installed jotquote with `pip` or `uv`, install your header provider module into the same environment. If your provider is a standalone script rather than an installed package, add its parent directory to `PYTHONPATH` before starting the server (e.g., `PYTHONPATH=/path/to/mymodules jotquote webserver`).
 
-When `header_provider` is not set, no custom HTTP headers are applied to responses.
+When `header_provider_extension` is not set, no custom HTTP headers are applied to responses.
 
 ### Example
 
@@ -405,13 +405,13 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 
 | Property | Default | Description |
 |---|---|---|
-| `header_provider` | _(empty)_ | Dotted Python module path for a header provider (see [Header Provider](#header-provider)) |
-| `quote_resolver` | _(empty)_ | Dotted Python module path for a quote resolver (see [Quote Resolver](#quote-resolver)) |
+| `header_provider_extension` | _(empty)_ | Dotted Python module path for a header provider (see [Header Provider](#header-provider)) |
+| `quote_resolver_extension` | _(empty)_ | Dotted Python module path for a quote resolver (see [Quote Resolver](#quote-resolver)) |
 | `port` | `5544` | Port the web server (`jotquote webserver`) listens on |
 | `ip` | `127.0.0.1` | IP address the web server (`jotquote webserver`) binds to |
 | `editor_port` | `5545` | Port the web editor (`jotquote webeditor`) listens on |
 | `editor_ip` | `127.0.0.1` | IP address the web editor (`jotquote webeditor`) binds to |
-| `cache_seconds` | `14400` | How long (in seconds) the web server caches the quote list after a file change |
+| `expiration_seconds` | `14400` | How long (in seconds) the web server caches the quote list after a file change |
 | `page_title` | `jotquote` | HTML page title shown in the browser tab |
 | `show_stars` | `false` | If `true`, shows star ratings on the web server |
 | `light_foreground_color` | `#000000` | Text color in light mode |

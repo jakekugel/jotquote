@@ -121,10 +121,10 @@ def test_io_errors(flask_client):
 
 
 def test_web_cache_seconds(flask_client, config, monkeypatch):
-    """Cache-Control max-age respects web_cache_seconds config property."""
+    """Cache-Control max-age respects expiration_seconds config property."""
     monkeypatch.setattr(web, '_header_fn', _cache_control_provider)
     monkeypatch.setattr(web, '_header_loaded', True)
-    config[api.SECTION_WEB]['cache_seconds'] = '60'
+    config[api.SECTION_WEB]['expiration_seconds'] = '60'
     client, quote_file = flask_client
     rv = client.get('/')
     cc = rv.headers.get('Cache-Control', '')
@@ -497,11 +497,11 @@ def test_mode_random_no_permalink(flask_client, config, monkeypatch):
 
 
 def test_mode_random_no_midnight_cap(flask_client, config, monkeypatch):
-    """mode=random uses cache_seconds directly without midnight cap."""
+    """mode=random uses expiration_seconds directly without midnight cap."""
     monkeypatch.setattr(web, '_header_fn', _cache_control_provider)
     monkeypatch.setattr(web, '_header_loaded', True)
     config[api.SECTION_WEB]['mode'] = 'random'
-    config[api.SECTION_WEB]['cache_seconds'] = '60'
+    config[api.SECTION_WEB]['expiration_seconds'] = '60'
     client, quote_file = flask_client
     rv = client.get('/')
     cc = rv.headers.get('Cache-Control', '')

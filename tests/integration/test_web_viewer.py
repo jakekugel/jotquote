@@ -46,7 +46,7 @@ ip = 127.0.0.1
 {web_extra}"""
 
 _GENERAL_KEYS = {'show_author_count'}
-_WEB_NO_PREFIX = {'header_provider', 'quote_resolver'}
+_WEB_NO_PREFIX = {'header_provider_extension', 'quote_resolver_extension'}
 
 
 def _make_env(tmp_path, quote_file, **extra_props):
@@ -260,9 +260,9 @@ def test_static_asset_cache_header(tmp_path):
 
 
 def test_header_provider(tmp_path):
-    """Webserver with header_provider configured applies custom headers to the response."""
+    """Webserver with header_provider_extension configured applies custom headers to the response."""
     quote_file = _copy_quotes(tmp_path)
-    env = _make_env(tmp_path, quote_file, header_provider='tests.fixtures.test_header_provider')
+    env = _make_env(tmp_path, quote_file, header_provider_extension='tests.fixtures.test_header_provider')
 
     proc = subprocess.Popen(
         [_script('jotquote'), 'webserver'],
@@ -303,7 +303,7 @@ def test_gunicorn_launch(tmp_path):
 def test_resolver_date_route(tmp_path):
     """Webserver with quote resolver serves the resolved quote for /<date>."""
     quote_file = _copy_quotes(tmp_path)
-    env = _make_env(tmp_path, quote_file, quote_resolver='tests.fixtures.test_resolver')
+    env = _make_env(tmp_path, quote_file, quote_resolver_extension='tests.fixtures.test_resolver')
     # d4a5c5a909517953 is the hash for the Ben Franklin quote in quotes1.txt
     env['TEST_RESOLVER_MAP'] = '20260319=d4a5c5a909517953'
 
@@ -333,7 +333,7 @@ def test_resolver_root_permalink(tmp_path):
     """Webserver with resolver returning hash for today shows permalink on /."""
     quote_file = _copy_quotes(tmp_path)
     today = datetime.datetime.now().strftime('%Y%m%d')
-    env = _make_env(tmp_path, quote_file, quote_resolver='tests.fixtures.test_resolver')
+    env = _make_env(tmp_path, quote_file, quote_resolver_extension='tests.fixtures.test_resolver')
     env['TEST_RESOLVER_MAP'] = '{}=d4a5c5a909517953'.format(today)
 
     proc = subprocess.Popen(

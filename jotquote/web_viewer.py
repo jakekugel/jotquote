@@ -107,24 +107,22 @@ def showpage(date_path_param=None):
 
     now = datetime.datetime.now()
 
-    # Calculate max-age: configured cap or seconds until midnight, whichever is less
+    # Calculate expiration: configured cap or seconds until midnight, whichever is less
     midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     seconds_until_midnight = int((midnight - now).total_seconds())
     config, _ = api.get_config()
-    cap_seconds = int(config[api.SECTION_WEB].get('cache_seconds', '14400'))
+    expiration_seconds = int(config[api.SECTION_WEB].get('expiration_seconds', '14400'))
     page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
     show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
     mode = config[api.SECTION_WEB].get('mode', 'daily')
     about_text = config[api.SECTION_WEB].get('about', '')
     colors = web_core.get_color_config(config)
-    if mode == 'random':
-        max_age = cap_seconds
-    else:
-        max_age = min(cap_seconds, seconds_until_midnight)
+    if mode != 'random' and date_path_param is None:
+        expiration_seconds = min(expiration_seconds, seconds_until_midnight)
 
     # Compute cache expiration time for auto-refresh (root route only)
     if date_path_param is None:
-        expires_at_dt = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=max_age)
+        expires_at_dt = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=expiration_seconds)
         expires_at = expires_at_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
     else:
         expires_at = None
@@ -152,7 +150,7 @@ def showpage(date_path_param=None):
                 **colors,
             )
         )
-        _apply_headers(response, config, max_age)
+        _apply_headers(response, config, expiration_seconds)
         return response
 
     # Select quote based on mode
@@ -178,9 +176,6 @@ def showpage(date_path_param=None):
                 # Show permalink on root page when resolver maps today's quote
                 if date_path_param is None:
                     permalink = f'/{lookup_date}'
-                # For date URLs, content is static — use full cache cap
-                if date_path_param:
-                    max_age = cap_seconds
             elif date_path_param:
                 abort(404)
             else:
@@ -214,14 +209,14 @@ def showpage(date_path_param=None):
             **colors,
         )
     )
-    _apply_headers(response, config, max_age)
+    _apply_headers(response, config, expiration_seconds)
     return response
 
 
 def _get_resolver(config):
     """Return the cached quote resolver function, or None.
 
-    Loads the resolver module specified by the ``quote_resolver`` property in the
+    Loads the resolver module specified by the ``quote_resolver_extension`` property in the
     ``[web]`` section of settings.conf.  The module must define a ``resolve``
     function that accepts a date string (YYYYMMDD) and returns a 16-char MD5 hash
     string or None.
@@ -233,7 +228,7 @@ def _get_resolver(config):
     if _resolver_loaded:
         return _resolver_fn
     _resolver_loaded = True
-    module_path = config[api.SECTION_WEB].get('quote_resolver', '')
+    module_path = config[api.SECTION_WEB].get('quote_resolver_extension', '')
     if not module_path:
         return None
     try:
@@ -257,7 +252,7 @@ def _reset_resolver():
 def _get_header_provider(config):
     """Return the cached header-provider function, or None.
 
-    Loads the header-provider module specified by the ``header_provider``
+    Loads the header-provider module specified by the ``header_provider_extension``
     property in the ``[web]`` section of settings.conf.  The module must
     define a ``get_headers`` function that accepts an integer max_age and
     returns a dict of HTTP header name/value pairs.
@@ -269,7 +264,7 @@ def _get_header_provider(config):
     if _header_loaded:
         return _header_fn
     _header_loaded = True
-    module_path = config[api.SECTION_WEB].get('header_provider', '')
+    module_path = config[api.SECTION_WEB].get('header_provider_extension', '')
     if not module_path:
         return None
     try:
@@ -290,18 +285,18 @@ def _reset_header_provider():
     _header_loaded = False
 
 
-def _apply_headers(response, config, max_age):
+def _apply_headers(response, config, expiration_seconds):
     """Apply extension-point HTTP headers to the response.
 
     response (flask.Response) -- the response object to modify.
     config (ConfigParser) -- the application configuration object.
-    max_age (int) -- cache duration in seconds.
+    expiration_seconds (int) -- cache duration in seconds.
     """
     header_provider = _get_header_provider(config)
     if header_provider is None:
         return
     try:
-        headers = header_provider(max_age)
+        headers = header_provider(expiration_seconds)
     except Exception:
         app.logger.exception('header provider error')
         return
