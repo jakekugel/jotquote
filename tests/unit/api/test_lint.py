@@ -5,7 +5,7 @@
 from configparser import ConfigParser
 
 from jotquote import api
-from jotquote.lint import (
+from jotquote.api.lint import (
     LintIssue,
     _check_ascii,
     _check_author_antipatterns,

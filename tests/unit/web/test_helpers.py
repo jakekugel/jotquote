@@ -9,7 +9,7 @@ from configparser import ConfigParser
 import pytest
 
 from jotquote import api
-from jotquote.web.core import LOG_FORMAT, TimestampFormatter, get_color_config, sanitize_for_log
+from jotquote.web.helpers import LOG_FORMAT, TimestampFormatter, get_color_config, sanitize_for_log
 
 # ---------------------------------------------------------------------------
 # TimestampFormatter

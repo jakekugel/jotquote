@@ -177,7 +177,7 @@ def test_waitress_serve_command(tmp_path):
             '127.0.0.1',
             '--port',
             str(TEST_PORT),
-            'jotquote.web_viewer:app',
+            'jotquote.web.viewer:app',
         ],
         startup_log='Serving on http://127.0.0.1:{}'.format(TEST_PORT),
     )
@@ -294,7 +294,7 @@ def test_gunicorn_launch(tmp_path):
             _script('gunicorn'),
             '--bind',
             '127.0.0.1:{}'.format(TEST_PORT),
-            'jotquote.web_viewer:app',
+            'jotquote.web.viewer:app',
         ],
         startup_log='Listening at: http://127.0.0.1:{}'.format(TEST_PORT),
     )
@@ -367,7 +367,7 @@ def test_legacy_jotquote_section_warns_on_web_start(tmp_path):
     # Copy the legacy config template to the jotquote config directory
     jotquote_dir = tmp_path / '.jotquote'
     jotquote_dir.mkdir()
-    templates_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'jotquote', 'templates'))
+    templates_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'jotquote', 'resources'))
     shutil.copy(os.path.join(templates_dir, 'settings.legacy.conf'), jotquote_dir / 'settings.conf')
 
     # Copy the quote fixture so the relative quote_file path resolves correctly
@@ -540,6 +540,6 @@ def test_waitress_serve_startup_logs(tmp_path):
             '127.0.0.1',
             '--port',
             str(TEST_PORT),
-            'jotquote.web_viewer:app',
+            'jotquote.web.viewer:app',
         ],
     )

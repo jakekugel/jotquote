@@ -116,7 +116,7 @@ def _start_editor_server(tmp_path, quote_file, env):
     cmd = [
         sys.executable,
         '-c',
-        "from waitress import serve; from jotquote.web_editor import app; serve(app, host='127.0.0.1', port={})".format(
+        "from waitress import serve; from jotquote.web.editor import app; serve(app, host='127.0.0.1', port={})".format(
             TEST_PORT
         ),
     ]

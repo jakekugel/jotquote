@@ -40,8 +40,9 @@ jotquote = "jotquote.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["jotquote"]
 include = [
-    "jotquote/templates/**",
-    "jotquote/static/**",
+    "jotquote/resources/**",
+    "jotquote/web/templates/**",
+    "jotquote/web/static/**",
 ]
 
 [dependency-groups]

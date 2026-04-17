@@ -10,7 +10,8 @@ import click
 from click.testing import CliRunner
 
 import tests.test_util
-from jotquote import api, cli
+from jotquote import api
+from jotquote.cli import cli
 
 
 def test_list(config, tmp_path):
@@ -554,9 +555,9 @@ def test_codepage_conversion(config, tmp_path):
     assert text_data == expected
 
 
-@patch('jotquote.web_viewer.run_server')
+@patch('jotquote.web.viewer.run_server')
 def test_webserver(mock_run_server, config, tmp_path):
-    """Test webserver subcommand calls web_viewer.run_server"""
+    """Test webserver subcommand calls web.viewer.run_server"""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes2.txt')
     config[api.SECTION_GENERAL]['quote_file'] = path
 
@@ -874,7 +875,7 @@ def test_add_lint_exception_propagates(config, tmp_path, monkeypatch):
     config[api.SECTION_GENERAL]['quote_file'] = path
     config[api.SECTION_LINT]['lint_on_add'] = 'true'
 
-    from jotquote import lint as lintmod
+    from jotquote.api import lint as lintmod
 
     monkeypatch.setattr(lintmod, 'lint_quotes', lambda *a, **kw: (_ for _ in ()).throw(RuntimeError('boom')))
 
