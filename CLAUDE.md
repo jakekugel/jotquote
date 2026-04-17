@@ -40,14 +40,14 @@ uv build
 
 ## Development Verification
 
-After any change to `jotquote/` or `jotquote/templates/quotes.txt`, run the linter against the built-in quote collection to confirm there are no lint errors:
+After any change to `jotquote/` or `jotquote/resources/quotes.txt`, run the linter against the built-in quote collection to confirm there are no lint errors:
 
 ```bash
-export JOTQUOTE_CONFIG=jotquote/templates/settings.conf
+export JOTQUOTE_CONFIG=jotquote/resources/settings.conf
 uv run jotquote lint
 ```
 
-Because the template `settings.conf` uses `quote_file = ./quotes.txt` (a relative path), jotquote resolves it to `jotquote/templates/quotes.txt` automatically. The built-in quotes must always be lint-clean.
+Because the template `settings.conf` uses `quote_file = ./quotes.txt` (a relative path), jotquote resolves it to `jotquote/resources/quotes.txt` automatically. The built-in quotes must always be lint-clean.
 
 ## Architecture
 
@@ -55,15 +55,14 @@ Because the template `settings.conf` uses `quote_file = ./quotes.txt` (a relativ
 
 ### Core modules
 
-- [jotquote/api.py](jotquote/api.py) — All business logic and data access. The `Quote` class is the central data model. Key functions: `read_quotes()`, `parse_quote()`, `add_quote()`, `write_quotes()`, `get_config()`. Configuration lives at `~/.jotquote/settings.conf`; quote data at `~/.jotquote/quotes.txt`.
+- [jotquote/api/](jotquote/api/) — All business logic and data access, split across focused submodules: `quote.py` (the `Quote` class, `parse_quote`, `parse_tags`), `store.py` (`read_quotes`, `write_quotes`, `add_quote`, `settags`, `set_quote`, SHA-256 concurrency control), `config.py` (`get_config`, section constants, legacy `[jotquote]` migration), `selection.py` (`get_random_choice`, `get_first_match`), and `lint.py` (`lint_quotes`, `apply_fixes`, `LintIssue`, all `_check_*` helpers). `jotquote/api/__init__.py` re-exports the public surface so `from jotquote import api` remains a single-import facade: `api.Quote`, `api.read_quotes`, `api.get_config`, `api.get_random_choice`, `api.LintIssue`, etc. Configuration lives at `~/.jotquote/settings.conf`; quote data at `~/.jotquote/quotes.txt`.
 
-- [jotquote/cli.py](jotquote/cli.py) — Click-based CLI. Entry point is `main`. Subcommands: `add`, `list`, `random`, `today`, `showalltags`, `settags`, `info`, `webserver`, `lint`. The quote file path flows via Click's context object (`ctx.obj['QUOTEFILE']`).
+- [jotquote/cli/](jotquote/cli/) — Click-based CLI. Entry point is `main`, re-exported from `jotquote/cli/__init__.py` so the console-script entry point `jotquote.cli:main` still resolves. Subcommands: `add`, `list`, `random`, `today`, `showalltags`, `settags`, `info`, `webserver`, `webeditor`, `lint`. The quote file path flows via Click's context object (`ctx.obj['QUOTEFILE']`).
 
-- [jotquote/web.py](jotquote/web.py) — Flask web server (`jotquote webserver`). Displays a deterministic daily quote. Caches quotes in Flask's `g` object and reloads when quote file mtime changes. Flask is lazily imported in `cli.py` so it doesn't load for pure CLI usage.
-
-- [jotquote/web_review.py](jotquote/web_review.py) — Separate Flask app for reviewing and updating quote tags. Serves the daily quote alongside a checkbox list of all tags; tag changes are saved via POST. Intended for local use only (no auth). Start with `waitress-serve --host 127.0.0.1 --port 5000 jotquote.web_review:app`.
-
-- [jotquote/lint.py](jotquote/lint.py) — All lint logic. `lint_quotes()` runs enabled checks against a list of quotes and returns a list of `LintIssue`. `apply_fixes()` applies auto-fixable issues in place. `ALL_CHECKS` frozenset is defined in `api.py` and imported by `lint.py`. Available checks: `ascii`, `smart-quotes`, `smart-dashes`, `double-spaces`, `quote-too-long`, `no-tags`, `no-author`, `author-antipatterns`, `required-tag-group`.
+- [jotquote/web/](jotquote/web/) — Flask subpackage housing both web apps and shared helpers alongside `templates/` and `static/`:
+  - [jotquote/web/viewer.py](jotquote/web/viewer.py) — Flask web server (`jotquote webserver`). Displays a deterministic daily quote. Caches quotes in Flask's `g` object and reloads when quote file mtime changes. Flask is lazily imported in `cli.py` so it doesn't load for pure CLI usage. WSGI path: `jotquote.web.viewer:app`.
+  - [jotquote/web/editor.py](jotquote/web/editor.py) — Separate Flask app (`jotquote webeditor`) for reviewing and updating quote tags. Serves the daily quote alongside a checkbox list of all tags; tag changes are saved via POST. Intended for local use only (no auth). WSGI path: `jotquote.web.editor:app`.
+  - [jotquote/web/helpers.py](jotquote/web/helpers.py) — Shared helpers used by both apps: `TimestampFormatter`, `configure_logging`, `sanitize_for_log`, `get_enabled_checks`, `get_color_config`, `abbreviate_timezone`.
 
 ### Quote file format
 
@@ -79,23 +78,19 @@ There are two input formats for the `add` command:
 - **Daily quote**: `get_random_choice()` seeds RNG with days since 2016-01-01, so the same quote is shown all day. `_get_random_value()` shuffles a list with seed 0 then uses `days % numquotes` as the index.
 - **Atomic writes**: `write_quotes()` writes to a randomly-named temp file, sanity-checks it against the backup size, creates a backup, then uses `os.replace()` to atomically swap it in.
 - **Duplicate detection**: `add_quotes()` compares quote text (not hash) against existing quotes before appending.
-- **Config auto-creation**: First run copies `jotquote/templates/settings.conf` to `~/.jotquote/settings.conf` and copies `jotquote/templates/quotes.txt` alongside it. The config file location can be overridden with the `JOTQUOTE_CONFIG` environment variable. Relative paths in `settings.conf` (e.g. `quote_file = ./quotes.txt`) are resolved relative to the directory containing the config file.
+- **Config auto-creation**: First run copies `jotquote/resources/settings.conf` to `~/.jotquote/settings.conf` and copies `jotquote/resources/quotes.txt` alongside it. The config file location can be overridden with the `JOTQUOTE_CONFIG` environment variable. Relative paths in `settings.conf` (e.g. `quote_file = ./quotes.txt`) are resolved relative to the directory containing the config file.
 - **Quote resolver**: Optional `quote_resolver` config property in `[web]` specifying a dotted Python module path. The module must define `resolve(date_str: str) -> str | None` returning a 16-char MD5 hash or None. When configured, the web server calls the resolver before falling back to the seeded RNG. The `/<date>` route serves a specific date's resolved quote. The resolver is loaded lazily via `importlib.import_module()` and cached for the server lifetime. See [DOCUMENTATION.md](DOCUMENTATION.md#quote-resolver).
 - **Version**: Defined in `pyproject.toml` as `version`. `jotquote/__init__.py` exposes it as `__version__` via `importlib.metadata`. Convention is `X.Y.Z.dev0` between releases; strip `.dev0` when releasing and tag the commit.
 
 ### Test infrastructure
 
-- `tests/conftest.py` — shared fixtures: `config` (mocks `api.get_config` to return a test `ConfigParser`) and `flask_client` (provides a Flask test client with a temporary quote file).
+- `tests/conftest.py` — shared fixtures: `config` (mocks `api.get_config` at both the facade and the `jotquote.api.config` submodule) and `flask_client` (provides a Flask test client with a temporary quote file). `tests/unit/conftest.py` provides the `editor_client` fixture.
 - `tests/test_util.py` — helpers: `init_quotefile()` copies a fixture from `tests/testdata/` to a temp dir; `compare_quotes()` does list equality.
 - `tests/testdata/` — nine quote fixture files (`quotes1.txt`–`quotes9.txt`).
-- `tests/api_test.py` — unittest-style API tests.
-- `tests/api_pytest_test.py` — pytest-style API tests using `monkeypatch` and `tmp_path`.
-- `tests/cli_test.py` — CLI unit tests.
-- `tests/cli_integration_test.py` — CLI integration tests.
-- `tests/lint_test.py` — lint module unit tests.
-- `tests/web_test.py` — web server unit tests.
-- `tests/web_integration_test.py` — web server integration tests.
-- `tests/web_review_integration_test.py` — review app integration tests.
+- `tests/unit/api/` — per-submodule unit tests mirroring `jotquote/api/`: `test_quote.py`, `test_store.py`, `test_config.py`, `test_selection.py`, `test_lint.py`. Private helpers are reached by importing the submodule directly (e.g. `from jotquote.api import store as store_mod`).
+- `tests/unit/cli/test_cli.py` — CLI unit tests.
+- `tests/unit/web/` — web-subpackage unit tests: `test_viewer.py`, `test_editor.py`, `test_helpers.py`.
+- `tests/integration/` — integration tests: `test_cli.py`, `test_web_viewer.py`, `test_web_editor.py`.
 - `tests/fixtures/test_resolver.py` — test quote resolver for integration tests.
 
 ### Ruff rules

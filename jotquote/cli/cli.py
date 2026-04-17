@@ -166,9 +166,9 @@ def webserver(ctx):
     """Start a web server to display quote of the day."""
 
     # Lazy import to avoid importing web packages when using pure cli
-    import jotquote.web_viewer
+    import jotquote.web.viewer
 
-    jotquote.web_viewer.run_server()
+    jotquote.web.viewer.run_server()
 
 
 @jotquote.command()
@@ -177,9 +177,9 @@ def webeditor(ctx):
     """Start a local web server for editing quotes."""
 
     # Lazy import to avoid importing web packages when using pure cli
-    import jotquote.web_editor
+    import jotquote.web.editor
 
-    jotquote.web_editor.run_server()
+    jotquote.web.editor.run_server()
 
 
 @jotquote.command()
@@ -258,7 +258,7 @@ def lint(ctx, fix, select_checks, ignore_checks):
       Auto-fix issues that can be corrected safely:
         jotquote lint --fix
     """
-    from jotquote import lint as lintmod
+    from jotquote.api import lint as lintmod
 
     if select_checks and ignore_checks:
         raise click.ClickException('--select and --ignore are mutually exclusive.')
@@ -315,7 +315,7 @@ def _get_active_checks(select_checks, ignore_checks, config):
 
 def _lint_new_quotes(quotes):
     """Lint parsed quotes before adding. Returns list of LintIssue."""
-    from jotquote import lint as lintmod
+    from jotquote.api import lint as lintmod
 
     config, _ = api.get_config()
     checks = _get_active_checks('', '', config)

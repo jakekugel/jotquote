@@ -282,7 +282,7 @@ def test_legacy_jotquote_section_still_works(tmp_path):
     # Copy the legacy config template to the jotquote config directory
     jotquote_dir = tmp_path / '.jotquote'
     jotquote_dir.mkdir()
-    templates_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'jotquote', 'templates'))
+    templates_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'jotquote', 'resources'))
     shutil.copy(os.path.join(templates_dir, 'settings.legacy.conf'), jotquote_dir / 'settings.conf')
 
     # Copy the quote fixture so the relative quote_file path resolves correctly

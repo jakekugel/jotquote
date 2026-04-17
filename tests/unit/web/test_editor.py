@@ -358,7 +358,7 @@ def test_lint_cache_hit_avoids_relint(editor_client, config, monkeypatch):
     """Two GET requests without file change should only lint once (cache hit)."""
     from unittest.mock import patch
 
-    from jotquote import web_editor
+    from jotquote.web import editor as web_editor
 
     client, quote_file = editor_client
     with patch.object(web_editor.lint, 'lint_quotes', wraps=web_editor.lint.lint_quotes) as mock_lint:
@@ -371,7 +371,7 @@ def test_lint_cache_miss_on_file_change(editor_client, config, monkeypatch):
     """Modifying the file between requests causes a cache miss and re-lint."""
     from unittest.mock import patch
 
-    from jotquote import web_editor
+    from jotquote.web import editor as web_editor
 
     client, quote_file = editor_client
     with patch.object(web_editor.lint, 'lint_quotes', wraps=web_editor.lint.lint_quotes) as mock_lint:
@@ -388,7 +388,7 @@ def test_lint_cache_miss_on_check_change(editor_client, config, monkeypatch):
     """Changing enabled checks causes a cache miss and re-lint."""
     from unittest.mock import patch
 
-    from jotquote import web_editor
+    from jotquote.web import editor as web_editor
 
     client, quote_file = editor_client
     config[api.SECTION_LINT]['enabled_checks'] = 'no-tags'
