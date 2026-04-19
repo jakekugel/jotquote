@@ -116,7 +116,7 @@ def _start_editor_server(tmp_path, quote_file, env):
     cmd = [
         sys.executable,
         '-c',
-        "from waitress import serve; from jotquote.web_editor import app; serve(app, host='127.0.0.1', port={})".format(
+        "from waitress import serve; from jotquote.web.editor import app; serve(app, host='127.0.0.1', port={})".format(
             TEST_PORT
         ),
     ]
@@ -298,6 +298,51 @@ def test_sha256_mismatch_error(tmp_path):
                 'publication': '',
                 'tags': '',
                 'sha256': 'bogus_sha256',
+            }
+        ).encode('utf-8')
+        req = urllib.request.Request(
+            'http://127.0.0.1:{}/{}'.format(TEST_PORT, line_num),
+            data=post_data,
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            assert resp.status == 200
+            body = resp.read().decode('utf-8')
+        assert 'modified since it was last read' in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_concurrent_modification_error(tmp_path):
+    """POST after an external file mutation re-renders with the concurrent-modification error."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+    proc, stderr_lines = _start_editor_server(tmp_path, quote_file, env)
+    try:
+        _assert_server_started(proc, stderr_lines)
+
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            body = resp.read().decode('utf-8')
+
+        line_num_match = re.search(r'action="/(\d+)"', body)
+        assert line_num_match, 'Could not find form action with line number'
+        line_num = line_num_match.group(1)
+
+        sha256_match = re.search(r'name="sha256" value="([0-9a-f]+)"', body)
+        assert sha256_match, 'Could not find sha256 hidden input'
+        stale_sha256 = sha256_match.group(1)
+
+        with open(quote_file, 'a', encoding='utf-8') as f:
+            f.write('External edit|External Author||\n')
+
+        post_data = urllib.parse.urlencode(
+            {
+                'quote': 'Attempted update',
+                'author': 'Some Author',
+                'publication': '',
+                'tags': '',
+                'sha256': stale_sha256,
             }
         ).encode('utf-8')
         req = urllib.request.Request(

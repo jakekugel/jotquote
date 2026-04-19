@@ -282,7 +282,7 @@ def test_legacy_jotquote_section_still_works(tmp_path):
     # Copy the legacy config template to the jotquote config directory
     jotquote_dir = tmp_path / '.jotquote'
     jotquote_dir.mkdir()
-    templates_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'jotquote', 'templates'))
+    templates_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'jotquote', 'resources'))
     shutil.copy(os.path.join(templates_dir, 'settings.legacy.conf'), jotquote_dir / 'settings.conf')
 
     # Copy the quote fixture so the relative quote_file path resolves correctly
@@ -333,6 +333,29 @@ def test_missing_quote_file_friendly_error(tmp_path):
     stderr = result.stderr.decode('utf-8', errors='replace')
     assert 'quote_file' in stderr
     assert 'NoOptionError' not in stderr
+    assert 'Traceback' not in stderr
+
+
+def test_settags_out_of_range_translates_to_click_error(tmp_path):
+    """jotquote settags -n <too-large> exits non-zero with a friendly message.
+
+    Confirms the CLI's _translate_api_errors decorator converts QuoteNotFoundError
+    from api.settags into a ClickException so the user sees 'Error: ...' not a
+    traceback.
+    """
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+
+    result = subprocess.run(
+        [_script('jotquote'), 'settags', '-n', '999', 'newtag'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode != 0
+    stderr = result.stderr.decode('utf-8', errors='replace')
+    assert 'out of range' in stderr
     assert 'Traceback' not in stderr
 
 

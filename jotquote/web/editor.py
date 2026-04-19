@@ -4,17 +4,17 @@
 
 import logging
 
-import click
 from flask import Flask, abort, redirect, render_template, request
 
-from jotquote import api, lint
-from jotquote.web import core as web_core
+from jotquote import api
+from jotquote.api import lint
+from jotquote.web import helpers as web_helpers
 
 app = Flask(__name__)
 
 # Configure the root logger at module load time so the format applies regardless
 # of whether the app is launched via 'jotquote webeditor' or a WSGI server directly.
-web_core.configure_logging()
+web_helpers.configure_logging()
 
 # Named logger for HTTP access lines; propagates to the root handler configured above.
 _access_logger = logging.getLogger('jotquote.access')
@@ -36,7 +36,7 @@ def log_request(response):
     _access_logger.info(
         '%s %s %s',
         request.method,
-        web_core.sanitize_for_log(request.full_path.rstrip('?')),
+        web_helpers.sanitize_for_log(request.full_path.rstrip('?')),
         response.status_code,
     )
     return response
@@ -107,8 +107,8 @@ def save_quote(line_num):
         api.set_quote(quotefile, line_num, quote_obj, sha256)
         return redirect(f'/{line_num}')
     # Save failed — re-render using the cached lint issues for this quote
-    except click.ClickException as e:
-        checks = web_core.get_enabled_checks(config)
+    except api.ApiException as e:
+        checks = web_helpers.get_enabled_checks(config)
         quotes = api.read_quotes(quotefile)
         all_issues = _get_lint_issues(quotes, checks, config, sha256)
         lint_issues = [issue for issue in all_issues if issue.line_number == line_num]
@@ -117,7 +117,7 @@ def save_quote(line_num):
             quotes,
             quote_obj,
             line_number=line_num,
-            error=e.format_message(),
+            error=str(e),
             lint_issues=lint_issues,
         )
 
@@ -133,8 +133,8 @@ def run_server():
     Alternatively, any WSGI server can be pointed directly at the 'app' object
     exported from this module.  For example:
 
-        waitress-serve --host 127.0.0.1 --port 5545 jotquote.web_editor:app
-        gunicorn --bind 127.0.0.1:5545 jotquote.web_editor:app  (Linux/Mac only)
+        waitress-serve --host 127.0.0.1 --port 5545 jotquote.web.editor:app
+        gunicorn --bind 127.0.0.1:5545 jotquote.web.editor:app  (Linux/Mac only)
 
     When using a WSGI server directly, this function is not called and the
     WSGI server determines the host and port.  Logging is configured at module
@@ -247,9 +247,9 @@ def _render_editor(config, quotes, quote, line_number=None, error=None, lint_iss
 
     # Read page config: title, theme colors, enabled checks, and file hash
     page_title = config.get(api.SECTION_WEB, 'page_title', fallback='jotquote')
-    colors = web_core.get_color_config(config)
+    colors = web_helpers.get_color_config(config)
     quotefile = config.get(api.SECTION_GENERAL, 'quote_file')
-    checks = web_core.get_enabled_checks(config)
+    checks = web_helpers.get_enabled_checks(config)
     sha256 = api.get_sha256(quotefile)
 
     # Determine the current quote's position and adjacent quote line numbers

@@ -24,17 +24,19 @@ def config(monkeypatch):
     cfg.add_section(api.SECTION_WEB)
     cfg[api.SECTION_WEB]['port'] = '80'
     cfg[api.SECTION_WEB]['ip'] = '0.0.0.0'
-    monkeypatch.setattr(api, 'get_config', Mock(return_value=(cfg, False)))
+    mock_get_config = Mock(return_value=(cfg, False))
+    monkeypatch.setattr('jotquote.api.config.get_config', mock_get_config)
+    monkeypatch.setattr('jotquote.api.get_config', mock_get_config)
     return cfg
 
 
 @pytest.fixture
 def flask_client(tmp_path):
     """Provide a Flask test client with a temporary quote file."""
-    from jotquote import web_viewer
+    from jotquote.web import viewer
 
     quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
-    web_viewer.app.testing = True
-    web_viewer.app.config['QUOTE_FILE'] = quote_file
-    with web_viewer.app.test_client() as client:
+    viewer.app.testing = True
+    viewer.app.config['QUOTE_FILE'] = quote_file
+    with viewer.app.test_client() as client:
         yield client, quote_file

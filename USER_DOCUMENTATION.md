@@ -325,7 +325,7 @@ def get_headers(max_age):
 
 ## Review App
 
-The review app (`web_review.py`) is a Flask web server intended to help manage tags on quotes. It displays the quote of the day alongside the full list of tags in your quote file, letting you update the quote's tags directly from the browser.
+The review app (`jotquote/web/editor.py`) is a Flask web server intended to help manage tags on quotes. It displays the quote of the day alongside the full list of tags in your quote file, letting you update the quote's tags directly from the browser.
 
 ---
 
@@ -349,13 +349,13 @@ The review app (`web_review.py`) is a Flask web server intended to help manage t
 If you installed jotquote with pip into your global Python environment:
 
 ```bash
-waitress-serve --host 127.0.0.1 --port 5000 jotquote.web_review:app
+waitress-serve --host 127.0.0.1 --port 5000 jotquote.web.editor:app
 ```
 
 If you are running from a local development checkout with uv:
 
 ```bash
-uv run waitress-serve --host 127.0.0.1 --port 5000 jotquote.web_review:app
+uv run waitress-serve --host 127.0.0.1 --port 5000 jotquote.web.editor:app
 ```
 
 Then open `http://127.0.0.1:5000` in your browser.

@@ -5,7 +5,7 @@
 import pytest
 
 import tests.test_util
-from jotquote import web_viewer as web
+from jotquote.web import viewer as web
 
 
 @pytest.fixture

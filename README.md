@@ -37,7 +37,7 @@ $ jotquote webserver
 
 By default, the web server is only accessible on the system on which
 it is running.  But by editing the settings.conf file, the web server can be
-made accessible to computers on the network also.  See [DOCUMENTATION.md](DOCUMENTATION.md) for details.
+made accessible to computers on the network also.  See [USER_DOCUMENTATION.md](USER_DOCUMENTATION.md) for details.
 
 ## The quote file
 
@@ -90,7 +90,7 @@ $ jotquote add -h
 
 The behavior of the jotquote command is controlled with the settings.conf
 file.  This file is always found at `~/.jotquote/settings.conf` on Windows, Mac,
-and Linux.  See [DOCUMENTATION.md](DOCUMENTATION.md) for the full table of available properties.
+and Linux.  See [USER_DOCUMENTATION.md](USER_DOCUMENTATION.md) for the full table of available properties.
 
 ## Supported environments
 
@@ -98,12 +98,14 @@ jotquote is tested on Python 3.9 through 3.14 on Windows, Mac, and Linux.
 
 ## Additional documentation
 
-[DOCUMENTATION.md](DOCUMENTATION.md) contains full reference documentation for the package, including:
+[USER_DOCUMENTATION.md](USER_DOCUMENTATION.md) contains full reference documentation for the package, including:
 
 - Complete CLI command reference with all options and examples
 - The quote resolver extension point for mapping dates to specific quotes
 - The review app for managing quote tags from a browser
 - Full settings.conf property reference
+
+[API_REFERENCE.md](API_REFERENCE.md) documents the public Python API of the `jotquote.api` package, with signatures and code examples for every public function and class.
 
 ## Credit
 
@@ -113,7 +115,7 @@ by Armin Ronacher.
 
 ## Contributing
 
-Contributions are welcome, see [DEVELOPMENT.md](DEVELOPMENT.md) for details.
+Contributions are welcome, see [DEVELOPER_DOCUMENTATION.md](DEVELOPER_DOCUMENTATION.md) for details.
 
 ## License
 

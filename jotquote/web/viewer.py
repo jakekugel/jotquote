@@ -10,14 +10,14 @@ import os
 from flask import Flask, abort, g, make_response, render_template, request
 
 from jotquote import api
-from jotquote.web import core as web_core
+from jotquote.web import helpers as web_helpers
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 86400  # 24 hours
 
 # Configure the root logger at module load time so the format applies regardless
 # of whether the app is launched via 'jotquote webserver' or a WSGI server directly.
-web_core.configure_logging()
+web_helpers.configure_logging()
 
 # Named logger for HTTP access lines; propagates to the root handler configured above.
 _access_logger = logging.getLogger('jotquote.access')
@@ -63,7 +63,7 @@ def log_request(response):
         _access_logger.info(
             '%s %s %s expires_at=%s',
             request.method,
-            web_core.sanitize_for_log(request.full_path.rstrip('?')),
+            web_helpers.sanitize_for_log(request.full_path.rstrip('?')),
             response.status_code,
             expires_at,
         )
@@ -71,7 +71,7 @@ def log_request(response):
         _access_logger.info(
             '%s %s %s',
             request.method,
-            web_core.sanitize_for_log(request.full_path.rstrip('?')),
+            web_helpers.sanitize_for_log(request.full_path.rstrip('?')),
             response.status_code,
         )
     return response
@@ -90,7 +90,7 @@ def aboutpage():
     if not about_text:
         abort(404)
     page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
-    colors = web_core.get_color_config(config)
+    colors = web_helpers.get_color_config(config)
     return render_template('about.html', about_text=about_text, page_title=page_title, **colors)
 
 
@@ -116,7 +116,7 @@ def showpage(date_path_param=None):
     show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
     mode = config[api.SECTION_WEB].get('mode', 'daily')
     about_text = config[api.SECTION_WEB].get('about', '')
-    colors = web_core.get_color_config(config)
+    colors = web_helpers.get_color_config(config)
     if mode != 'random' and date_path_param is None:
         expiration_seconds = min(expiration_seconds, seconds_until_midnight)
 
@@ -193,7 +193,7 @@ def showpage(date_path_param=None):
     stars = quote.get_num_stars()
     response = make_response(
         render_template(
-            'quote.html',
+            'viewer.html',
             quote=quote.quote,
             author=quote.author,
             date1=date1,
@@ -348,8 +348,8 @@ def run_server():
     Alternatively, any WSGI server can be pointed directly at the 'app' object
     exported from this module.  For example:
 
-        waitress-serve --host 127.0.0.1 --port 5544 jotquote.web_viewer:app
-        gunicorn --bind 127.0.0.1:5544 jotquote.web_viewer:app  (Linux/Mac only)
+        waitress-serve --host 127.0.0.1 --port 5544 jotquote.web.viewer:app
+        gunicorn --bind 127.0.0.1:5544 jotquote.web.viewer:app  (Linux/Mac only)
 
     When using a WSGI server directly, this function is not called and the
     WSGI server determines the host and port.  Logging is configured at module

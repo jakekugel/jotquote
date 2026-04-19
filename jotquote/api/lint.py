@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
-from jotquote import api
+from jotquote.api import config as _config
 
 # Smart/typographic quote characters and their ASCII replacements
 _SMART_QUOTE_CHARS = '\u2018\u2019\u201c\u201d\u2039\u203a\u00ab\u00bb'
@@ -37,6 +37,21 @@ _ALLCAPS_WORD_RE = re.compile(r'\b[A-Z]{3,}\b')
 
 @dataclass
 class LintIssue:
+    """A single lint finding attached to a specific quote.
+
+    Attributes:
+        line_number (int): 1-based line number of the quote in the source file.
+        check (str): Name of the check that produced the issue (e.g.
+            ``'smart-quotes'``).
+        field (str): The field the issue applies to — one of ``'quote'``,
+            ``'author'``, ``'publication'``, or ``'tags'``.
+        message (str): Human-readable description of the issue.
+        fixable (bool): ``True`` if :func:`apply_fixes` can auto-correct this
+            issue.
+        fix_value (str | None): The corrected value, when ``fixable`` is
+            ``True``; ``None`` otherwise.
+    """
+
     line_number: int
     check: str
     field: str  # One of: 'quote', 'author', 'publication', 'tags'
@@ -46,8 +61,20 @@ class LintIssue:
 
 
 def lint_quotes(quotes, checks, config):
-    """Run enabled checks against all quotes. Returns a list of LintIssue."""
-    lint_cfg = config[api.SECTION_LINT]
+    """Run the enabled lint checks against a list of quotes.
+
+    Args:
+        quotes (list[Quote]): The quotes to check.
+        checks (Iterable[str]): Names of the checks to run.  Unknown names
+            are silently ignored.
+        config (configparser.ConfigParser): Application config.  Used to
+            look up per-check configuration in the ``[lint]`` section.
+
+    Returns:
+        list[LintIssue]: All issues found, in the order produced by the
+            checks.
+    """
+    lint_cfg = config[_config.SECTION_LINT]
     issues = []
     for quote in quotes:
         if 'ascii' in checks:
@@ -72,9 +99,16 @@ def lint_quotes(quotes, checks, config):
 
 
 def apply_fixes(quotes, issues):
-    """Apply all fixable issues to the quote list.
+    """Apply every auto-fixable issue to the matching quote, in place.
 
-    Returns (fixed_quotes, fix_count). Mutates quote objects in place.
+    Args:
+        quotes (list[Quote]): The quotes to update.  Modified in place.
+        issues (list[LintIssue]): Issues produced by :func:`lint_quotes`.
+            Non-fixable issues are ignored.
+
+    Returns:
+        tuple[list[Quote], int]: The (mutated) ``quotes`` list and the count
+            of fixes that were applied.
     """
     fixes_by_line = {}
     for issue in issues:
