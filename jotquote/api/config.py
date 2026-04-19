@@ -6,7 +6,7 @@ import os
 import shutil
 from configparser import ConfigParser
 
-import click
+from jotquote.api.exceptions import ConfigError
 
 APP_NAME = 'jotquote'
 CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.jotquote', 'settings.conf')
@@ -81,7 +81,7 @@ def get_config():
             case.
 
     Raises:
-        click.ClickException: If ``quote_file`` is not set in the ``[general]``
+        ConfigError: If ``quote_file`` is not set in the ``[general]``
             section of the loaded config file.
     """
     config_file = os.environ.get('JOTQUOTE_CONFIG') or CONFIG_FILE
@@ -122,7 +122,7 @@ def get_config():
 
     # Validate required property
     if not config.has_option(SECTION_GENERAL, 'quote_file'):
-        raise click.ClickException(
+        raise ConfigError(
             "'quote_file' is not set in [general] section of {}. Please add it to your settings.conf file.".format(
                 config_file
             )
@@ -143,12 +143,12 @@ def get_filename():
             ``quote_file`` property of the ``[general]`` section.
 
     Raises:
-        click.ClickException: If the resolved quote file does not exist.
+        ConfigError: If the resolved quote file does not exist.
     """
     config, _ = get_config()
     filename = config.get(SECTION_GENERAL, 'quote_file')
     if not os.path.exists(filename):
-        raise click.ClickException("The quote file specified in settings.conf, '{}', was not found.".format(filename))
+        raise ConfigError("The quote file specified in settings.conf, '{}', was not found.".format(filename))
     return filename
 
 

@@ -5,7 +5,6 @@
 import hashlib
 import re
 
-import click
 import pytest
 
 from jotquote import api
@@ -53,7 +52,7 @@ def test_parse_quotes_no_author():
 def test_parse_quotes_alphanumerics_only_in_tags():
     """parse_quote() should raise exception if there are invalid characters in tags."""
     with pytest.raises(
-        click.ClickException, match="invalid tag 'tag3!': only numbers, letters, and commas are allowed in tags"
+        api.QuoteValidationError, match="invalid tag 'tag3!': only numbers, letters, and commas are allowed in tags"
     ):
         api.parse_quote('This is a quote. | Author | Publication   | tag1, tag2 , tag3!  ', simple_format=False)
 
@@ -244,7 +243,7 @@ def test__parse_quote_simple__should_parse_out_author_and_publication(
     ],
 )
 def test__parse_quote_simple__should_raise_exception_if_not_parseable(raw_quote, error_message):
-    with pytest.raises(click.ClickException, match=re.escape(error_message)):
+    with pytest.raises(api.QuoteValidationError, match=re.escape(error_message)):
         quote_mod._parse_quote_simple(raw_quote)
 
 

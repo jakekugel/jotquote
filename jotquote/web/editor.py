@@ -4,7 +4,6 @@
 
 import logging
 
-import click
 from flask import Flask, abort, redirect, render_template, request
 
 from jotquote import api
@@ -108,7 +107,7 @@ def save_quote(line_num):
         api.set_quote(quotefile, line_num, quote_obj, sha256)
         return redirect(f'/{line_num}')
     # Save failed — re-render using the cached lint issues for this quote
-    except click.ClickException as e:
+    except api.ApiException as e:
         checks = web_helpers.get_enabled_checks(config)
         quotes = api.read_quotes(quotefile)
         all_issues = _get_lint_issues(quotes, checks, config, sha256)
@@ -118,7 +117,7 @@ def save_quote(line_num):
             quotes,
             quote_obj,
             line_number=line_num,
-            error=e.format_message(),
+            error=str(e),
             lint_issues=lint_issues,
         )
 

@@ -2,6 +2,7 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
+import functools
 import os
 import random as randomlib
 import sys
@@ -10,6 +11,19 @@ import time
 import click
 
 from jotquote import api
+
+
+def _translate_api_errors(func):
+    """Translate jotquote.api.ApiException into click.ClickException for CLI output."""
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except api.ApiException as e:
+            raise click.ClickException(str(e)) from e
+
+    return wrapper
 
 HELP_MAIN_F_ARG = (
     'optional path to quote file (if not provided, the command will check ~/.jotquote/settings.conf for path)'
@@ -54,6 +68,7 @@ HELP_TODAY_T_ARG = 'the quote must have the given tag'
 @click.option('--quotefile', type=click.Path(exists=False), help=HELP_MAIN_F_ARG)
 @click.version_option()
 @click.pass_context
+@_translate_api_errors
 def jotquote(ctx, quotefile):
     """This command allows you to manage a collection of quotes contained in a text
     file; you can add, view, and tag quotes.  The command can also be used to start
@@ -96,6 +111,7 @@ def jotquote(ctx, quotefile):
 @click.option('--no-lint', is_flag=True, help='Skip lint checks when adding (overrides lint_on_add in settings.conf).')
 @click.argument('quote')  # , help=HELP_ADD_POS_ARG
 @click.pass_context
+@_translate_api_errors
 def add(ctx, extended, no_lint, quote):
     """add a new quote to the quote file."""
     quotefile = ctx.obj['QUOTEFILE']
@@ -111,6 +127,7 @@ def add(ctx, extended, no_lint, quote):
 @click.option('--hash', '-s', help=HELP_LIST_S_ARG)
 @click.option('--extended', '-e', help=HELP_LIST_E_ARG, is_flag=True)
 @click.pass_context
+@_translate_api_errors
 def list(ctx, tags, keyword, long, number, hash, extended):
     """List all quotes in the text file meeting some criteria."""
     quotefile = ctx.obj['QUOTEFILE']
@@ -136,6 +153,7 @@ def list(ctx, tags, keyword, long, number, hash, extended):
 
 @jotquote.command()
 @click.pass_context
+@_translate_api_errors
 def showalltags(ctx):
     """Show all tags used in the quote file."""
     quotefile = ctx.obj['QUOTEFILE']
@@ -150,18 +168,28 @@ def showalltags(ctx):
 @click.option('--hash', '-s', help=HELP_SETTAGS_S_ARG)
 @click.argument('newtags')
 @click.pass_context
+@_translate_api_errors
 def settags(ctx, number, hash, newtags):
     """Set new tags for a given quote, replacing any existing quotes.  The subcommand
     has one required argument, NEWTAGS, which is a comma-separated list of tags.
     """
     quotefile = ctx.obj['QUOTEFILE']
     quotenum = _parse_number_arg(number)
+
+    # Validate the selector args at the CLI boundary so the API only sees
+    # well-formed calls.  api.settags treats these cases as programmer misuse.
+    if quotenum is not None and hash is not None:
+        raise click.ClickException('both the -s and -n option were included, but only one allowed.')
+    if quotenum is None and hash is None:
+        raise click.ClickException('either the -n or the -s argument must be included.')
+
     tags = api.parse_tags(newtags)
     api.settags(quotefile, n=quotenum, hash=hash, newtags=tags)
 
 
 @jotquote.command()
 @click.pass_context
+@_translate_api_errors
 def webserver(ctx):
     """Start a web server to display quote of the day."""
 
@@ -173,6 +201,7 @@ def webserver(ctx):
 
 @jotquote.command()
 @click.pass_context
+@_translate_api_errors
 def webeditor(ctx):
     """Start a local web server for editing quotes."""
 
@@ -186,6 +215,7 @@ def webeditor(ctx):
 @click.option('--tags', '-t', help=HELP_RANDOM_T_ARG)
 @click.option('--keyword', '-k', help=HELP_RANDOM_K_ARG)
 @click.pass_context
+@_translate_api_errors
 def random(ctx, tags, keyword):
     """Display a random quote.  By default any quote in the quote file may be
     shown, however the -t and -k options can be used to narrow the candidates
@@ -196,6 +226,7 @@ def random(ctx, tags, keyword):
 
 @jotquote.command()
 @click.pass_context
+@_translate_api_errors
 def today(ctx):
     """Display a random quote, seeding the random number generator with the
     date to produce a random quote that remains the same on a given day.
@@ -214,6 +245,7 @@ def today(ctx):
 
 @jotquote.command()
 @click.pass_context
+@_translate_api_errors
 def info(ctx):
     """Show location of config file and quote file."""
 
@@ -240,6 +272,7 @@ def info(ctx):
 )
 @click.option('--ignore', 'ignore_checks', default='', help='Comma-separated list of checks to skip.')
 @click.pass_context
+@_translate_api_errors
 def lint(ctx, fix, select_checks, ignore_checks):
     """Check the quote file for quality issues.
 

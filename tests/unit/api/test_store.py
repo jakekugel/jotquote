@@ -2,11 +2,11 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
+import builtins
 import hashlib
 import os
 import re
 
-import click
 import pytest
 
 import tests.test_util
@@ -240,21 +240,24 @@ def test__write_quotes__should_write_to_temp_filename(config, monkeypatch, tmp_p
     quotefile = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     quotes = api.read_quotes(quotefile)
 
-    # And given the open_file() function wrapped with function that tracks args
-    original_open_file = click.open_file
-    captured_args = []
+    # And given builtins.open wrapped to capture write-mode calls
+    original_open = builtins.open
+    write_paths = []
 
-    def mock_open_file(*args, **kwargs):
-        captured_args.append(args)
-        return original_open_file(*args, **kwargs)
+    def mock_open(*args, **kwargs):
+        mode = args[1] if len(args) > 1 else kwargs.get('mode', 'r')
+        if 'w' in mode:
+            write_paths.append(args[0])
+        return original_open(*args, **kwargs)
 
-    monkeypatch.setattr(click, 'open_file', mock_open_file)
+    monkeypatch.setattr(store_mod, 'open', mock_open, raising=False)
 
     # When write_quotes() called
     api.write_quotes(quotefile, quotes)
 
-    # Then check open_file() called with temporary filename
-    assert captured_args[0][0] != quotefile
+    # Then check the write was to a temp path, not the quote file itself
+    assert write_paths, 'expected at least one write-mode open call'
+    assert write_paths[0] != quotefile
 
 
 def test__write_quotes__should_create_backup_file(config, tmp_path):
@@ -296,7 +299,7 @@ def test__write_quotes__should_not_modify_quote_file_on_write_error(config, monk
     # And given fake writer
     class FakeWriter:
         def __init__(self, path):
-            with open(path, 'w') as file:
+            with builtins.open(path, 'w') as file:
                 file.write('bad contents')
 
         def __enter__(self):
@@ -308,19 +311,18 @@ def test__write_quotes__should_not_modify_quote_file_on_write_error(config, monk
         def write(self, bytes):
             raise IOError('Fake write error')
 
-    # And given the open_file() function replaced with fake writer
-    def fake_open_file(*args, **kwargs):
+    # And given the open() function (as seen from store.py) replaced with fake writer
+    def fake_open(*args, **kwargs):
         return FakeWriter(args[0])
 
-    original_open_file = click.open_file
-    monkeypatch.setattr(click, 'open_file', fake_open_file)
+    monkeypatch.setattr(store_mod, 'open', fake_open, raising=False)
 
     # When write_quotes() called
-    with pytest.raises(click.ClickException) as excinfo:
+    with pytest.raises(api.StorageError) as excinfo:
         api.write_quotes(quote_path, quotes2)
 
     # Then check quote_path was not modified
-    monkeypatch.setattr(click, 'open_file', original_open_file)
+    monkeypatch.setattr(store_mod, 'open', builtins.open, raising=False)
     assert "an error occurred writing the quotes.  The file '{0}' was not modified.".format(quote_path) == str(
         excinfo.value
     )
@@ -338,7 +340,7 @@ def test__write_quotes__should_return_good_exception_when_backup_larger_than_quo
     os.rename(quotes_path_2, backup_path)
 
     # When write_quotes() called to write quotes to quotes5.txt
-    with pytest.raises(click.ClickException) as excinfo:
+    with pytest.raises(api.StorageError) as excinfo:
         api.write_quotes(quote_path, quotes)
 
     # Then an error message returned indicating backup has more lines than new quotes5.txt
@@ -402,36 +404,36 @@ def test_settags_clears_tags(config, tmp_path):
 
 
 def test_settags_both_n_and_hash_raises(config, tmp_path):
-    """settags() should raise ClickException if both n and hash are provided."""
+    """settags() should raise ValueError (programmer misuse) if both n and hash are provided."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
 
     with pytest.raises(
-        click.ClickException, match=re.escape('both the -s and -n option were included, but only one allowed.')
+        ValueError, match=re.escape('both the -s and -n option were included, but only one allowed.')
     ):
         api.settags(path, n=1, hash='a3bff52cabf7e859', newtags=['tag1'])
 
 
 def test_settags_neither_n_nor_hash_raises(config, tmp_path):
-    """settags() should raise ClickException if neither n nor hash is provided."""
+    """settags() should raise ValueError (programmer misuse) if neither n nor hash is provided."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
 
-    with pytest.raises(click.ClickException, match=re.escape('either the -n or the -s argument must be included.')):
+    with pytest.raises(ValueError, match=re.escape('either the -n or the -s argument must be included.')):
         api.settags(path, n=None, hash=None, newtags=['tag1'])
 
 
 def test_settags_hash_not_found_raises(config, tmp_path):
-    """settags() should raise ClickException if the given hash matches no quote."""
+    """settags() should raise QuoteNotFoundError if the given hash matches no quote."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
 
-    with pytest.raises(click.ClickException, match=re.escape("no quote found with hash 'deadbeefdeadbeef'.")):
+    with pytest.raises(api.QuoteNotFoundError, match=re.escape("no quote found with hash 'deadbeefdeadbeef'.")):
         api.settags(path, n=None, hash='deadbeefdeadbeef', newtags=['tag1'])
 
 
 def test_settags_n_out_of_range_raises(config, tmp_path):
-    """settags() should raise ClickException if n is out of range."""
+    """settags() should raise QuoteNotFoundError if n is out of range."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
 
-    with pytest.raises(click.ClickException, match=re.escape('quote number 99 is out of range (1-4).')):
+    with pytest.raises(api.QuoteNotFoundError, match=re.escape('quote number 99 is out of range (1-4).')):
         api.settags(path, n=99, hash=None, newtags=['tag1'])
 
 
@@ -473,22 +475,22 @@ class TestSetQuote:
         assert updated.tags == ['newtag']
 
     def test_set_quote_sha256_mismatch(self, tmp_path):
-        """set_quote raises ClickException when SHA256 does not match."""
+        """set_quote raises ConcurrentModificationError when SHA256 does not match."""
         quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
         quotes = api.read_quotes(quote_file)
         line_num = quotes[0].get_line_number()
 
         new_quote = api.Quote('New text', 'New Author', None, [])
-        with pytest.raises(click.ClickException, match='modified since it was last read'):
+        with pytest.raises(api.ConcurrentModificationError, match='modified since it was last read'):
             api.set_quote(quote_file, line_num, new_quote, 'bogus_sha256')
 
     def test_set_quote_invalid_line_number(self, tmp_path):
-        """set_quote raises ClickException for a nonexistent line number."""
+        """set_quote raises QuoteNotFoundError for a nonexistent line number."""
         quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
         sha256 = api.get_sha256(quote_file)
 
         new_quote = api.Quote('New text', 'New Author', None, [])
-        with pytest.raises(click.ClickException, match='No quote found at line number'):
+        with pytest.raises(api.QuoteNotFoundError, match='No quote found at line number'):
             api.set_quote(quote_file, 999, new_quote, sha256)
 
 
@@ -518,9 +520,9 @@ def test_read_quotes_with_hash_changes_on_file_change(tmp_path):
 
 
 def test_read_quotes_with_hash_file_not_found(tmp_path):
-    """read_quotes_with_hash() raises ClickException for nonexistent file."""
+    """read_quotes_with_hash() raises StorageError for nonexistent file."""
     path = os.path.join(str(tmp_path), 'nonexistent.txt')
-    with pytest.raises(click.ClickException, match='was not found'):
+    with pytest.raises(api.StorageError, match='was not found'):
         api.read_quotes_with_hash(path)
 
 
@@ -548,13 +550,13 @@ def test_write_quotes_succeeds_with_matching_hash(tmp_path):
 
 
 def test_write_quotes_fails_with_mismatched_hash(tmp_path):
-    """write_quotes() raises ClickException when expected_sha256 does not match."""
+    """write_quotes() raises ConcurrentModificationError when expected_sha256 does not match."""
     quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     quotes, sha256 = api.read_quotes_with_hash(quote_file)
     # Modify file externally
     with open(quote_file, 'a', encoding='utf-8') as f:
         f.write('Injected quote | Injected Author | | tag1\n')
-    with pytest.raises(click.ClickException, match='modified by another process'):
+    with pytest.raises(api.ConcurrentModificationError, match='modified by another process'):
         api.write_quotes(quote_file, quotes, expected_sha256=sha256)
 
 
@@ -574,7 +576,7 @@ def test_write_quotes_succeeds_with_none_hash(tmp_path):
 
 
 def test_settags_fails_on_concurrent_modification(tmp_path, config):
-    """settags() raises ClickException when quote file is modified externally."""
+    """settags() raises ConcurrentModificationError when quote file is modified externally."""
     quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     config[api.SECTION_GENERAL]['quote_file'] = str(quote_file)
 
@@ -589,14 +591,14 @@ def test_settags_fails_on_concurrent_modification(tmp_path, config):
 
     store_mod.read_quotes_with_hash = _modified_read
     try:
-        with pytest.raises(click.ClickException, match='modified by another process'):
+        with pytest.raises(api.ConcurrentModificationError, match='modified by another process'):
             api.settags(quote_file, 1, None, ['newtag'])
     finally:
         store_mod.read_quotes_with_hash = original_fn
 
 
 def test_add_quotes_fails_on_concurrent_modification(tmp_path, config):
-    """add_quotes() raises ClickException when quote file is modified externally."""
+    """add_quotes() raises ConcurrentModificationError when quote file is modified externally."""
     quote_file = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     config[api.SECTION_GENERAL]['quote_file'] = str(quote_file)
 
@@ -611,7 +613,7 @@ def test_add_quotes_fails_on_concurrent_modification(tmp_path, config):
     store_mod.read_quotes_with_hash = _modified_read
     try:
         new_quote = api.Quote('Brand new quote', 'Brand New Author', None, [])
-        with pytest.raises(click.ClickException, match='modified by another process'):
+        with pytest.raises(api.ConcurrentModificationError, match='modified by another process'):
             api.add_quotes(quote_file, [new_quote])
     finally:
         store_mod.read_quotes_with_hash = original_fn

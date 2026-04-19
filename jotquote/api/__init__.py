@@ -12,6 +12,15 @@ from jotquote.api.config import (
     get_config,
     get_filename,
 )
+from jotquote.api.exceptions import (
+    ApiException,
+    ConcurrentModificationError,
+    ConfigError,
+    DuplicateQuoteError,
+    QuoteNotFoundError,
+    QuoteValidationError,
+    StorageError,
+)
 from jotquote.api.lint import LintIssue, apply_fixes, lint_quotes
 from jotquote.api.quote import (
     INVALID_CHARS,
@@ -38,14 +47,21 @@ from jotquote.api.store import (
 __all__ = [
     'ALL_CHECKS',
     'APP_NAME',
+    'ApiException',
     'CONFIG_FILE',
+    'ConcurrentModificationError',
+    'ConfigError',
+    'DuplicateQuoteError',
     'INVALID_CHARS',
     'INVALID_CHARS_QUOTE',
     'LintIssue',
     'Quote',
+    'QuoteNotFoundError',
+    'QuoteValidationError',
     'SECTION_GENERAL',
     'SECTION_LINT',
     'SECTION_WEB',
+    'StorageError',
     'add_quote',
     'add_quotes',
     'apply_fixes',

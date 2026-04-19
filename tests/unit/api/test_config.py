@@ -5,7 +5,6 @@
 import os
 from configparser import ConfigParser
 
-import click
 import pytest
 
 from jotquote import api
@@ -141,8 +140,8 @@ def test_get_config_legacy_format_warns(tmp_path, monkeypatch):
     assert migrated is True
 
 
-def test_get_config_missing_quote_file_raises_click_exception(tmp_path, monkeypatch):
-    """get_config() raises ClickException with friendly message when quote_file is missing."""
+def test_get_config_missing_quote_file_raises_config_error(tmp_path, monkeypatch):
+    """get_config() raises ConfigError with friendly message when quote_file is missing."""
     config_file = tmp_path / 'settings.conf'
     config_file.write_text(
         '[general]\nline_separator = platform\n',
@@ -150,7 +149,7 @@ def test_get_config_missing_quote_file_raises_click_exception(tmp_path, monkeypa
     )
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    with pytest.raises(click.ClickException, match='quote_file'):
+    with pytest.raises(api.ConfigError, match='quote_file'):
         api.get_config()
 
 

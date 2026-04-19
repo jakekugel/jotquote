@@ -6,7 +6,7 @@ import hashlib
 import re
 from string import ascii_letters
 
-import click
+from jotquote.api.exceptions import QuoteValidationError
 
 INVALID_CHARS_QUOTE = re.compile('[|"\n\r]')
 INVALID_CHARS = re.compile('[|\n\r]')
@@ -39,9 +39,10 @@ class Quote:
                 tags.
 
         Raises:
-            click.ClickException: If any of ``quote``, ``author``, or
+            QuoteValidationError: If any of ``quote``, ``author``, or
                 ``publication`` contains a forbidden character (pipe, double
-                quote, newline, carriage return), or if ``tags`` is not a list.
+                quote, newline, carriage return).
+            TypeError: If ``tags`` is not a list.
         """
         self.quote = quote.strip()
         self.author = author.strip()
@@ -123,13 +124,13 @@ class Quote:
             tags (list[str] | None): New list of tags.  ``None`` clears tags.
 
         Raises:
-            click.ClickException: If ``tags`` is not ``None`` and not a list.
+            TypeError: If ``tags`` is not ``None`` and not a list.
         """
         if tags is None:
             self.tags = []
         else:
             if type(tags) is not list:
-                raise click.ClickException('The quote object was not given a list for tags parameter.')
+                raise TypeError('The quote object was not given a list for tags parameter.')
             self.tags = tags
 
     def get_hash(self):
@@ -211,7 +212,7 @@ def parse_quote(new_quote, simple_format=True):
         Quote: The parsed quote object.
 
     Raises:
-        click.ClickException: If the line cannot be parsed.
+        QuoteValidationError: If the line cannot be parsed.
     """
     return _parse_quote(new_quote, simple_format=simple_format)
 
@@ -226,7 +227,7 @@ def parse_tags(tag_string):
         list[str]: Sorted list of unique non-empty tags.
 
     Raises:
-        click.ClickException: If any tag contains characters other than
+        QuoteValidationError: If any tag contains characters other than
             ASCII letters, digits, or underscores.
     """
     return _parse_tags(tag_string)
@@ -264,11 +265,12 @@ def _parse_quote(raw_line, simple_format=True):
         quotestring, author, publication, tags = _parse_quote_extended(line)
 
     if len(quotestring) == 0:
-        raise click.ClickException('a quote was not found')
+        raise QuoteValidationError('a quote was not found', field='quote')
 
     if len(author) == 0:
-        raise click.ClickException(
-            'an author was not included with the quote.  ' + 'Expecting quote in the format "<quote> - <author>".'
+        raise QuoteValidationError(
+            'an author was not included with the quote.  ' + 'Expecting quote in the format "<quote> - <author>".',
+            field='author',
         )
 
     quote = Quote(quotestring, author, publication, tags)
@@ -278,7 +280,7 @@ def _parse_quote(raw_line, simple_format=True):
 def _parse_quote_simple(line):
     """Internal function to parse a single quote line in simple format."""
     if any(c == '|' for c in line):
-        raise click.ClickException('the quote included an embedded pipe character (|)')
+        raise QuoteValidationError('the quote included an embedded pipe character (|)', field='quote')
 
     # Get a list of matchers for hyphens next to and not next to a space char
     hyphen_w_period = list(re.finditer('(?<=\\.)\\s*[-]\\s*', line))
@@ -293,7 +295,7 @@ def _parse_quote_simple(line):
     elif len(hyphen_w_space) == 0 and len(hyphen_wo_space) == 1:
         selected_matcher = hyphen_wo_space[0]
     else:
-        raise click.ClickException('unable to determine which hyphen separates the quote from the author.')
+        raise QuoteValidationError('unable to determine which hyphen separates the quote from the author.')
 
     quote = line[: selected_matcher.start()]
     author = line[selected_matcher.end() :]
@@ -316,7 +318,7 @@ def _parse_quote_simple(line):
         author = match.group(1).strip()
         publication = match.group(2).strip()
     else:
-        raise click.ClickException(
+        raise QuoteValidationError(
             "unable to parse the author and publication.  Try 'Quote - Author (Publication)', or 'Quote - Author, Publication'"
         )
 
@@ -333,7 +335,7 @@ def _parse_quote_extended(quote_line):
     fields = quote_line.split('|')
 
     if len(fields) != 4:
-        raise click.ClickException("did not find 3 '|' characters")
+        raise QuoteValidationError("did not find 3 '|' characters")
 
     quote = fields[0].strip()
     author = fields[1].strip()
@@ -350,8 +352,9 @@ def _parse_tags(tag_string):
     for rawtag in rawtags:
         tag = rawtag.strip()
         if not all(c in ascii_letters + '0123456789_' for c in tag):
-            raise click.ClickException(
-                "invalid tag '{0}': only numbers, letters, and commas are allowed in tags".format(tag)
+            raise QuoteValidationError(
+                "invalid tag '{0}': only numbers, letters, and commas are allowed in tags".format(tag),
+                field='tags',
             )
         if tag != '':
             tagset.add(tag)
@@ -388,4 +391,7 @@ def _raise_invalid_char_exception(char, component_name):
         charstring = 'carriage return (0x0d)'
     else:
         charstring = '(' + char + ')'
-    raise click.ClickException('the {} included a {} character'.format(component_name, charstring))
+    raise QuoteValidationError(
+        'the {} included a {} character'.format(component_name, charstring),
+        field=component_name,
+    )

@@ -7,9 +7,16 @@ import os
 import random as randomlib
 import shutil
 
-import click
-
 from jotquote.api import config as _config
+from jotquote.api.exceptions import (
+    ApiException,
+    ConcurrentModificationError,
+    ConfigError,
+    DuplicateQuoteError,
+    QuoteNotFoundError,
+    QuoteValidationError,
+    StorageError,
+)
 from jotquote.api.quote import Quote, _parse_quote
 
 
@@ -23,8 +30,9 @@ def read_quotes(filename):
         list[Quote]: The parsed quotes, in file order.
 
     Raises:
-        click.ClickException: If the file does not exist, contains a duplicate
-            quote, or has a malformed line.
+        StorageError: If the file does not exist.
+        DuplicateQuoteError: If the file contains a duplicate quote.
+        QuoteValidationError: If the file has a malformed line.
     """
     quotes, _ = read_quotes_with_hash(filename)
     return quotes
@@ -41,11 +49,12 @@ def read_quotes_with_hash(filename):
             of the file contents.
 
     Raises:
-        click.ClickException: If the file does not exist, contains a duplicate
-            quote, or has a malformed line.
+        StorageError: If the file does not exist.
+        DuplicateQuoteError: If the file contains a duplicate quote.
+        QuoteValidationError: If the file has a malformed line.
     """
     if not os.path.exists(filename):
-        raise click.ClickException("The quote file '{0}' was not found.".format(filename))
+        raise StorageError("The quote file '{0}' was not found.".format(filename))
 
     with open(filename, 'rb') as f:
         raw = f.read()
@@ -98,7 +107,7 @@ def parse_quotes(rawlines, filename, encoding=None, simple_format=True):
             line number in ``rawlines``.
 
     Raises:
-        click.ClickException: If a non-comment line cannot be parsed.
+        QuoteValidationError: If a non-comment line cannot be parsed.
     """
     quotes = []
     linenum = 0
@@ -124,7 +133,7 @@ def parse_quotes(rawlines, filename, encoding=None, simple_format=True):
             quote.line_number = linenum
             quotes.append(quote)
         except Exception as exception:
-            raise click.ClickException(
+            raise QuoteValidationError(
                 'syntax error on line {0} of {1}: {2}.  Line with error: "{3}"'.format(
                     str(linenum), filename, str(exception), line
                 )
@@ -147,25 +156,26 @@ def settags(quotefile, n, hash, newtags):
             clear all tags.
 
     Raises:
-        click.ClickException: If neither or both of ``n`` / ``hash`` are
-            provided, if ``n`` is out of range, if ``hash`` matches no quote,
-            or if the file was modified concurrently.
+        ValueError: If neither or both of ``n`` / ``hash`` are provided.
+        QuoteNotFoundError: If ``n`` is out of range or ``hash`` matches no
+            quote.
+        ConcurrentModificationError: If the file was modified concurrently.
     """
     if n is not None and hash is not None:
-        raise click.ClickException('both the -s and -n option were included, but only one allowed.')
+        raise ValueError('both the -s and -n option were included, but only one allowed.')
     if n is None and hash is None:
-        raise click.ClickException('either the -n or the -s argument must be included.')
+        raise ValueError('either the -n or the -s argument must be included.')
 
     quotes, sha256 = read_quotes_with_hash(quotefile)
 
     if n is not None:
         if n < 1 or n > len(quotes):
-            raise click.ClickException('quote number {0} is out of range (1-{1}).'.format(n, len(quotes)))
+            raise QuoteNotFoundError('quote number {0} is out of range (1-{1}).'.format(n, len(quotes)))
         quote = quotes[n - 1]
     else:
         matched = [q for q in quotes if q.get_hash() == hash]
         if not matched:
-            raise click.ClickException("no quote found with hash '{0}'.".format(hash))
+            raise QuoteNotFoundError("no quote found with hash '{0}'.".format(hash))
         quote = matched[0]
 
     quote.set_tags(newtags)
@@ -202,13 +212,16 @@ def set_quote(quotefile, line_num, quote, sha256):
         sha256 (str): Expected SHA-256 hex digest of the quote file.
 
     Raises:
-        click.ClickException: If the checksum does not match or ``line_num``
-            does not identify an existing quote.
+        ConcurrentModificationError: If the checksum does not match.
+        QuoteNotFoundError: If ``line_num`` does not identify an existing
+            quote.
     """
     quotes, current_sha = read_quotes_with_hash(quotefile)
     if current_sha != sha256:
-        raise click.ClickException(
-            'The quote file has been modified since it was last read. Please reload the page and try again.'
+        raise ConcurrentModificationError(
+            'The quote file has been modified since it was last read. Please reload the page and try again.',
+            expected_sha256=sha256,
+            current_sha256=current_sha,
         )
     target = None
     for q in quotes:
@@ -216,7 +229,7 @@ def set_quote(quotefile, line_num, quote, sha256):
             target = q
             break
     if target is None:
-        raise click.ClickException('No quote found at line number {}.'.format(line_num))
+        raise QuoteNotFoundError('No quote found at line number {}.'.format(line_num))
     target.quote = quote.quote
     target.author = quote.author
     target.publication = quote.publication
@@ -235,11 +248,12 @@ def add_quote(filename, quote):
         int: Total number of quotes in the file after the add.
 
     Raises:
-        click.ClickException: If ``quote`` is not a :class:`Quote`, if the
-            file does not exist, or if the quote is already present.
+        TypeError: If ``quote`` is not a :class:`Quote`.
+        StorageError: If the file does not exist.
+        DuplicateQuoteError: If the quote is already present.
     """
     if not isinstance(quote, Quote):
-        raise click.ClickException('The quote parameter must be type class Quote.')
+        raise TypeError('The quote parameter must be type class Quote.')
 
     quotes = [quote]
     return add_quotes(filename, quotes)
@@ -259,15 +273,18 @@ def add_quotes(filename, newquotes):
         int: Total number of quotes in the file after the append.
 
     Raises:
-        click.ClickException: If the file does not exist, if any of the new
-            quotes duplicates an existing quote, or if the file was modified
-            by another process during the operation.
+        StorageError: If the file does not exist.
+        DuplicateQuoteError: If any of the new quotes duplicates an existing
+            quote.
+        ConcurrentModificationError: If the file was modified by another
+            process during the operation.
+        TypeError: If ``newquotes`` is not a list.
     """
     if not os.path.exists(filename):
-        raise click.ClickException("The quote file '%s' does not exist." % filename)
+        raise StorageError("The quote file '%s' does not exist." % filename)
 
     if type(newquotes) is not list:
-        raise Exception('the add_quotes() function expected a list as second parameter.')
+        raise TypeError('the add_quotes() function expected a list as second parameter.')
 
     # Check for duplicates within new quotes.  Exception raised if duplicate found within input lines.
     _check_for_duplicates(newquotes, 'stdin')
@@ -279,7 +296,7 @@ def add_quotes(filename, newquotes):
     for existing_quote in quotes:
         for new_quote in newquotes:
             if new_quote.quote == existing_quote.quote:
-                raise click.ClickException(
+                raise DuplicateQuoteError(
                     'the quote "{}" is already in the quote file {}.'.format(new_quote.quote, filename)
                 )
 
@@ -307,18 +324,21 @@ def write_quotes(quote_path, quotes, expected_sha256=None):
             concurrency check is performed.
 
     Raises:
-        click.ClickException: If the file does not exist, the SHA-256 does
-            not match, the backup sanity check fails, or an I/O error
-            occurs during the write.
+        StorageError: If the file does not exist, the backup sanity check
+            fails, or an I/O error occurs during the write.
+        ConcurrentModificationError: If ``expected_sha256`` is provided and
+            the file's current SHA-256 does not match.
     """
     if not os.path.exists(quote_path):
-        raise click.ClickException("the quote file '{0}' was not found.".format(quote_path))
+        raise StorageError("the quote file '{0}' was not found.".format(quote_path))
 
     if expected_sha256 is not None:
         current_sha = get_sha256(quote_path)
         if current_sha != expected_sha256:
-            raise click.ClickException(
-                'the quote file was modified by another process during this operation. No changes were saved.'
+            raise ConcurrentModificationError(
+                'the quote file was modified by another process during this operation. No changes were saved.',
+                expected_sha256=expected_sha256,
+                current_sha256=current_sha,
             )
 
     newline = _get_newline()
@@ -335,13 +355,12 @@ def write_quotes(quote_path, quotes, expected_sha256=None):
             break
 
     try:
-        # I had previously called open_file with atomic=True and passed the quote
-        # file directly, but hit a bug in Cryptomator filesystem where write() failed
-        # but the close() succeeded, so Click replaced quote file with a partially
-        # written temp file.  Cryptomator fixed the bug, but I am creating the temp
-        # file myself now to avoid this class of error, and use atomic=False instead
-        # of atomic=True.
-        with click.open_file(temp_path, mode='wb', errors='strict', atomic=False) as outfile:
+        # Create the temp file directly rather than delegating atomic replacement
+        # to a library.  Past experience with a filesystem bug (Cryptomator) where a
+        # failed write() followed by a successful close() caused the quote file to
+        # be replaced with a partially written temp file taught me to keep the
+        # replacement step explicit and under this function's control.
+        with open(temp_path, mode='wb') as outfile:
             for quote in quotes:
                 output_bytes = format_quote(quote).encode('utf-8') + newline.encode('utf-8')
                 outfile.write(output_bytes)
@@ -352,7 +371,7 @@ def write_quotes(quote_path, quotes, expected_sha256=None):
             temp_size = os.path.getsize(temp_path)
             if backup_size > temp_size + 1000:
                 os.remove(temp_path)
-                raise click.ClickException(
+                raise StorageError(
                     "the backup file '{0}' is more than 1,000 bytes larger than the quote file '{1}' would be "
                     'after this operation.  This is suspicious, the quote file was not modified.  '
                     'If this was expected, delete the backup file and try again.'.format(backup_file, quote_file)
@@ -363,7 +382,7 @@ def write_quotes(quote_path, quotes, expected_sha256=None):
                 temp_lines = f.read().count(b'\n')
             if backup_lines > temp_lines:
                 os.remove(temp_path)
-                raise click.ClickException(
+                raise StorageError(
                     "the backup file '{0}' has {1} lines but the quote file '{2}' would have {3} lines after "
                     'this operation.  This is suspicious, the quote file was not modified.  '
                     'If this was expected, delete the backup file and try again.'.format(
@@ -373,18 +392,18 @@ def write_quotes(quote_path, quotes, expected_sha256=None):
 
         # Create a backup (overwriting existing backup)
         shutil.copy(quote_path, backup_path)
-    except click.ClickException:
+    except ApiException:
         raise
     except:
         os.remove(temp_path)
-        raise click.ClickException(
+        raise StorageError(
             "an error occurred writing the quotes.  The file '{0}' was not modified.".format(quote_path)
         )
 
     try:
         os.replace(temp_path, quote_path)
     except:
-        raise click.ClickException('an error occurred writing the quotes.')
+        raise StorageError('an error occurred writing the quotes.')
 
 
 def format_quote(quote):
@@ -400,10 +419,10 @@ def format_quote(quote):
         str: A single line without a trailing newline.
 
     Raises:
-        click.ClickException: If ``quote`` is not a :class:`Quote`.
+        TypeError: If ``quote`` is not a :class:`Quote`.
     """
     if not isinstance(quote, Quote):
-        raise click.ClickException('The quote parameter must be type class Quote.')
+        raise TypeError('The quote parameter must be type class Quote.')
 
     quotestr = quote.quote
     author = quote.author
@@ -422,7 +441,7 @@ def _check_for_duplicates(quotes, source):
         if quote.quote not in quoteset:
             quoteset.add(quote.quote)
         else:
-            raise click.ClickException(
+            raise DuplicateQuoteError(
                 'a duplicate quote was found on line {} of \'{}\'.  Quote: "{}".'.format(index + 1, source, quote.quote)
             )
 
@@ -438,7 +457,7 @@ def _get_newline():
     elif linesep_property == 'windows':
         return '\r\n'
     else:
-        raise click.ClickException(
+        raise ConfigError(
             "the value '{0}' is not valid value for the line_separator property."
             "  Valid values are 'platform', 'windows', or 'unix'.".format(linesep_property)
         )

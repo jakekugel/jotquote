@@ -336,6 +336,29 @@ def test_missing_quote_file_friendly_error(tmp_path):
     assert 'Traceback' not in stderr
 
 
+def test_settags_out_of_range_translates_to_click_error(tmp_path):
+    """jotquote settags -n <too-large> exits non-zero with a friendly message.
+
+    Confirms the CLI's _translate_api_errors decorator converts QuoteNotFoundError
+    from api.settags into a ClickException so the user sees 'Error: ...' not a
+    traceback.
+    """
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+
+    result = subprocess.run(
+        [_script('jotquote'), 'settags', '-n', '999', 'newtag'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode != 0
+    stderr = result.stderr.decode('utf-8', errors='replace')
+    assert 'out of range' in stderr
+    assert 'Traceback' not in stderr
+
+
 def _acronym_from_index(i):
     """Return a 5-letter string that uniquely encodes integer i in base-26.
 
