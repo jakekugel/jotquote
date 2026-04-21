@@ -105,6 +105,37 @@ Install the [Ruff extension](https://marketplace.visualstudio.com/items?itemName
 
 This runs the Ruff formatter (style/quotes/spacing) and linter auto-fixes each time a Python file is saved. Quote style and other rules are read from `pyproject.toml` automatically.
 
+## Code graph (code-review-graph)
+
+The repository is wired to [code-review-graph](https://github.com/tirth8205/code-review-graph), a Tree-sitter-based tool that builds a structural graph of the codebase (functions, classes, calls, imports) and exposes it to AI coding assistants over MCP. It is optional — tests, lint, and the jotquote CLI do not depend on it, and CI does not run it.
+
+The tool is run on demand via [uvx](https://docs.astral.sh/uv/), so there is nothing to install globally and no entry in `pyproject.toml`.
+
+### One-time setup
+
+Build the initial graph from the repository root:
+
+```bash
+$ uvx code-review-graph build
+$ uvx code-review-graph status
+```
+
+`build` parses every tracked source file and writes the graph to the tool's local cache directory. `status` prints node/edge counts for a quick sanity check. Files listed in [.code-review-graphignore](.code-review-graphignore) (plain-text data files under `jotquote/resources/` and `tests/testdata/`) and anything covered by `.gitignore` are skipped automatically.
+
+### Keeping the graph fresh
+
+After pulling new changes or editing code, re-parse only what changed:
+
+```bash
+$ uvx code-review-graph update
+```
+
+Run a full rebuild (`uvx code-review-graph build`) only after large refactors, merges, or branch switches.
+
+### Using it from Claude Code
+
+[.mcp.json](.mcp.json) registers a project-scoped MCP server pointing at `uvx code-review-graph serve`. When you open the repo in Claude Code, it will prompt once to trust the server; after approval, `/mcp` should list `code-review-graph` as connected. From that point on, Claude Code can query callers, callees, blast-radius, and change impact directly from the graph instead of grepping the repo.
+
 ## Multi-version CI
 
 Multi-version testing (Python 3.9–3.14 on Linux, Mac, and Windows) is
