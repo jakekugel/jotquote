@@ -233,6 +233,63 @@ The `mode` property in the `[web]` section controls how quotes are selected:
 
 ---
 
+## settings.conf
+
+The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotquote's behavior. It is created automatically on first run with default values. Properties are organized into three sections: `[general]`, `[lint]`, and `[web]`.
+
+### `[general]` section
+
+| Property | Default | Description |
+|---|---|---|
+| `quote_file` | `~/.jotquote/quotes.txt` | Path to the quote file |
+| `line_separator` | `platform` | Line ending style: `platform`, `unix`, or `windows` |
+| `show_author_count` | `false` | If `true`, shows the number of quotes per author on the web server |
+
+### `[lint]` section
+
+| Property | Default | Description |
+|---|---|---|
+| `enabled_checks` | _(all checks)_ | Comma-separated list of lint checks to run by default. If empty or absent, all checks run. Valid values: `ascii`, `smart-quotes`, `smart-dashes`, `double-spaces`, `quote-too-long`, `no-tags`, `no-author`, `author-antipatterns`, `required-tag-group` |
+| `max_quote_length` | `0` | Maximum allowed quote length in characters; `0` disables the check. Used by the `quote-too-long` lint check |
+| `author_antipattern_regex` | _(empty)_ | Comma-separated list of regex patterns; authors matching any pattern are flagged by the `author-antipatterns` lint check |
+| `lint_on_add` | `false` | If `true`, lint checks are run automatically when adding a quote via the `add` command. Use `--no-lint` to skip lint for a single invocation regardless of this setting. |
+| `required_group_<name>` | _(empty)_ | Defines a named group of required tags; a quote must have at least one tag from this group or it is flagged by the `required-tag-group` check. `<name>` is any identifier (e.g. `stars`, `visibility`). Add multiple properties with different names to define multiple groups. Example: `required_group_stars = 1star, 2stars, 3stars, 4stars, 5stars` |
+
+### `[web]` section
+
+| Property | Default | Description |
+|---|---|---|
+| `mode` | `daily` | Quote selection mode. `daily` shows a deterministic daily quote (changes at midnight). `random` shows a truly random quote on each page load, disabling the permalink feature. |
+| `header_provider_extension` | _(empty)_ | Dotted Python module path for a header provider (see [Header Provider](#header-provider)) |
+| `quote_resolver_extension` | _(empty)_ | Dotted Python module path for a quote resolver (see [Quote Resolver](#quote-resolver)) |
+| `port` | `5544` | Port the web server (`jotquote webserver`) listens on |
+| `ip` | `127.0.0.1` | IP address the web server (`jotquote webserver`) binds to |
+| `editor_port` | `5545` | Port the web editor (`jotquote webeditor`) listens on |
+| `editor_ip` | `127.0.0.1` | IP address the web editor (`jotquote webeditor`) binds to |
+| `expiration_seconds` | `14400` | How long (in seconds) before the web page auto-refreshes in the browser. In `daily` mode, this is capped so the refresh happens no later than midnight |
+| `page_title` | `jotquote` | HTML page title shown in the browser tab |
+| `light_foreground_color` | `#000000` | Text color in light mode |
+| `light_background_color` | `#ffffff` | Background color in light mode |
+| `dark_foreground_color` | `#ffffff` | Text color in dark mode |
+| `dark_background_color` | `#000000` | Background color in dark mode |
+| `about` | _(empty)_ | Text displayed on the `/about` page. If empty, the `/about` route returns 404. When set, an `@` button appears on the quote page linking to the about page. |
+
+## Environment Variables
+
+| Variable | Description |
+|---|---|
+| `JOTQUOTE_CONFIG` | Path to the `settings.conf` file. Overrides the default location (`~/.jotquote/settings.conf`). Useful for running jotquote with an alternate configuration, for example during development or in CI. Accepts absolute or relative paths; relative paths are interpreted relative to the current working directory. |
+
+**Example** — restore the original dark color scheme:
+
+```ini
+[web]
+dark_foreground_color = #e8e8e8
+dark_background_color = #1a1a1a
+```
+
+---
+
 ## Quote Resolver
 
 The quote resolver is a pluggable extension point that allows you to control which quote is displayed on a given date. When configured, the web server calls the resolver before falling back to the default seeded random selection. A resolver also enables permalink URLs (`/<YYYYMMDD>`) so that a specific date's quote can be shared and revisited.
@@ -376,65 +433,3 @@ The review app reads the same `~/.jotquote/settings.conf` file used by the CLI a
 2. Tags currently on today's quote are pre-checked
 3. Check or uncheck tags as desired
 4. Click **Save Tags** — the quote file is updated atomically and the page reloads
-
----
-
-## settings.conf
-
-The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotquote's behavior. It is created automatically on first run with default values. Properties are organized into three sections: `[general]`, `[lint]`, and `[web]`.
-
-### `[general]` section
-
-| Property | Default | Description |
-|---|---|---|
-| `quote_file` | `~/.jotquote/quotes.txt` | Path to the quote file |
-| `line_separator` | `platform` | Line ending style: `platform`, `unix`, or `windows` |
-| `show_author_count` | `false` | If `true`, shows the number of quotes per author on the web server |
-
-### `[lint]` section
-
-| Property | Default | Description |
-|---|---|---|
-| `enabled_checks` | _(all checks)_ | Comma-separated list of lint checks to run by default. If empty or absent, all checks run. Valid values: `ascii`, `smart-quotes`, `smart-dashes`, `double-spaces`, `quote-too-long`, `no-tags`, `no-author`, `author-antipatterns`, `required-tag-group` |
-| `max_quote_length` | `0` | Maximum allowed quote length in characters; `0` disables the check. Used by the `quote-too-long` lint check |
-| `author_antipattern_regex` | _(empty)_ | Comma-separated list of regex patterns; authors matching any pattern are flagged by the `author-antipatterns` lint check |
-| `lint_on_add` | `false` | If `true`, lint checks are run automatically when adding a quote via the `add` command. Use `--no-lint` to skip lint for a single invocation regardless of this setting. |
-| `required_group_<name>` | _(empty)_ | Defines a named group of required tags; a quote must have at least one tag from this group or it is flagged by the `required-tag-group` check. `<name>` is any identifier (e.g. `stars`, `visibility`). Add multiple properties with different names to define multiple groups. Example: `required_group_stars = 1star, 2stars, 3stars, 4stars, 5stars` |
-
-### `[web]` section
-
-| Property | Default | Description |
-|---|---|---|
-| `header_provider_extension` | _(empty)_ | Dotted Python module path for a header provider (see [Header Provider](#header-provider)) |
-| `quote_resolver_extension` | _(empty)_ | Dotted Python module path for a quote resolver (see [Quote Resolver](#quote-resolver)) |
-| `port` | `5544` | Port the web server (`jotquote webserver`) listens on |
-| `ip` | `127.0.0.1` | IP address the web server (`jotquote webserver`) binds to |
-| `editor_port` | `5545` | Port the web editor (`jotquote webeditor`) listens on |
-| `editor_ip` | `127.0.0.1` | IP address the web editor (`jotquote webeditor`) binds to |
-| `expiration_seconds` | `14400` | How long (in seconds) the web server caches the quote list after a file change |
-| `page_title` | `jotquote` | HTML page title shown in the browser tab |
-| `show_stars` | `false` | If `true`, shows star ratings on the web server |
-| `light_foreground_color` | `#000000` | Text color in light mode |
-| `light_background_color` | `#ffffff` | Background color in light mode |
-| `dark_foreground_color` | `#ffffff` | Text color in dark mode |
-| `dark_background_color` | `#000000` | Background color in dark mode |
-| `mode` | `daily` | Quote selection mode. `daily` shows a deterministic daily quote (changes at midnight). `random` shows a truly random quote on each page load, disabling the permalink feature. |
-| `about` | _(empty)_ | Text displayed on the `/about` page. If empty, the `/about` route returns 404. When set, an `@` button appears on the quote page linking to the about page. |
-
-### Legacy format
-
-The old single-section `[jotquote]` format (with prefixed key names like `lint_on_add`, `web_port`) is still supported but deprecated. If detected, jotquote will automatically migrate the settings in memory and print a deprecation warning to stderr. Users should update their `settings.conf` to the new three-section format.
-
-## Environment Variables
-
-| Variable | Description |
-|---|---|
-| `JOTQUOTE_CONFIG` | Path to the `settings.conf` file. Overrides the default location (`~/.jotquote/settings.conf`). Useful for running jotquote with an alternate configuration, for example during development or in CI. Accepts absolute or relative paths; relative paths are interpreted relative to the current working directory. |
-
-**Example** — restore the original dark color scheme:
-
-```ini
-[web]
-dark_foreground_color = #e8e8e8
-dark_background_color = #1a1a1a
-```
