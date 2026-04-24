@@ -396,9 +396,7 @@ def write_quotes(quote_path, quotes, expected_sha256=None):
         raise
     except:
         os.remove(temp_path)
-        raise StorageError(
-            "an error occurred writing the quotes.  The file '{0}' was not modified.".format(quote_path)
-        )
+        raise StorageError("an error occurred writing the quotes.  The file '{0}' was not modified.".format(quote_path))
 
     try:
         os.replace(temp_path, quote_path)

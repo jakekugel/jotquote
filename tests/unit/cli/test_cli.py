@@ -4,7 +4,7 @@
 
 import os
 import time
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import click
 from click.testing import CliRunner
@@ -911,5 +911,3 @@ def test_add_lint_on_add_true_runs_checks(config, tmp_path):
     assert result.exit_code == 0
     assert 'Warning:' in result.output
     assert '1 quote added' in result.output
-
-

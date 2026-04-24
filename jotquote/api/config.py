@@ -153,6 +153,7 @@ def get_filename():
         ConfigError: If the resolved quote file does not exist.
     """
     from jotquote import api as _api  # lazy import to route through the patchable facade
+
     config = _api.get_config()
     filename = config.get(SECTION_GENERAL, 'quote_file')
     if not os.path.exists(filename):

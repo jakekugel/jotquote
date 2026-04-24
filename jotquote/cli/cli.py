@@ -25,6 +25,7 @@ def _translate_api_errors(func):
 
     return wrapper
 
+
 HELP_MAIN_F_ARG = (
     'optional path to quote file (if not provided, the command will check ~/.jotquote/settings.conf for path)'
 )

@@ -160,7 +160,9 @@ def test_no_header_provider_no_cache_control(flask_client, config, monkeypatch):
 
 def test_custom_header_provider(flask_client, config, monkeypatch):
     """Custom header provider headers appear on the response."""
-    monkeypatch.setattr(web, '_header_fn', lambda max_age: {'X-Custom': 'test', 'Cache-Control': f'public, max-age={max_age}'})
+    monkeypatch.setattr(
+        web, '_header_fn', lambda max_age: {'X-Custom': 'test', 'Cache-Control': f'public, max-age={max_age}'}
+    )
     monkeypatch.setattr(web, '_header_loaded', True)
     client, quote_file = flask_client
     rv = client.get('/')
