@@ -913,33 +913,3 @@ def test_add_lint_on_add_true_runs_checks(config, tmp_path):
     assert '1 quote added' in result.output
 
 
-# ---------------------------------------------------------------------------
-# Legacy [jotquote] migration warning in CLI
-# ---------------------------------------------------------------------------
-
-
-def test_legacy_migration_warning_emitted_to_stderr(config, tmp_path, monkeypatch):
-    """CLI emits a deprecation warning when get_config() reports migration."""
-    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.SECTION_GENERAL]['quote_file'] = path
-    monkeypatch.setattr(api, 'get_config', Mock(return_value=(config, True)))
-
-    runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['list'], obj={})
-
-    assert result.exit_code == 0
-    assert 'deprecated' in result.output.lower()
-    assert '[jotquote]' in result.output
-
-
-def test_no_migration_warning_when_not_migrated(config, tmp_path, monkeypatch):
-    """CLI does not emit a deprecation warning when migration did not occur."""
-    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    config[api.SECTION_GENERAL]['quote_file'] = path
-    monkeypatch.setattr(api, 'get_config', Mock(return_value=(config, False)))
-
-    runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['list'], obj={})
-
-    assert result.exit_code == 0
-    assert 'deprecated' not in result.output.lower()

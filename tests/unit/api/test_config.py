@@ -16,7 +16,7 @@ def test_get_config_creates_from_template(tmp_path, monkeypatch):
     config_file = tmp_path / 'settings.conf'
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    config, _ = api.get_config()
+    config = api.get_config()
 
     assert config_file.exists()
     contents = config_file.read_text(encoding='utf-8')
@@ -40,7 +40,7 @@ def test_get_config_env_var_overrides_default(tmp_path, monkeypatch):
     )
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    config, _ = api.get_config()
+    config = api.get_config()
 
     assert config.get(api.SECTION_WEB, 'page_title') == 'Custom Title'
 
@@ -56,7 +56,7 @@ def test_get_config_resolves_relative_quote_file(tmp_path, monkeypatch):
     )
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    config, _ = api.get_config()
+    config = api.get_config()
 
     resolved = config.get(api.SECTION_GENERAL, 'quote_file')
     assert os.path.isabs(resolved)
@@ -82,7 +82,7 @@ def test_get_config_new_format(tmp_path, monkeypatch):
     )
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    config, _ = api.get_config()
+    config = api.get_config()
 
     assert os.path.isabs(config.get(api.SECTION_GENERAL, 'quote_file'))
     assert config.get(api.SECTION_GENERAL, 'line_separator') == 'unix'
@@ -108,9 +108,9 @@ def test_get_config_legacy_format_migrates(tmp_path, monkeypatch):
     )
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    config, migrated = api.get_config()
+    with pytest.warns(UserWarning, match=r'\[jotquote\]'):
+        config = api.get_config()
 
-    assert migrated is True
     # General properties
     assert os.path.isabs(config.get(api.SECTION_GENERAL, 'quote_file'))
     assert config.get(api.SECTION_GENERAL, 'show_author_count') == 'true'
@@ -127,7 +127,7 @@ def test_get_config_legacy_format_migrates(tmp_path, monkeypatch):
 
 
 def test_get_config_legacy_format_warns(tmp_path, monkeypatch):
-    """get_config() returns migrated=True for legacy [jotquote] format."""
+    """get_config() emits a DeprecationWarning for legacy [jotquote] format."""
     config_file = tmp_path / 'settings.conf'
     config_file.write_text(
         '[jotquote]\nquote_file = /some/path/quotes.txt\n',
@@ -135,9 +135,8 @@ def test_get_config_legacy_format_warns(tmp_path, monkeypatch):
     )
     monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
 
-    _, migrated = api.get_config()
-
-    assert migrated is True
+    with pytest.warns(UserWarning, match=r'\[jotquote\]'):
+        api.get_config()
 
 
 def test_get_config_missing_quote_file_raises_config_error(tmp_path, monkeypatch):
