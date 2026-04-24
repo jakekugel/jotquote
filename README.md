@@ -26,6 +26,22 @@ $ jotquote add "The larger the island of knowledge, the longer the shoreline of 
 1 quote added for total of 639 quotes.
 ```
 
+## Breaking Change for 1.0.0
+
+The `settings.conf` file format has changed. All settings previously under the
+single `[jotquote]` section are now split across three sections:
+
+- `[general]` — quote file path, line separator, and display options
+- `[lint]` — lint rules applied when adding quotes
+- `[web]` — web server host, port, colors, and extensions
+
+Existing `settings.conf` files with the old `[jotquote]` section continue to work
+(jotquote migrates them in memory and emits a warning), but please update your
+file to the new format to silence the warning.
+
+See the [settings.conf section of USER_DOCUMENTATION.md](USER_DOCUMENTATION.md#settingsconf)
+for the full property reference and an example of the new format.
+
 ## Starting the web server
 
 In some cases, the command-line might be good enough for viewing the quotes in your

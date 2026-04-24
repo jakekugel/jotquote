@@ -38,7 +38,7 @@ def _log_startup_info():
 
     # Compute config file path using the same logic as api.get_config()
     config_file = os.environ.get('JOTQUOTE_CONFIG') or api.CONFIG_FILE
-    config, _ = api.get_config()
+    config = api.get_config()
     quote_file = config.get(api.SECTION_GENERAL, 'quote_file')
     _logger.info('path to settings.conf file: %s', config_file)
     _logger.info('path to the quote file: %s', quote_file)
@@ -85,7 +85,7 @@ def rootpage():
 @app.route('/about')
 def aboutpage():
     """Render the about page."""
-    config, _ = api.get_config()
+    config = api.get_config()
     about_text = config[api.SECTION_WEB].get('about', '')
     if not about_text:
         abort(404)
@@ -110,7 +110,7 @@ def showpage(date_path_param=None):
     # Calculate expiration: configured cap or seconds until midnight, whichever is less
     midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     seconds_until_midnight = int((midnight - now).total_seconds())
-    config, _ = api.get_config()
+    config = api.get_config()
     expiration_seconds = int(config[api.SECTION_WEB].get('expiration_seconds', '14400'))
     page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
     show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
@@ -309,7 +309,7 @@ def get_quotes():
 
     # Ensure that path to quote file read from configuration file
     if 'QUOTE_FILE' not in app.config:
-        config, _ = api.get_config()
+        config = api.get_config()
         app.config['QUOTE_FILE'] = config.get(api.SECTION_GENERAL, 'quote_file')
 
     try:
@@ -357,7 +357,7 @@ def run_server():
     """
 
     # Load needed configuration from settings.conf file
-    config, _ = api.get_config()
+    config = api.get_config()
     listen_port = config.get(api.SECTION_WEB, 'port')
     listen_ip = config.get(api.SECTION_WEB, 'ip')
 

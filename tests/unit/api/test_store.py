@@ -407,9 +407,7 @@ def test_settags_both_n_and_hash_raises(config, tmp_path):
     """settags() should raise ValueError (programmer misuse) if both n and hash are provided."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
 
-    with pytest.raises(
-        ValueError, match=re.escape('both the -s and -n option were included, but only one allowed.')
-    ):
+    with pytest.raises(ValueError, match=re.escape('both the -s and -n option were included, but only one allowed.')):
         api.settags(path, n=1, hash='a3bff52cabf7e859', newtags=['tag1'])
 
 

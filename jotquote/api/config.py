@@ -4,6 +4,7 @@
 
 import os
 import shutil
+import warnings
 from configparser import ConfigParser
 
 from jotquote.api.exceptions import ConfigError
@@ -74,13 +75,13 @@ def get_config():
     absolute paths relative to the directory containing settings.conf.
 
     Returns:
-        tuple[configparser.ConfigParser, bool]: The loaded config and a flag
-            that is ``True`` when the legacy ``[jotquote]`` section was
-            detected and migrated in-memory to ``[general]``/``[lint]``/``[web]``.
-            Callers should surface a deprecation warning to the user in that
-            case.
+        configparser.ConfigParser: The loaded config.
 
     Raises:
+        UserWarning: If the legacy ``[jotquote]`` section is detected,
+            a ``UserWarning`` is emitted via :func:`warnings.warn` so
+            callers receive a visible deprecation notice regardless of
+            warning filters.
         ConfigError: If ``quote_file`` is not set in the ``[general]``
             section of the loaded config file.
     """
@@ -111,7 +112,13 @@ def get_config():
     config.read(config_file)
 
     # Migrate legacy [jotquote] section to [general]/[lint]/[web]
-    migrated = _migrate_legacy_section(config)
+    if _migrate_legacy_section(config):
+        warnings.warn(
+            'settings.conf uses the deprecated [jotquote] section. '
+            'Please update to [general], [lint], and [web] sections.',
+            UserWarning,
+            stacklevel=2,
+        )
 
     # Ensure optional sections exist
     for section in (SECTION_LINT, SECTION_WEB):
@@ -132,7 +139,7 @@ def get_config():
     if not config.has_option(SECTION_LINT, 'enabled_checks'):
         config[SECTION_LINT]['enabled_checks'] = ', '.join(sorted(ALL_CHECKS))
 
-    return config, migrated
+    return config
 
 
 def get_filename():
@@ -145,7 +152,9 @@ def get_filename():
     Raises:
         ConfigError: If the resolved quote file does not exist.
     """
-    config, _ = get_config()
+    from jotquote import api as _api  # lazy import to route through the patchable facade
+
+    config = _api.get_config()
     filename = config.get(SECTION_GENERAL, 'quote_file')
     if not os.path.exists(filename):
         raise ConfigError("The quote file specified in settings.conf, '{}', was not found.".format(filename))

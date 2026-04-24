@@ -160,7 +160,9 @@ def test_no_header_provider_no_cache_control(flask_client, config, monkeypatch):
 
 def test_custom_header_provider(flask_client, config, monkeypatch):
     """Custom header provider headers appear on the response."""
-    monkeypatch.setattr(web, '_header_fn', lambda max_age: {'X-Custom': 'test', 'Cache-Control': f'public, max-age={max_age}'})
+    monkeypatch.setattr(
+        web, '_header_fn', lambda max_age: {'X-Custom': 'test', 'Cache-Control': f'public, max-age={max_age}'}
+    )
     monkeypatch.setattr(web, '_header_loaded', True)
     client, quote_file = flask_client
     rv = client.get('/')
@@ -414,28 +416,6 @@ def test_permalink_button_present(flask_client, config, monkeypatch):
     rv = client.get('/')
     assert b'id="permalink-btn"' in rv.data
     assert b'copyPermalink' in rv.data
-
-
-# ---------------------------------------------------------------------------
-# Legacy [jotquote] migration warning in web server
-# ---------------------------------------------------------------------------
-
-
-def test_run_server_no_migration_warning(flask_client, config, monkeypatch):
-    """run_server() never logs a migration warning; the CLI handles that."""
-    from unittest.mock import Mock, patch
-
-    config[api.SECTION_WEB]['port'] = '5544'
-    config[api.SECTION_WEB]['ip'] = '127.0.0.1'
-    monkeypatch.setattr(api, 'get_config', Mock(return_value=(config, True)))
-
-    warning_messages = []
-    monkeypatch.setattr(web.app.logger, 'warning', lambda msg: warning_messages.append(msg))
-
-    with patch('waitress.serve'):
-        web.run_server()
-
-    assert len(warning_messages) == 0
 
 
 # ---------------------------------------------------------------------------

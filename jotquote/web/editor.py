@@ -145,7 +145,7 @@ def run_server():
     """
 
     # Read host and port from config, applying defaults if not set
-    config, _ = api.get_config()
+    config = api.get_config()
     listen_port = config.get(api.SECTION_WEB, 'editor_port', fallback='')
     listen_ip = config.get(api.SECTION_WEB, 'editor_ip', fallback='')
 
@@ -167,7 +167,7 @@ def _load_quotes():
     Returns:
         tuple[configparser.ConfigParser, list[api.Quote]]: The config object and list of quotes.
     """
-    config, _ = api.get_config()
+    config = api.get_config()
     quotefile = config.get(api.SECTION_GENERAL, 'quote_file')
     quotes = api.read_quotes(quotefile)
     return config, quotes

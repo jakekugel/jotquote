@@ -28,7 +28,7 @@ uv run pytest tests/api_test.py
 uv run pytest tests/api_test.py::TestClassName::test_method_name
 
 # Lint
-uv run ruff check jotquote/
+uv run ruff check
 
 # Run tests with coverage
 uv run coverage run -m pytest

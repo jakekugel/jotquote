@@ -24,7 +24,7 @@ def config(monkeypatch):
     cfg.add_section(api.SECTION_WEB)
     cfg[api.SECTION_WEB]['port'] = '80'
     cfg[api.SECTION_WEB]['ip'] = '0.0.0.0'
-    mock_get_config = Mock(return_value=(cfg, False))
+    mock_get_config = Mock(return_value=cfg)
     monkeypatch.setattr('jotquote.api.config.get_config', mock_get_config)
     monkeypatch.setattr('jotquote.api.get_config', mock_get_config)
     return cfg

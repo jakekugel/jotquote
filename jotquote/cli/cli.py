@@ -25,6 +25,7 @@ def _translate_api_errors(func):
 
     return wrapper
 
+
 HELP_MAIN_F_ARG = (
     'optional path to quote file (if not provided, the command will check ~/.jotquote/settings.conf for path)'
 )
@@ -74,13 +75,7 @@ def jotquote(ctx, quotefile):
     file; you can add, view, and tag quotes.  The command can also be used to start
     a simple web server to display a quote of the day.
     """
-    config, migrated = api.get_config()
-    if migrated:
-        click.echo(
-            'Warning: settings.conf uses the deprecated [jotquote] section. '
-            'Please update to [general], [lint], and [web] sections.',
-            err=True,
-        )
+    config = api.get_config()
 
     # Get path to quote file
     if quotefile is None:
@@ -297,7 +292,7 @@ def lint(ctx, fix, select_checks, ignore_checks):
         raise click.ClickException('--select and --ignore are mutually exclusive.')
 
     quotefile = ctx.obj['QUOTEFILE']
-    config, _ = api.get_config()
+    config = api.get_config()
 
     checks = _get_active_checks(select_checks, ignore_checks, config)
 
@@ -350,7 +345,7 @@ def _lint_new_quotes(quotes):
     """Lint parsed quotes before adding. Returns list of LintIssue."""
     from jotquote.api import lint as lintmod
 
-    config, _ = api.get_config()
+    config = api.get_config()
     checks = _get_active_checks('', '', config)
     if not checks:
         return []
@@ -360,7 +355,7 @@ def _lint_new_quotes(quotes):
 def _add_quotes(quotefile, newquote_str, extended, no_lint=False):
     """Adds the new quote(s) to the quote file."""
 
-    config, _ = api.get_config()
+    config = api.get_config()
     lint_on_add = config[api.SECTION_LINT].getboolean('lint_on_add', fallback=False)
 
     if newquote_str == '-':
@@ -404,7 +399,7 @@ def _add_quotes(quotefile, newquote_str, extended, no_lint=False):
 
     if new_count == 1:
         print('{0} quote added for total of {1}.'.format(str(new_count), str(total_count)))
-        config, _ = api.get_config()
+        config = api.get_config()
         if config[api.SECTION_GENERAL].getboolean('show_author_count', fallback=False):
             all_quotes = api.read_quotes(quotefile)
             count = sum(1 for q in all_quotes if q.author == quote.author)

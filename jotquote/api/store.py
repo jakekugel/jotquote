@@ -396,9 +396,7 @@ def write_quotes(quote_path, quotes, expected_sha256=None):
         raise
     except:
         os.remove(temp_path)
-        raise StorageError(
-            "an error occurred writing the quotes.  The file '{0}' was not modified.".format(quote_path)
-        )
+        raise StorageError("an error occurred writing the quotes.  The file '{0}' was not modified.".format(quote_path))
 
     try:
         os.replace(temp_path, quote_path)
@@ -448,7 +446,7 @@ def _check_for_duplicates(quotes, source):
 
 def _get_newline():
     """Return the newline string based on the line_separator config property."""
-    config, _ = _config.get_config()
+    config = _config.get_config()
     linesep_property = config.get(_config.SECTION_GENERAL, 'line_separator', fallback='platform')
     if not linesep_property or linesep_property == 'platform':
         return os.linesep
