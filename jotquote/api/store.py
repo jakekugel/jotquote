@@ -428,7 +428,8 @@ def format_quote(quote):
     if publication is None:
         publication = ''
     tags = ', '.join(quote.tags)
-    return '%s | %s | %s | %s' % (quotestr, author, publication, tags)
+    line = '%s | %s | %s | %s' % (quotestr, author, publication, tags)
+    return line.rstrip(' ')
 
 
 def _check_for_duplicates(quotes, source):
