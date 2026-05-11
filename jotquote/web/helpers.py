@@ -7,7 +7,7 @@ import time
 
 from jotquote import api
 
-LOG_FORMAT = '%(asctime)s %(levelname)s %(name)s:%(message)s'
+LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
 
 
 def abbreviate_timezone(name):

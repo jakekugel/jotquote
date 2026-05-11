@@ -22,8 +22,9 @@ def test_timestamp_formatter_format():
     record = logging.LogRecord('test.logger', logging.INFO, '', 0, 'hello', [], None)
     record.msecs = 42.0
     formatted = formatter.format(record)
-    # e.g. "2026/04/07 06:21:42.042 AM CDT INFO test.logger:hello"
+    # e.g. "2026/04/07 06:21:42.042 AM CDT INFO hello"
     assert re.match(r'\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [AP]M \S+ ', formatted)
+    assert 'test.logger' not in formatted
 
 
 # ---------------------------------------------------------------------------

@@ -615,3 +615,39 @@ def test_add_quotes_fails_on_concurrent_modification(tmp_path, config):
             api.add_quotes(quote_file, [new_quote])
     finally:
         store_mod.read_quotes_with_hash = original_fn
+
+
+def test_format_quote_no_trailing_space_when_no_tags():
+    """format_quote() should not produce a trailing space when the quote has no tags."""
+    quote = api.Quote('A quote', 'An author', 'A publication', [])
+    line = api.format_quote(quote)
+    assert not line.endswith(' ')
+    assert line == 'A quote | An author | A publication |'
+
+
+def test_format_quote_no_trailing_space_when_no_publication_or_tags():
+    """format_quote() should not produce a trailing space when both publication and tags are empty."""
+    quote = api.Quote('A quote', 'An author', None, [])
+    line = api.format_quote(quote)
+    assert not line.endswith(' ')
+    assert line == 'A quote | An author |  |'
+
+
+def test_format_quote_with_tags_unchanged():
+    """format_quote() should still produce the standard format when tags are present."""
+    quote = api.Quote('A quote', 'An author', 'A publication', ['tag1', 'tag2'])
+    line = api.format_quote(quote)
+    assert line == 'A quote | An author | A publication | tag1, tag2'
+
+
+def test_write_quotes_strips_trailing_space_for_untagged_quote(config, tmp_path):
+    """write_quotes() should not write a trailing space on lines with no tags."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    quote = api.Quote('Untagged quote', 'Untagged author', None, [])
+
+    api.add_quote(path, quote)
+
+    with open(path, 'rb') as openfile:
+        raw = openfile.read()
+    for line in raw.splitlines():
+        assert not line.endswith(b' '), 'found trailing space on line: {!r}'.format(line)

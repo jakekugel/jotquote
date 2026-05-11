@@ -339,7 +339,7 @@ def test_add_stdin(config, tmp_path):
 
     expected = [
         'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\n',
-        'Ask for what you want and be prepared to get it. | Maya Angelou |  | \n',
+        'Ask for what you want and be prepared to get it. | Maya Angelou |  |\n',
     ]
     assert returned == expected
 
@@ -469,7 +469,7 @@ def test_add_extended_format(config, tmp_path):
 
     expected = [
         'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | U\n',
-        'Ask for what you want and be prepared to get it. | Maya Angelou |  | \n',
+        'Ask for what you want and be prepared to get it. | Maya Angelou |  |\n',
     ]
     assert returned == expected
 
@@ -549,7 +549,7 @@ def test_codepage_conversion(config, tmp_path):
         + os.linesep
         + 'They that can give up essential liberty to obtain a little temporary safety deserve neither liberty nor safety. | Ben Franklin |  | franklin, freedom'
         + os.linesep
-        + 'δηψ. | Greek Author |  | '
+        + 'δηψ. | Greek Author |  |'
         + os.linesep
     )
     assert text_data == expected

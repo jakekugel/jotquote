@@ -137,12 +137,11 @@ body {
     justify-content: flex-end;
     overflow: hidden;
     max-width: 0;
-    transition: max-width 1.0s ease-out;
+    transition: max-width 0.8s;
 }
 
 #expandable-btns.expanded {
-    max-width: 500px;
-    transition: max-width 1.0s ease-in;
+    transition: max-width 0.8s;
 }
 
 .theme-icon, .copy-link-icon, .about-icon, .fullscreen-icon, .expand-icon, .collapse-icon {
@@ -266,7 +265,23 @@ body {
             var container = document.getElementById('expandable-btns');
             var toggleBtn = document.getElementById('toggle-btn');
             var expanding = !container.classList.contains('expanded');
-            container.classList.toggle('expanded');
+            if (expanding) {
+                // Temporarily lift the max-width cap (with transitions disabled)
+                // to measure the buttons' natural width. Without this, default
+                // flex-shrink would collapse the buttons to 0 inside the capped
+                // container, and scrollWidth would read as 0.
+                container.style.transition = 'none';
+                container.style.maxWidth = 'none';
+                var naturalWidth = container.scrollWidth;
+                container.style.maxWidth = '0';
+                container.offsetHeight;
+                container.style.transition = '';
+                container.classList.add('expanded');
+                container.style.maxWidth = naturalWidth + 'px';
+            } else {
+                container.classList.remove('expanded');
+                container.style.maxWidth = '0';
+            }
             toggleBtn.querySelector('span').className = expanding ? 'collapse-icon' : 'expand-icon';
         }
 
