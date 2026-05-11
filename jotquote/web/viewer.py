@@ -6,6 +6,7 @@ import datetime
 import importlib
 import logging
 import os
+import random
 
 from flask import Flask, abort, g, make_response, render_template, request
 
@@ -107,25 +108,16 @@ def showpage(date_path_param=None):
 
     now = datetime.datetime.now()
 
-    # Calculate expiration: configured cap or seconds until midnight, whichever is less
-    midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    seconds_until_midnight = int((midnight - now).total_seconds())
+    # Read page configuration
     config = api.get_config()
-    expiration_seconds = int(config[api.SECTION_WEB].get('expiration_seconds', '14400'))
     page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
     show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
     mode = config[api.SECTION_WEB].get('mode', 'daily')
     about_text = config[api.SECTION_WEB].get('about', '')
     colors = web_helpers.get_color_config(config)
-    if mode != 'random' and date_path_param is None:
-        expiration_seconds = min(expiration_seconds, seconds_until_midnight)
 
-    # Compute cache expiration time for auto-refresh (root route only)
-    if date_path_param is None:
-        expires_at_dt = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=expiration_seconds)
-        expires_at = expires_at_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
-    else:
-        expires_at = None
+    # Compute cache lifetime (for HTTP headers) and the absolute reload instant (for the client)
+    expiration_seconds, expires_at = _compute_expiration(config, mode, date_path_param, now)
     g.expires_at = expires_at
 
     # Determine display date
@@ -283,6 +275,45 @@ def _reset_header_provider():
     global _header_fn, _header_loaded
     _header_fn = None
     _header_loaded = False
+
+
+def _compute_expiration(config, mode, date_path_param, now):
+    """Compute the page's cache lifetime and client reload instant.
+
+    Returns a tuple ``(expiration_seconds, expires_at)`` where
+    ``expiration_seconds`` is the HTTP cache lifetime in seconds and
+    ``expires_at`` is a UTC ISO-8601 string giving the absolute moment the
+    client should reload (or ``None`` for dated permalink routes, which
+    don't auto-refresh).  ``expires_at`` includes 60-120 seconds of random
+    jitter past the cache expiration so the browser is guaranteed to bypass
+    any still-fresh cached copy when it reloads.
+
+    config (ConfigParser) -- the application configuration object.
+    mode (str) -- the configured viewer mode ('daily' or 'random').
+    date_path_param (str | None) -- the URL date parameter, or None for root.
+    now (datetime) -- naive local datetime used for the midnight cap.
+    Returns tuple[int, str | None].
+    """
+    # Read base cache duration from settings
+    expiration_seconds = int(config[api.SECTION_WEB].get('expiration_seconds', '14400'))
+
+    # Cap at midnight for daily mode on the root route so the next day's quote appears
+    if mode != 'random' and date_path_param is None:
+        midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        seconds_until_midnight = int((midnight - now).total_seconds())
+        expiration_seconds = min(expiration_seconds, seconds_until_midnight)
+
+    # Dated permalink routes don't auto-refresh
+    if date_path_param is not None:
+        return expiration_seconds, None
+
+    # Bake jitter into expires_at so the client reloads after the cache has expired
+    jitter_seconds = random.randint(60, 120)
+    reload_dt = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
+        seconds=expiration_seconds + jitter_seconds
+    )
+    expires_at = reload_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+    return expiration_seconds, expires_at
 
 
 def _apply_headers(response, config, expiration_seconds):
