@@ -329,9 +329,7 @@ def test__write_quotes__should_not_modify_quote_file_on_write_error(config, monk
     assert tests.test_util.compare_quotes(quotes, api.read_quotes(quote_path))
 
 
-def test__write_quotes__should_return_good_exception_when_new_quote_file_more_than_1000_bytes_smaller(
-    config, tmp_path
-):
+def test__write_quotes__should_return_good_exception_when_new_quote_file_more_than_1000_bytes_smaller(config, tmp_path):
     # Given a quote file with a single very long quote (well over 1,000 bytes)
     quote_path = os.path.join(str(tmp_path), 'big.txt')
     long_text = 'x' * 1500
