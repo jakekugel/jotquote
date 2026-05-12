@@ -329,23 +329,39 @@ def test__write_quotes__should_not_modify_quote_file_on_write_error(config, monk
     assert tests.test_util.compare_quotes(quotes, api.read_quotes(quote_path))
 
 
-def test__write_quotes__should_return_good_exception_when_backup_larger_than_quote_file(config, tmp_path):
-    # Given a quote file quotes5.txt with a single quote in it
-    quote_path = tests.test_util.init_quotefile(str(tmp_path), 'quotes5.txt')
+def test__write_quotes__should_return_good_exception_when_new_quote_file_more_than_1000_bytes_smaller(
+    config, tmp_path
+):
+    # Given a quote file with a single very long quote (well over 1,000 bytes)
+    quote_path = os.path.join(str(tmp_path), 'big.txt')
+    long_text = 'x' * 1500
+    with open(quote_path, 'wb') as f:
+        f.write('{0} | Author | |\n'.format(long_text).encode('utf-8'))
     quotes = api.read_quotes(quote_path)
 
-    # And given a backup file .quotes5.txt.jotquote.bak with 4 quotes in it
-    quotes_path_2 = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
-    backup_path = os.path.join(str(tmp_path), '.quotes5.txt.jotquote.bak')
-    os.rename(quotes_path_2, backup_path)
-
-    # When write_quotes() called to write quotes to quotes5.txt
+    # When write_quotes() called with a single short quote (same line count, much smaller size)
+    new_quote = api.Quote('A short quote.', 'Author', None, [])
     with pytest.raises(api.StorageError) as excinfo:
-        api.write_quotes(quote_path, quotes)
+        api.write_quotes(quote_path, [new_quote])
 
-    # Then an error message returned indicating backup has more lines than new quotes5.txt
-    assert "the backup file '.quotes5.txt.jotquote.bak' has" in str(excinfo.value)
-    assert 'lines but the quote file' in str(excinfo.value)
+    # Then an error message returned indicating the quote file would shrink by too many bytes
+    assert "the size of the quote file file 'big.txt' would be reduced by more than 1,000 bytes" in str(excinfo.value)
+    assert 'This is suspicious' in str(excinfo.value)
+    assert tests.test_util.compare_quotes(quotes, api.read_quotes(quote_path))
+
+
+def test__write_quotes__should_return_good_exception_when_new_quotes_have_fewer_lines(config, tmp_path):
+    # Given a quote file quotes1.txt with 4 quotes in it
+    quote_path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    quotes = api.read_quotes(quote_path)
+
+    # When write_quotes() called with a single quote (reducing the line count)
+    with pytest.raises(api.StorageError) as excinfo:
+        api.write_quotes(quote_path, quotes[:1])
+
+    # Then an error message returned indicating the quote file would lose lines
+    assert "the quote file 'quotes1.txt' would be reduced from" in str(excinfo.value)
+    assert 'lines to' in str(excinfo.value)
     assert 'This is suspicious' in str(excinfo.value)
     assert tests.test_util.compare_quotes(quotes, api.read_quotes(quote_path))
 
