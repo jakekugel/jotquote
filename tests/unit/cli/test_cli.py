@@ -674,8 +674,8 @@ def test_lint_clean_file(config, tmp_path):
     config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
-    # Run with only ascii check to avoid spurious tag failures on fixture data
-    result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii'], obj={})
+    # Run with only smart-quotes check to avoid spurious tag failures on fixture data
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'smart-quotes'], obj={})
 
     assert result.exit_code == 0
     assert 'No issues found.' in result.output
@@ -699,7 +699,7 @@ def test_lint_select_and_ignore_mutually_exclusive(config, tmp_path):
     config[api.SECTION_GENERAL]['quote_file'] = path
 
     runner = CliRunner()
-    result = runner.invoke(cli.jotquote, ['lint', '--select', 'ascii', '--ignore', 'no-tags'], obj={})
+    result = runner.invoke(cli.jotquote, ['lint', '--select', 'smart-quotes', '--ignore', 'no-tags'], obj={})
 
     assert result.exit_code != 0
     assert 'mutually exclusive' in result.output
@@ -713,7 +713,7 @@ def test_lint_ignore(config, tmp_path):
     runner = CliRunner()
     result = runner.invoke(
         cli.jotquote,
-        ['lint', '--ignore', 'no-tags,author-antipatterns,ascii,smart-quotes,no-author'],
+        ['lint', '--ignore', 'no-tags,smart-quotes,no-author'],
         obj={},
     )
 
@@ -846,7 +846,7 @@ def test_add_lint_respects_enabled_checks(config, tmp_path):
     """add only runs checks listed in lint_enabled_checks."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     config[api.SECTION_GENERAL]['quote_file'] = path
-    config[api.SECTION_LINT]['enabled_checks'] = 'ascii'
+    config[api.SECTION_LINT]['enabled_checks'] = 'smart-quotes'
 
     runner = CliRunner()
     result = runner.invoke(cli.jotquote, ['add', 'A plain quote without tags - Test Author'], obj={})

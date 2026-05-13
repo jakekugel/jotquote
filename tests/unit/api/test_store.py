@@ -131,6 +131,35 @@ def test_add_quote_but_file_contains_quote_already(config, tmp_path):
         api.add_quote(path, quote)
 
 
+def test_add_quotes_hash_detects_duplicate_against_file(config, tmp_path):
+    """add_quotes() raises DuplicateQuoteError when a new quote's hash matches an existing file quote."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    duplicate = api.Quote('Ask for what you want and be prepared to get it.', 'Maya Angelou', None, [])
+    with pytest.raises(
+        api.DuplicateQuoteError,
+        match=re.escape(
+            'the quote "Ask for what you want and be prepared to get it."'
+            ' is already in the quote file {}.'.format(path)
+        ),
+    ):
+        api.add_quotes(path, [duplicate])
+
+
+def test_add_quotes_hash_detects_duplicate_in_batch(config, tmp_path):
+    """add_quotes() raises DuplicateQuoteError when a later batch item's hash matches an existing file quote."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    brand_new = api.Quote('A brand new quote.', 'New Author', None, [])
+    duplicate = api.Quote('Ask for what you want and be prepared to get it.', 'Maya Angelou', None, [])
+    with pytest.raises(
+        api.DuplicateQuoteError,
+        match=re.escape(
+            'the quote "Ask for what you want and be prepared to get it."'
+            ' is already in the quote file {}.'.format(path)
+        ),
+    ):
+        api.add_quotes(path, [brand_new, duplicate])
+
+
 def test_check_for_duplicates_with_duplicates():
     """The _check_for_duplicates function should raise exception if there are duplicate quotes."""
     quotes = [
@@ -364,18 +393,12 @@ def test__write_quotes__should_return_good_exception_when_new_quotes_have_fewer_
     assert tests.test_util.compare_quotes(quotes, api.read_quotes(quote_path))
 
 
-def test_duplicate_quotes(tmp_path):
-    """The read_quotes() function should raise exception if there are duplicate quotes."""
+def test_read_quotes_allows_duplicates(tmp_path):
+    """read_quotes() does not enforce duplicate detection; files with duplicates load successfully."""
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes8.txt')
-    with pytest.raises(
-        Exception,
-        match=re.escape(
-            "a duplicate quote was found on line 5 of '{}'.  Quote: \"The depressing thing about tennis is that no matter how good I get, I'll never be as good as a wall.\"".format(
-                path
-            )
-        ),
-    ):
-        api.read_quotes(path)
+    quotes = api.read_quotes(path)
+    assert len(quotes) == 5
+    assert quotes[1].quote == quotes[4].quote
 
 
 # --- settags() tests ---

@@ -282,6 +282,76 @@ def test_lint_on_add_false_skips_lint_integration(tmp_path):
     assert '1 quote added' in output
 
 
+def test_lint_duplicate_hash_integration(tmp_path):
+    """jotquote lint flags quotes with colliding fuzzy hashes."""
+    quote_file = tmp_path / 'quotes.txt'
+    quote_file.write_text(
+        'Apples bake cherries deliciously. | Author A | | x\n'
+        'Ants bother cats daily. | Author B | | y\n',
+        encoding='utf-8',
+    )
+    env = _make_env(tmp_path, quote_file)
+
+    result = subprocess.run(
+        [_script('jotquote'), 'lint', '--select', 'duplicate-hash'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    output = result.stdout.decode('utf-8', errors='replace')
+    assert result.returncode != 0
+    assert 'duplicate-hash' in output
+
+
+def test_lint_unicode_ellipsis_fix_integration(tmp_path):
+    """jotquote lint --fix replaces the unicode ellipsis with three ASCII periods."""
+    quote_file = tmp_path / 'quotes.txt'
+    quote_file.write_text(
+        'Wait… really? | Author A | | tag1\n',
+        encoding='utf-8',
+    )
+    env = _make_env(tmp_path, quote_file)
+
+    detect = subprocess.run(
+        [_script('jotquote'), 'lint', '--select', 'unicode-ellipsis'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    detect_out = detect.stdout.decode('utf-8', errors='replace')
+    assert detect.returncode != 0
+    assert 'unicode-ellipsis' in detect_out
+
+    fix = subprocess.run(
+        [_script('jotquote'), 'lint', '--select', 'unicode-ellipsis', '--fix'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert fix.returncode == 0
+    contents = quote_file.read_text(encoding='utf-8')
+    assert '…' not in contents
+    assert 'Wait... really?' in contents
+
+
+def test_add_duplicate_quote_rejected_integration(tmp_path):
+    """jotquote add rejects a quote already present in the file with a non-zero exit code."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+
+    result = subprocess.run(
+        [_script('jotquote'), 'add', 'Ask for what you want and be prepared to get it. - Maya Angelou'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    stderr = result.stderr.decode('utf-8', errors='replace')
+    assert result.returncode != 0
+    assert 'already' in stderr or 'duplicate' in stderr.lower()
+
+
 def test_legacy_jotquote_section_still_works(tmp_path):
     """jotquote list works with the legacy [jotquote] section and emits a deprecation warning."""
     # Copy the legacy config template to the jotquote config directory

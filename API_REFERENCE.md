@@ -770,10 +770,9 @@ Run the named lint checks against `quotes` and return every
 silently ignored.  Per-check options are read from the `[lint]` section
 of `config`.
 
-Available checks: `ascii`, `smart-quotes`, `smart-dashes`,
-`double-spaces`, `quote-too-long`, `no-tags`, `no-author`,
-`author-antipatterns`, `required-tag-group`.  The full set is available
-as `api.ALL_CHECKS`.
+Available checks: `smart-quotes`, `smart-dashes`, `double-spaces`,
+`quote-too-long`, `no-tags`, `no-author`, `required-tag-group`.
+The full set is available as `api.ALL_CHECKS`.
 
 **Example:**
 

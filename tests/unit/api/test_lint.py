@@ -7,15 +7,15 @@ from configparser import ConfigParser
 from jotquote import api
 from jotquote.api.lint import (
     LintIssue,
-    _check_ascii,
-    _check_author_antipatterns,
     _check_double_spaces,
+    _check_duplicate_hash,
     _check_no_author,
     _check_no_tags,
     _check_quote_length,
     _check_required_tag_groups,
     _check_smart_dashes,
     _check_smart_quotes,
+    _check_unicode_ellipsis,
     apply_fixes,
     lint_quotes,
 )
@@ -28,52 +28,18 @@ def _make_quote(quote='Test quote', author='Test Author', publication=None, tags
     return q
 
 
-def _make_config(author_antipattern_regex='', enabled_checks='', max_quote_length='0', required_tag_groups=None):
+def _make_config(enabled_checks='', max_quote_length='0', required_tag_groups=None):
     """Helper to create a config with the lint section populated."""
     cfg = ConfigParser()
     cfg.add_section(api.SECTION_GENERAL)
     cfg[api.SECTION_GENERAL]['quote_file'] = 'notset'
     cfg.add_section(api.SECTION_LINT)
     cfg[api.SECTION_LINT]['enabled_checks'] = enabled_checks
-    cfg[api.SECTION_LINT]['author_antipattern_regex'] = author_antipattern_regex
     cfg[api.SECTION_LINT]['max_quote_length'] = max_quote_length
     if required_tag_groups:
         for name, tags in required_tag_groups.items():
             cfg[api.SECTION_LINT]['required_group_{}'.format(name)] = tags
     return cfg
-
-
-# ---------------------------------------------------------------------------
-# _check_ascii
-# ---------------------------------------------------------------------------
-
-
-def test_check_ascii_clean():
-    q = _make_quote(quote='Hello world', author='Jane Doe')
-    assert _check_ascii(q) == []
-
-
-def test_check_ascii_in_quote():
-    q = _make_quote(quote='caf\u00e9')
-    issues = _check_ascii(q)
-    assert len(issues) == 1
-    assert issues[0].check == 'ascii'
-    assert issues[0].field == 'quote'
-    assert not issues[0].fixable
-
-
-def test_check_ascii_in_author():
-    q = _make_quote(author='Fran\u00e7ois')
-    issues = _check_ascii(q)
-    assert len(issues) == 1
-    assert issues[0].field == 'author'
-
-
-def test_check_ascii_in_publication():
-    q = _make_quote(publication='Le Monde \u00e9dition')
-    issues = _check_ascii(q)
-    assert len(issues) == 1
-    assert issues[0].field == 'publication'
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +58,7 @@ def test_check_smart_quotes_in_quote():
     assert len(issues) == 1
     assert issues[0].check == 'smart-quotes'
     assert issues[0].fixable
-    assert issues[0].fix_value == '"Hello"'
+    assert issues[0].fix_value == "'Hello'"
 
 
 def test_check_smart_quotes_in_author():
@@ -281,61 +247,6 @@ def test_check_no_author_empty():
 
 
 # ---------------------------------------------------------------------------
-# _check_author_antipatterns
-# ---------------------------------------------------------------------------
-
-
-def test_author_antipatterns_clean():
-    cfg = _make_config()[api.SECTION_LINT]
-    q = _make_quote(author='Jane Doe')
-    assert _check_author_antipatterns(q, cfg) == []
-
-
-def test_author_antipatterns_anonymous():
-    cfg = _make_config()[api.SECTION_LINT]
-    for name in ['unknown', 'anonymous', 'ANON', 'n/a', 'None', '?']:
-        q = _make_quote(author=name)
-        issues = _check_author_antipatterns(q, cfg)
-        assert any(i.check == 'author-antipatterns' and 'unknown/anonymous' in i.message for i in issues), name
-
-
-def test_author_antipatterns_unknown_title_case_allowed():
-    """'Unknown' (title case) is the canonical form and must not be flagged."""
-    cfg = _make_config()[api.SECTION_LINT]
-    q = _make_quote(author='Unknown')
-    assert _check_author_antipatterns(q, cfg) == []
-
-
-def test_author_antipatterns_allcaps():
-    cfg = _make_config()[api.SECTION_LINT]
-    q = _make_quote(author='SMITH')
-    issues = _check_author_antipatterns(q, cfg)
-    assert any('all-caps' in i.message for i in issues)
-
-
-def test_author_antipatterns_allcaps_short_allowed():
-    """Two-letter uppercase words (initials/abbreviations) should not trigger."""
-    cfg = _make_config()[api.SECTION_LINT]
-    q = _make_quote(author='J.K. Rowling')
-    issues = _check_author_antipatterns(q, cfg)
-    assert not any('all-caps' in i.message for i in issues)
-
-
-def test_author_antipatterns_custom_regex():
-    cfg = _make_config(author_antipattern_regex=r'^\d')[api.SECTION_LINT]
-    q = _make_quote(author='123Author')
-    issues = _check_author_antipatterns(q, cfg)
-    assert any('custom pattern' in i.message for i in issues)
-
-
-def test_author_antipatterns_custom_regex_no_match():
-    cfg = _make_config(author_antipattern_regex=r'^\d')[api.SECTION_LINT]
-    q = _make_quote(author='Jane Doe')
-    issues = _check_author_antipatterns(q, cfg)
-    assert not any('custom pattern' in i.message for i in issues)
-
-
-# ---------------------------------------------------------------------------
 # _check_required_tag_groups
 # ---------------------------------------------------------------------------
 
@@ -390,6 +301,90 @@ def test_required_tag_groups_multiple_groups_one_missing():
 
 
 # ---------------------------------------------------------------------------
+# _check_duplicate_hash
+# ---------------------------------------------------------------------------
+
+
+def test_check_duplicate_hash_clean():
+    """No issues when every quote has a unique hash."""
+    quotes = [
+        _make_quote(quote='Alpha bravo charlie delta.', line_number=1),
+        _make_quote(quote='Echo foxtrot golf hotel.', line_number=2),
+    ]
+    assert _check_duplicate_hash(quotes) == []
+
+
+def test_check_duplicate_hash_detects_pair():
+    """Two quotes with the same hash are flagged on the second occurrence."""
+    quotes = [
+        _make_quote(quote='Apples bake cherries deliciously.', line_number=3),
+        _make_quote(quote='Ants bother cats daily.', line_number=7),
+    ]
+    issues = _check_duplicate_hash(quotes)
+    assert len(issues) == 1
+    assert issues[0].check == 'duplicate-hash'
+    assert issues[0].field == 'quote'
+    assert issues[0].line_number == 7
+    assert '3' in issues[0].message
+    assert not issues[0].fixable
+
+
+def test_check_duplicate_hash_detects_group_of_three():
+    """Three quotes with the same hash produce two issues (second and third)."""
+    quotes = [
+        _make_quote(quote='Apples bake cherries deliciously.', line_number=1),
+        _make_quote(quote='Ants bother cats daily.', line_number=5),
+        _make_quote(quote='Alligators build canals daily.', line_number=9),
+    ]
+    issues = _check_duplicate_hash(quotes)
+    assert len(issues) == 2
+    assert {i.line_number for i in issues} == {5, 9}
+
+
+# ---------------------------------------------------------------------------
+# _check_unicode_ellipsis
+# ---------------------------------------------------------------------------
+
+
+def test_check_unicode_ellipsis_clean():
+    q = _make_quote(quote='Three dots... not a single codepoint')
+    assert _check_unicode_ellipsis(q) == []
+
+
+def test_check_unicode_ellipsis_in_quote():
+    q = _make_quote(quote='Wait… really?')
+    issues = _check_unicode_ellipsis(q)
+    assert len(issues) == 1
+    assert issues[0].check == 'unicode-ellipsis'
+    assert issues[0].field == 'quote'
+    assert issues[0].fixable
+    assert issues[0].fix_value == 'Wait... really?'
+
+
+def test_check_unicode_ellipsis_in_author():
+    q = _make_quote(author='Jane Doe…')
+    issues = _check_unicode_ellipsis(q)
+    assert len(issues) == 1
+    assert issues[0].field == 'author'
+    assert issues[0].fix_value == 'Jane Doe...'
+
+
+def test_check_unicode_ellipsis_in_publication():
+    q = _make_quote(publication='The Times…')
+    issues = _check_unicode_ellipsis(q)
+    assert len(issues) == 1
+    assert issues[0].field == 'publication'
+    assert issues[0].fix_value == 'The Times...'
+
+
+def test_check_unicode_ellipsis_multiple_occurrences():
+    q = _make_quote(quote='Wait… really…')
+    issues = _check_unicode_ellipsis(q)
+    assert len(issues) == 1
+    assert issues[0].fix_value == 'Wait... really...'
+
+
+# ---------------------------------------------------------------------------
 # apply_fixes
 # ---------------------------------------------------------------------------
 
@@ -397,11 +392,28 @@ def test_required_tag_groups_multiple_groups_one_missing():
 def test_apply_fixes_smart_quotes():
     q = _make_quote(quote='\u201cHello\u201d', author='Jane Doe', line_number=1)
     issues = [
-        LintIssue(line_number=1, check='smart-quotes', field='quote', message='', fixable=True, fix_value='"Hello"'),
+        LintIssue(line_number=1, check='smart-quotes', field='quote', message='', fixable=True, fix_value="'Hello'"),
     ]
     quotes, count = apply_fixes([q], issues)
     assert count == 1
-    assert quotes[0].quote == '"Hello"'
+    assert quotes[0].quote == "'Hello'"
+
+
+def test_apply_fixes_unicode_ellipsis():
+    q = _make_quote(quote='Wait… really?', author='Jane Doe', line_number=1)
+    issues = [
+        LintIssue(
+            line_number=1,
+            check='unicode-ellipsis',
+            field='quote',
+            message='',
+            fixable=True,
+            fix_value='Wait... really?',
+        ),
+    ]
+    quotes, count = apply_fixes([q], issues)
+    assert count == 1
+    assert quotes[0].quote == 'Wait... really?'
 
 
 def test_apply_fixes_no_fixable_issues():

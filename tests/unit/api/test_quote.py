@@ -278,3 +278,25 @@ def test_get_hash_single_pass():
     # Each word contributes only its first letter: 't', 'q', 'b', 'f'
     expected = hashlib.md5('tqbf'.encode()).hexdigest()[:16]
     assert q.get_hash() == expected
+
+
+def test_get_hash_is_cached_after_first_call():
+    """Repeated get_hash() calls must reuse the cached value rather than recomputing."""
+    from unittest.mock import patch
+
+    q = api.Quote('Hello World foo', 'Author', None, [])
+    with patch('jotquote.api.quote.hashlib.md5', wraps=hashlib.md5) as spy:
+        q.get_hash()
+        q.get_hash()
+        q.get_hash()
+    assert spy.call_count == 1
+
+
+def test_get_hash_invalidates_when_quote_text_changes():
+    """Reassigning .quote must invalidate the cached hash so subsequent calls reflect the new text."""
+    q = api.Quote('Hello World foo', 'Author', None, [])
+    original = q.get_hash()
+    q.quote = 'Different text here'
+    expected_new = hashlib.md5('dth'.encode()).hexdigest()[:16]
+    assert q.get_hash() == expected_new
+    assert q.get_hash() != original
