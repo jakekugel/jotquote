@@ -92,7 +92,7 @@ def test_check_smart_quotes_in_quote():
     assert len(issues) == 1
     assert issues[0].check == 'smart-quotes'
     assert issues[0].fixable
-    assert issues[0].fix_value == '"Hello"'
+    assert issues[0].fix_value == "'Hello'"
 
 
 def test_check_smart_quotes_in_author():
@@ -397,11 +397,11 @@ def test_required_tag_groups_multiple_groups_one_missing():
 def test_apply_fixes_smart_quotes():
     q = _make_quote(quote='\u201cHello\u201d', author='Jane Doe', line_number=1)
     issues = [
-        LintIssue(line_number=1, check='smart-quotes', field='quote', message='', fixable=True, fix_value='"Hello"'),
+        LintIssue(line_number=1, check='smart-quotes', field='quote', message='', fixable=True, fix_value="'Hello'"),
     ]
     quotes, count = apply_fixes([q], issues)
     assert count == 1
-    assert quotes[0].quote == '"Hello"'
+    assert quotes[0].quote == "'Hello'"
 
 
 def test_apply_fixes_no_fixable_issues():

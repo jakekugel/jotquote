@@ -12,7 +12,7 @@ from jotquote.api import config as _config
 _SMART_QUOTE_CHARS = '\u2018\u2019\u201c\u201d\u2039\u203a\u00ab\u00bb'
 _SMART_QUOTE_MAP = str.maketrans(
     '\u2018\u2019\u201c\u201d\u2039\u203a\u00ab\u00bb',
-    '\'\'""\'\'""',
+    "''''''''",
 )
 
 # Unicode dash/hyphen characters and their ASCII hyphen replacement
