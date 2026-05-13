@@ -51,7 +51,7 @@ class Quote:
         else:
             self.publication = publication.strip()
 
-        _assert_no_invalid_chars_quote(self.quote, 'quote')
+        _assert_no_invalid_chars_quote(self._quote, 'quote')
         _assert_no_invalid_chars(self.author, 'author')
 
         if self.publication is not None:
@@ -60,6 +60,16 @@ class Quote:
         self.tags = []
         self.set_tags(tags)
         self.line_number = 0
+
+    @property
+    def quote(self):
+        return self._quote
+
+    @quote.setter
+    def quote(self, value):
+        # Invalidate the cached hash whenever the quote text changes.
+        self._quote = value
+        self._hash = None
 
     def __eq__(self, other):
         """Return True if two quotes have the same quote, author, publication, and tags."""
@@ -151,10 +161,13 @@ class Quote:
         Returns:
             str: The first 16 hex characters of the MD5 digest.
         """
+        if self._hash is not None:
+            return self._hash
+
         # Single pass: record the first lowercase letter of every alphabetic word.
         first_letters = []
         in_word = False
-        for ch in self.quote:
+        for ch in self._quote:
             if ch.isalpha():
                 if not in_word:
                     first_letters.append(ch.lower())
@@ -164,7 +177,8 @@ class Quote:
         acronym = ''.join(first_letters)
         m = hashlib.md5()
         m.update(acronym.encode('utf-8'))
-        return m.hexdigest()[0:16]
+        self._hash = m.hexdigest()[0:16]
+        return self._hash
 
     def get_num_stars(self):
         """Return the star rating (0-5) derived from star tags.

@@ -14,15 +14,15 @@ CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.jotquote', 'settings.conf'
 
 ALL_CHECKS = frozenset(
     {
-        'ascii',  # Flag non-ASCII characters in quote, author, or publication
         'smart-quotes',  # Flag (and fix) typographic/smart quote characters
         'smart-dashes',  # Flag (and fix) unicode dash/hyphen variants
+        'unicode-ellipsis',  # Flag (and fix) the Unicode horizontal ellipsis (U+2026)
         'double-spaces',  # Flag (and fix) runs of multiple spaces in any field
         'quote-too-long',  # Flag quotes exceeding a configurable max length (max_quote_length)
         'no-tags',  # Flag quotes with no tags
         'no-author',  # Flag quotes with no author
-        'author-antipatterns',  # Flag author fields matching known bad patterns (anonymous, all-caps, source-type words)
         'required-tag-group',  # Flag quotes missing a tag from any user-defined required tag group
+        'duplicate-hash',  # Flag quotes whose fuzzy first-letter hash collides with another quote in the file
     }
 )
 
@@ -43,7 +43,6 @@ _GENERAL_KEYS = frozenset(
 _LINT_KEYS = frozenset(
     {
         'lint_on_add',
-        'lint_author_antipattern_regex',
     }
 )
 

@@ -31,7 +31,6 @@ def read_quotes(filename):
 
     Raises:
         StorageError: If the file does not exist.
-        DuplicateQuoteError: If the file contains a duplicate quote.
         QuoteValidationError: If the file has a malformed line.
     """
     quotes, _ = read_quotes_with_hash(filename)
@@ -50,7 +49,6 @@ def read_quotes_with_hash(filename):
 
     Raises:
         StorageError: If the file does not exist.
-        DuplicateQuoteError: If the file contains a duplicate quote.
         QuoteValidationError: If the file has a malformed line.
     """
     if not os.path.exists(filename):
@@ -59,10 +57,11 @@ def read_quotes_with_hash(filename):
     with open(filename, 'rb') as f:
         raw = f.read()
 
-    sha256_hex = hashlib.sha256(raw).hexdigest()
+    # Get the SHA-256 hash of the file contents while we have it in memory, to avoid a second pass over the file.
+    sha256_hex = _sha256_hex(raw)
+
     lines = raw.decode('utf-8').splitlines()
     quotes = parse_quotes(lines, filename, simple_format=False)
-    _check_for_duplicates(quotes, filename)
 
     return quotes, sha256_hex
 
@@ -191,11 +190,8 @@ def get_sha256(filename):
     Returns:
         str: The hex SHA-256 digest of the file contents.
     """
-    h = hashlib.sha256()
     with open(filename, 'rb') as f:
-        for chunk in iter(lambda: f.read(8192), b''):
-            h.update(chunk)
-    return h.hexdigest()
+        return _sha256_hex(f.read())
 
 
 def set_quote(quotefile, line_num, quote, sha256):
@@ -292,13 +288,13 @@ def add_quotes(filename, newquotes):
     # Read in quotes from the quote file given.  Exception raised on I/O error
     quotes, sha256 = read_quotes_with_hash(filename)
 
-    # Loop through existing quotes and check against new quotes for any duplicates
-    for existing_quote in quotes:
-        for new_quote in newquotes:
-            if new_quote.quote == existing_quote.quote:
-                raise DuplicateQuoteError(
-                    'the quote "{}" is already in the quote file {}.'.format(new_quote.quote, filename)
-                )
+    # Build a set of existing quote hashes for O(1) lookup, then check each new quote once.
+    existing_hashes = {q.get_hash() for q in quotes}
+    for new_quote in newquotes:
+        if new_quote.get_hash() in existing_hashes:
+            raise DuplicateQuoteError(
+                'the quote "{}" is already in the quote file {}.'.format(new_quote.quote, filename)
+            )
 
     # Rewrite quote file with any additional quotes
     quotes.extend(newquotes)
@@ -431,13 +427,26 @@ def format_quote(quote):
     return line.rstrip(' ')
 
 
+def _sha256_hex(data):
+    """Return the SHA-256 hex digest of the given bytes.
+
+    Args:
+        data (bytes): The bytes to hash.
+
+    Returns:
+        str: Hex SHA-256 digest of ``data``.
+    """
+    return hashlib.sha256(data).hexdigest()
+
+
 def _check_for_duplicates(quotes, source):
     """Throws an exception if the given list of quotes contains duplicates."""
 
-    quoteset = set()
+    hashes = set()
     for index, quote in enumerate(quotes):
-        if quote.quote not in quoteset:
-            quoteset.add(quote.quote)
+        quote_hash = quote.get_hash()
+        if quote_hash not in hashes:
+            hashes.add(quote_hash)
         else:
             raise DuplicateQuoteError(
                 'a duplicate quote was found on line {} of \'{}\'.  Quote: "{}".'.format(index + 1, source, quote.quote)

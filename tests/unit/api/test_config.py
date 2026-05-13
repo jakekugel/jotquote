@@ -159,7 +159,6 @@ def test_migrate_legacy_section_prefix_stripping():
     config['jotquote']['quote_file'] = '/path/quotes.txt'
     config['jotquote']['line_separator'] = 'unix'
     config['jotquote']['lint_max_quote_length'] = '100'
-    config['jotquote']['lint_author_antipattern_regex'] = r'^\d'
     config['jotquote']['lint_required_group_stars'] = '1star, 2stars'
     config['jotquote']['web_port'] = '8080'
     config['jotquote']['web_ip'] = '0.0.0.0'
@@ -175,7 +174,6 @@ def test_migrate_legacy_section_prefix_stripping():
     assert config.get(api.SECTION_GENERAL, 'show_author_count') == 'true'
     # Lint section (prefix stripped)
     assert config.get(api.SECTION_LINT, 'max_quote_length') == '100'
-    assert config.get(api.SECTION_LINT, 'author_antipattern_regex') == r'^\d'
     assert config.get(api.SECTION_LINT, 'required_group_stars') == '1star, 2stars'
     # Web section (prefix stripped)
     assert config.get(api.SECTION_WEB, 'port') == '8080'

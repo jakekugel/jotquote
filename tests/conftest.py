@@ -19,8 +19,7 @@ def config(monkeypatch):
     cfg[api.SECTION_GENERAL]['quote_file'] = 'notset'
     cfg[api.SECTION_GENERAL]['line_separator'] = 'platform'
     cfg.add_section(api.SECTION_LINT)
-    cfg[api.SECTION_LINT]['enabled_checks'] = 'ascii, smart-quotes, no-tags, no-author, author-antipatterns'
-    cfg[api.SECTION_LINT]['author_antipattern_regex'] = ''
+    cfg[api.SECTION_LINT]['enabled_checks'] = 'smart-quotes, no-tags, no-author'
     cfg.add_section(api.SECTION_WEB)
     cfg[api.SECTION_WEB]['port'] = '80'
     cfg[api.SECTION_WEB]['ip'] = '0.0.0.0'

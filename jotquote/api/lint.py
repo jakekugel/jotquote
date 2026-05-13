@@ -31,9 +31,8 @@ _SMART_DASH_NAMES = {
 _SMART_DASH_CHARS = ''.join(_SMART_DASH_NAMES)
 _SMART_DASH_MAP = str.maketrans(_SMART_DASH_CHARS, '-' * len(_SMART_DASH_CHARS))
 
-_ANON_RE = re.compile(r'^\s*(unknown|anonymous|anon|n/a|none|\?)\s*$', re.IGNORECASE)
-_ALLCAPS_WORD_RE = re.compile(r'\b[A-Z]{3,}\b')
-
+# Unicode horizontal ellipsis (U+2026); auto-fixed to three ASCII periods.
+_UNICODE_ELLIPSIS = '…'
 
 @dataclass
 class LintIssue:
@@ -77,8 +76,6 @@ def lint_quotes(quotes, checks, config):
     lint_cfg = config[_config.SECTION_LINT]
     issues = []
     for quote in quotes:
-        if 'ascii' in checks:
-            issues.extend(_check_ascii(quote))
         if 'smart-quotes' in checks:
             issues.extend(_check_smart_quotes(quote))
         if 'smart-dashes' in checks:
@@ -91,10 +88,14 @@ def lint_quotes(quotes, checks, config):
             issues.extend(_check_no_tags(quote))
         if 'no-author' in checks:
             issues.extend(_check_no_author(quote))
-        if 'author-antipatterns' in checks:
-            issues.extend(_check_author_antipatterns(quote, lint_cfg))
         if 'required-tag-group' in checks:
             issues.extend(_check_required_tag_groups(quote, lint_cfg))
+        if 'unicode-ellipsis' in checks:
+            issues.extend(_check_unicode_ellipsis(quote))
+
+    if 'duplicate-hash' in checks:
+        issues.extend(_check_duplicate_hash(quotes))
+
     return issues
 
 
@@ -138,6 +139,11 @@ def apply_fixes(quotes, issues):
                 current = getattr(quote, field_name) or ''
                 setattr(quote, field_name, re.sub(r'  +', ' ', current))
                 fix_count += 1
+            ue = [i for i in line_fixes if i.check == 'unicode-ellipsis' and i.field == field_name]
+            if ue:
+                current = getattr(quote, field_name) or ''
+                setattr(quote, field_name, current.replace(_UNICODE_ELLIPSIS, '...'))
+                fix_count += 1
 
     return quotes, fix_count
 
@@ -145,28 +151,6 @@ def apply_fixes(quotes, issues):
 # ---------------------------------------------------------------------------
 # Private check helpers
 # ---------------------------------------------------------------------------
-
-_ASCII_SKIP = frozenset(_SMART_QUOTE_CHARS) | frozenset(_SMART_DASH_CHARS)
-
-
-def _check_ascii(quote):
-    """Flag non-ASCII characters in the quote, author, or publication fields."""
-    issues = []
-    for field_name, value in [('quote', quote.quote), ('author', quote.author), ('publication', quote.publication)]:
-        if value is None:
-            continue
-        non_ascii = [(i, c) for i, c in enumerate(value) if ord(c) > 127 and c not in _ASCII_SKIP]
-        if non_ascii:
-            pos, char = non_ascii[0]
-            issues.append(
-                LintIssue(
-                    line_number=quote.line_number,
-                    check='ascii',
-                    field=field_name,
-                    message='Non-ASCII character {!r} at position {} in {}'.format(char, pos, field_name),
-                )
-            )
-    return issues
 
 
 def _check_smart_quotes(quote):
@@ -206,6 +190,27 @@ def _check_smart_dashes(quote):
                     check='smart-dashes',
                     field=field_name,
                     message='Non-standard {} in {} (use ASCII hyphen)'.format(', '.join(names), field_name),
+                    fixable=True,
+                    fix_value=fixed,
+                )
+            )
+    return issues
+
+
+def _check_unicode_ellipsis(quote):
+    """Flag and fix the Unicode horizontal ellipsis (U+2026) in any field."""
+    issues = []
+    for field_name, value in [('quote', quote.quote), ('author', quote.author), ('publication', quote.publication)]:
+        if value is None:
+            continue
+        if _UNICODE_ELLIPSIS in value:
+            fixed = value.replace(_UNICODE_ELLIPSIS, '...')
+            issues.append(
+                LintIssue(
+                    line_number=quote.line_number,
+                    check='unicode-ellipsis',
+                    field=field_name,
+                    message='Unicode ellipsis in {}'.format(field_name),
                     fixable=True,
                     fix_value=fixed,
                 )
@@ -280,46 +285,23 @@ def _check_no_author(quote):
     return []
 
 
-def _check_author_antipatterns(quote, lint_cfg):
-    """Flag author fields matching known bad patterns (anonymous, all-caps, or custom regex)."""
+def _check_duplicate_hash(quotes):
+    """Flag quotes whose fuzzy hash collides with an earlier quote in the file."""
     issues = []
-    author = quote.author
-
-    if _ANON_RE.match(author) and author.strip() != 'Unknown':
-        issues.append(
-            LintIssue(
-                line_number=quote.line_number,
-                check='author-antipatterns',
-                field='author',
-                message='Author matches unknown/anonymous pattern: {!r} (use "Unknown" instead)'.format(author),
-            )
-        )
-
-    allcaps = _ALLCAPS_WORD_RE.findall(author)
-    if allcaps:
-        issues.append(
-            LintIssue(
-                line_number=quote.line_number,
-                check='author-antipatterns',
-                field='author',
-                message='Author contains all-caps word(s): {}'.format(', '.join(allcaps)),
-            )
-        )
-
-    raw_patterns = lint_cfg.get('author_antipattern_regex', '')
-    if raw_patterns.strip():
-        for pattern in raw_patterns.split(','):
-            pattern = pattern.strip()
-            if pattern and re.search(pattern, author):
-                issues.append(
-                    LintIssue(
-                        line_number=quote.line_number,
-                        check='author-antipatterns',
-                        field='author',
-                        message='Author matches custom pattern {!r}: {!r}'.format(pattern, author),
-                    )
+    seen = {}
+    for quote in quotes:
+        h = quote.get_hash()
+        if h in seen:
+            issues.append(
+                LintIssue(
+                    line_number=quote.line_number,
+                    check='duplicate-hash',
+                    field='quote',
+                    message='Quote hash matches the quote on line {}'.format(seen[h]),
                 )
-
+            )
+        else:
+            seen[h] = quote.line_number
     return issues
 
 
