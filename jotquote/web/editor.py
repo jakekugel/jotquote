@@ -4,7 +4,7 @@
 
 import logging
 
-from flask import Flask, abort, redirect, render_template, request
+from flask import Flask, abort, redirect, render_template, request, send_file
 
 from jotquote import api
 from jotquote.api import lint
@@ -40,6 +40,13 @@ def log_request(response):
         response.status_code,
     )
     return response
+
+
+@app.route('/favicon.ico')
+def favicon():
+    """Serve the configured favicon, or the bundled default when none is set."""
+    config = api.get_config()
+    return send_file(web_helpers.resolve_favicon_path(config))
 
 
 @app.route('/', methods=['GET'])

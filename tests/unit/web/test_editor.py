@@ -2,9 +2,11 @@
 #  This file is licensed under the terms of the MIT License.  See the LICENSE
 # file in the root of this repository for complete details.
 
+import os
 import re
 
 from jotquote import api
+from jotquote.web import editor as web_editor
 
 
 def test_get_index_200(editor_client, config):
@@ -398,3 +400,29 @@ def test_lint_cache_miss_on_check_change(editor_client, config, monkeypatch):
         config[api.SECTION_LINT]['enabled_checks'] = 'no-author'
         client.get('/')
         assert mock_lint.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# Favicon
+# ---------------------------------------------------------------------------
+
+
+def test_editor_favicon_default(editor_client, config):
+    """/favicon.ico returns the bundled favicon when favicon_file is unset."""
+    client, _ = editor_client
+    rv = client.get('/favicon.ico')
+    assert rv.status_code == 200
+    bundled = os.path.join(os.path.dirname(web_editor.__file__), 'static', 'favicon.ico')
+    with open(bundled, 'rb') as f:
+        assert rv.data == f.read()
+
+
+def test_editor_favicon_custom(editor_client, config, tmp_path):
+    """/favicon.ico returns the user-configured file when favicon_file is set."""
+    custom = tmp_path / 'editor-favicon.svg'
+    custom.write_bytes(b'<svg id="x"/>')
+    config[api.SECTION_WEB]['favicon_file'] = str(custom)
+    client, _ = editor_client
+    rv = client.get('/favicon.ico')
+    assert rv.status_code == 200
+    assert rv.data == b'<svg id="x"/>'

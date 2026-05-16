@@ -673,6 +673,51 @@ def test_get_about_provider_import_error(config, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# Favicon
+# ---------------------------------------------------------------------------
+
+
+def test_favicon_default(flask_client, config):
+    """/favicon.ico returns the bundled favicon when favicon_file is unset."""
+    client, _ = flask_client
+    rv = client.get('/favicon.ico')
+    assert rv.status_code == 200
+    bundled = os.path.join(os.path.dirname(web.__file__), 'static', 'favicon.ico')
+    with open(bundled, 'rb') as f:
+        assert rv.data == f.read()
+
+
+def test_favicon_custom(flask_client, config, tmp_path):
+    """/favicon.ico returns the user-configured file when favicon_file is set."""
+    custom = tmp_path / 'my-favicon.svg'
+    custom.write_bytes(b'<svg xmlns="http://www.w3.org/2000/svg"/>')
+    config[api.SECTION_WEB]['favicon_file'] = str(custom)
+    client, _ = flask_client
+    rv = client.get('/favicon.ico')
+    assert rv.status_code == 200
+    assert rv.data == b'<svg xmlns="http://www.w3.org/2000/svg"/>'
+    assert 'svg' in rv.headers.get('Content-Type', '')
+
+
+def test_favicon_missing_falls_back(flask_client, config, tmp_path):
+    """Missing favicon_file → bundled default is served (no 500)."""
+    config[api.SECTION_WEB]['favicon_file'] = str(tmp_path / 'nope.ico')
+    client, _ = flask_client
+    rv = client.get('/favicon.ico')
+    assert rv.status_code == 200
+    bundled = os.path.join(os.path.dirname(web.__file__), 'static', 'favicon.ico')
+    with open(bundled, 'rb') as f:
+        assert rv.data == f.read()
+
+
+def test_favicon_link_uses_route(flask_client, config):
+    """Templates point <link rel=icon> at the /favicon.ico route, not /static/."""
+    client, _ = flask_client
+    rv = client.get('/')
+    assert b'<link rel="icon" href="/favicon.ico">' in rv.data
+
+
+# ---------------------------------------------------------------------------
 # Fullscreen button
 # ---------------------------------------------------------------------------
 

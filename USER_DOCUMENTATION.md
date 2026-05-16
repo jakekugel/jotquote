@@ -271,6 +271,7 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 | `editor_port` | `5545` | Port the web editor (`jotquote webeditor`) listens on |
 | `editor_ip` | `127.0.0.1` | IP address the web editor (`jotquote webeditor`) binds to |
 | `expiration_seconds` | `14400` | How long (in seconds) before the web page auto-refreshes in the browser. In `daily` mode, this is capped so the refresh happens no later than midnight |
+| `favicon_file` | _(empty)_ | Path to a custom favicon (`.ico`, `.svg`, or `.png`) served by both the viewer and the editor. Absolute paths are used as-is; relative paths are resolved against the directory containing `settings.conf`. When empty or the file is missing, the bundled default favicon is served. |
 | `page_title` | `jotquote` | HTML page title shown in the browser tab |
 | `light_foreground_color` | `#000000` | Text color in light mode |
 | `light_background_color` | `#ffffff` | Background color in light mode |

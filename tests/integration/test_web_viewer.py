@@ -46,7 +46,12 @@ ip = 127.0.0.1
 {web_extra}"""
 
 _GENERAL_KEYS = {'show_author_count'}
-_WEB_NO_PREFIX = {'header_provider_extension', 'quote_resolver_extension', 'about_content_provider_extension'}
+_WEB_NO_PREFIX = {
+    'header_provider_extension',
+    'quote_resolver_extension',
+    'about_content_provider_extension',
+    'favicon_file',
+}
 
 
 def _make_env(tmp_path, quote_file, **extra_props):
@@ -578,6 +583,36 @@ def test_about_content_provider_extension(tmp_path):
             assert resp.status == 200
             body = resp.read().decode('utf-8')
         assert 'href="/about"' in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_custom_favicon(tmp_path):
+    """Webserver with favicon_file configured serves that file at /favicon.ico."""
+    quote_file = _copy_quotes(tmp_path)
+    fixture_favicon = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), '..', 'fixtures', 'test_favicon.svg')
+    )
+    env = _make_env(tmp_path, quote_file, favicon_file=fixture_favicon)
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        url = TEST_URL.rstrip('/') + '/favicon.ico'
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            assert resp.status == 200
+            served = resp.read()
+        with open(fixture_favicon, 'rb') as f:
+            assert served == f.read()
     finally:
         proc.terminate()
         proc.wait(timeout=10)

@@ -8,7 +8,7 @@ import logging
 import os
 import random
 
-from flask import Flask, abort, g, make_response, render_template, request
+from flask import Flask, abort, g, make_response, render_template, request, send_file
 
 from jotquote import api
 from jotquote.web import helpers as web_helpers
@@ -108,6 +108,13 @@ def aboutpage():
     if not about_text:
         abort(404)
     return render_template('about.html', about_text=about_text, page_title=page_title, **colors)
+
+
+@app.route('/favicon.ico')
+def favicon():
+    """Serve the configured favicon, or the bundled default when none is set."""
+    config = api.get_config()
+    return send_file(web_helpers.resolve_favicon_path(config))
 
 
 @app.route('/<date_path_param>')

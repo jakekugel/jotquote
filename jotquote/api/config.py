@@ -49,6 +49,7 @@ _LINT_KEYS = frozenset(
 _WEB_KEYS = frozenset(
     {
         'about_content_provider_extension',
+        'favicon_file',
         'header_provider_extension',
         'quote_resolver_extension',
         'web_port',
@@ -195,6 +196,7 @@ def _resolve_config_paths(config, config_dir):
     """Resolve relative path values in config in-place, relative to config_dir."""
     path_lookups = [
         (SECTION_GENERAL, 'quote_file'),
+        (SECTION_WEB, 'favicon_file'),
     ]
     for section, key in path_lookups:
         if config.has_option(section, key):

@@ -40,4 +40,3 @@ Source:    https://www.svgrepo.com/svg/509835/circled-left-chevron
 Collection: Zest Interface Icons
 License:   MIT License
 Author:    zest
---------------------------------------------------------------------------------
