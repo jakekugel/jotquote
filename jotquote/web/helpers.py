@@ -3,11 +3,16 @@
 # file in the root of this repository for complete details.
 
 import logging
+import os
 import time
 
 from jotquote import api
 
 LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
+
+_logger = logging.getLogger(__name__)
+
+_BUNDLED_FAVICON = os.path.join(os.path.dirname(__file__), 'static', 'favicon.ico')
 
 
 def abbreviate_timezone(name):
@@ -56,6 +61,26 @@ def get_enabled_checks(config):
     """Return the set of lint checks to run, from config or all checks if unset."""
     raw = config.get(api.SECTION_LINT, 'enabled_checks', fallback='')
     return {c.strip() for c in raw.split(',') if c.strip()} if raw.strip() else api.ALL_CHECKS
+
+
+def resolve_favicon_path(config):
+    """Return the absolute path of the favicon to serve.
+
+    Reads the ``favicon_file`` property from the ``[web]`` section.  When the
+    property is empty or absent, returns the path to the bundled default
+    favicon.  When it is set but points to a non-existent file, logs an error
+    and returns the bundled default so the page still loads.
+
+    config (ConfigParser) -- the application configuration object.
+    Returns str (absolute path to a favicon file).
+    """
+    configured = config[api.SECTION_WEB].get('favicon_file', '').strip()
+    if not configured:
+        return _BUNDLED_FAVICON
+    if not os.path.isfile(configured):
+        _logger.error('favicon_file %r does not exist; serving bundled favicon', configured)
+        return _BUNDLED_FAVICON
+    return configured
 
 
 def get_color_config(config):

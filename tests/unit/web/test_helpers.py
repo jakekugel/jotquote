@@ -3,13 +3,20 @@
 # file in the root of this repository for complete details.
 
 import logging
+import os
 import re
 from configparser import ConfigParser
 
 import pytest
 
 from jotquote import api
-from jotquote.web.helpers import LOG_FORMAT, TimestampFormatter, get_color_config, sanitize_for_log
+from jotquote.web.helpers import (
+    LOG_FORMAT,
+    TimestampFormatter,
+    get_color_config,
+    resolve_favicon_path,
+    sanitize_for_log,
+)
 
 # ---------------------------------------------------------------------------
 # TimestampFormatter
@@ -131,3 +138,54 @@ def test_get_color_config_all_custom(web_config):
         'dark_fg': '#333333',
         'dark_bg': '#444444',
     }
+
+
+# ---------------------------------------------------------------------------
+# resolve_favicon_path
+# ---------------------------------------------------------------------------
+
+
+def _bundled_favicon():
+    import jotquote.web.helpers as helpers_mod
+
+    return os.path.join(os.path.dirname(helpers_mod.__file__), 'static', 'favicon.ico')
+
+
+def test_resolve_favicon_path_unset_returns_bundled(web_config):
+    """No favicon_file property → bundled default is returned."""
+    assert resolve_favicon_path(web_config) == _bundled_favicon()
+
+
+def test_resolve_favicon_path_empty_returns_bundled(web_config):
+    """Empty favicon_file → bundled default is returned."""
+    web_config[api.SECTION_WEB]['favicon_file'] = ''
+    assert resolve_favicon_path(web_config) == _bundled_favicon()
+
+
+def test_resolve_favicon_path_whitespace_returns_bundled(web_config):
+    """Whitespace-only favicon_file is treated as unset."""
+    web_config[api.SECTION_WEB]['favicon_file'] = '   '
+    assert resolve_favicon_path(web_config) == _bundled_favicon()
+
+
+def test_resolve_favicon_path_custom_file(web_config, tmp_path):
+    """Existing favicon_file → returns that absolute path."""
+    custom = tmp_path / 'my-favicon.svg'
+    custom.write_text('<svg/>', encoding='utf-8')
+    web_config[api.SECTION_WEB]['favicon_file'] = str(custom)
+    assert resolve_favicon_path(web_config) == str(custom)
+
+
+def test_resolve_favicon_path_missing_file_falls_back(web_config, tmp_path, caplog):
+    """Missing favicon_file → logs error and returns bundled default."""
+    bogus = tmp_path / 'does-not-exist.ico'
+    web_config[api.SECTION_WEB]['favicon_file'] = str(bogus)
+    with caplog.at_level(logging.ERROR, logger='jotquote.web.helpers'):
+        result = resolve_favicon_path(web_config)
+    assert result == _bundled_favicon()
+    assert any('favicon_file' in rec.getMessage() and 'does-not-exist.ico' in rec.getMessage() for rec in caplog.records)
+
+
+def test_resolve_favicon_path_bundled_exists():
+    """The bundled favicon path actually exists on disk."""
+    assert os.path.isfile(_bundled_favicon())
