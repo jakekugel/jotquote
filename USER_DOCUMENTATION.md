@@ -263,6 +263,7 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 | Property | Default | Description |
 |---|---|---|
 | `mode` | `daily` | Quote selection mode. `daily` shows a deterministic daily quote (changes at midnight). `random` shows a truly random quote on each page load, disabling the permalink feature. |
+| `about_content_provider_extension` | _(empty)_ | Dotted Python module path for an about content provider (see [About Content Provider](#about-content-provider)) |
 | `header_provider_extension` | _(empty)_ | Dotted Python module path for a header provider (see [Header Provider](#header-provider)) |
 | `quote_resolver_extension` | _(empty)_ | Dotted Python module path for a quote resolver (see [Quote Resolver](#quote-resolver)) |
 | `port` | `5544` | Port the web server (`jotquote webserver`) listens on |
@@ -379,6 +380,49 @@ def get_headers(max_age):
 
 - If the provider module cannot be imported, an error is logged and no custom headers are applied.
 - If the `get_headers` function raises an exception, the error is logged and no custom headers are applied to the response.
+- The provider module is loaded once and cached for the lifetime of the server process.
+
+---
+
+## About Content Provider
+
+The about content provider is a pluggable extension point that lets you supply the body content of the `/about` page from a Python module instead of hardcoding it in `settings.conf`. The web server keeps owning the page chrome (styling, theme toggle, page title, footer); the extension supplies only the HTML fragment that appears inside the about-text container.
+
+### How It Works
+
+An about content provider is a Python module that you write and install. The module must define a `get_about_content` function with this signature:
+
+```python
+def get_about_content() -> str:
+    """Return an HTML fragment to be injected as the about-page body content."""
+```
+
+- The function takes no arguments.
+- Return an HTML fragment string. The fragment is injected into the built-in `about.html` template **without HTML escaping**, so the extension is responsible for returning safe HTML.
+
+### Configuration
+
+Add the `about_content_provider_extension` property to `~/.jotquote/settings.conf`:
+
+```ini
+[web]
+about_content_provider_extension = mypackage.my_about_content
+```
+
+The module must be importable by the Python environment running the web server.
+
+### Precedence and Fallback
+
+- If `about_content_provider_extension` is set: the extension supplies the body content for `/about`. The `about` config property is ignored.
+- If `about_content_provider_extension` is not set and `about` has a value: the built-in about template renders the text. (Note: the rendered text is now passed through `|safe`, so HTML in the `about` config property is no longer escaped. Plain text continues to work as before.)
+- If neither is configured: `/about` returns 404 and the About button is hidden on the viewer page.
+
+The About button on the viewer page appears when either `about_content_provider_extension` is configured or the `about` property is non-empty.
+
+### Error Handling
+
+- If the provider module cannot be imported, an error is logged and the extension is disabled for the lifetime of the server process. The `about` config property is used as a fallback.
+- If `get_about_content` raises an exception, the error is logged and `/about` returns 500.
 - The provider module is loaded once and cached for the lifetime of the server process.
 
 ---

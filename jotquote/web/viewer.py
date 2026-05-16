@@ -56,6 +56,10 @@ _resolver_loaded = False
 _header_fn = None
 _header_loaded = False
 
+# Cached about-content-provider function, loaded lazily on first request.
+_about_provider_fn = None
+_about_provider_loaded = False
+
 
 @app.after_request
 def log_request(response):
@@ -87,11 +91,22 @@ def rootpage():
 def aboutpage():
     """Render the about page."""
     config = api.get_config()
-    about_text = config[api.SECTION_WEB].get('about', '')
-    if not about_text:
-        abort(404)
     page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
     colors = web_helpers.get_color_config(config)
+
+    # Resolve about page body: extension takes priority over config text
+    about_provider = _get_about_provider(config)
+    if about_provider:
+        try:
+            about_text = about_provider()
+        except Exception:
+            app.logger.exception('about content provider error')
+            abort(500)
+    else:
+        about_text = config[api.SECTION_WEB].get('about', '')
+
+    if not about_text:
+        abort(404)
     return render_template('about.html', about_text=about_text, page_title=page_title, **colors)
 
 
@@ -115,6 +130,7 @@ def showpage(date_path_param=None):
     mode = config[api.SECTION_WEB].get('mode', 'daily')
     about_text = config[api.SECTION_WEB].get('about', '')
     colors = web_helpers.get_color_config(config)
+    show_about = bool(about_text) or (_get_about_provider(config) is not None)
 
     # Compute cache lifetime (for HTTP headers) and the absolute reload instant (for the client)
     expiration_seconds, expires_at = _compute_expiration(config, mode, date_path_param, now)
@@ -138,7 +154,7 @@ def showpage(date_path_param=None):
                 date1=date1,
                 page_title=page_title,
                 expires_at=expires_at,
-                about_text=about_text,
+                show_about=show_about,
                 **colors,
             )
         )
@@ -197,7 +213,7 @@ def showpage(date_path_param=None):
             stars=stars,
             show_stars=show_stars,
             permalink=permalink,
-            about_text=about_text,
+            show_about=show_about,
             **colors,
         )
     )
@@ -275,6 +291,44 @@ def _reset_header_provider():
     global _header_fn, _header_loaded
     _header_fn = None
     _header_loaded = False
+
+
+def _get_about_provider(config):
+    """Return the cached about-content-provider function, or None.
+
+    Loads the module specified by the ``about_content_provider_extension``
+    property in the ``[web]`` section of settings.conf.  The module must define
+    a ``get_about_content`` function that takes no arguments and returns an
+    HTML fragment string to be injected as the about-page body content.  The
+    returned fragment is rendered into the built-in ``about.html`` template
+    without HTML escaping, so the extension is responsible for safe HTML.
+
+    config (ConfigParser) -- the application configuration object.
+    Returns callable or None.
+    """
+    global _about_provider_fn, _about_provider_loaded
+    if _about_provider_loaded:
+        return _about_provider_fn
+    _about_provider_loaded = True
+    module_path = config[api.SECTION_WEB].get('about_content_provider_extension', '')
+    if not module_path:
+        return None
+    try:
+        mod = importlib.import_module(module_path)
+        _about_provider_fn = getattr(mod, 'get_about_content')
+    except (ImportError, AttributeError) as e:
+        app.logger.error('failed to load about content provider %r: %s', module_path, e)
+    return _about_provider_fn
+
+
+def _reset_about_provider():
+    """Clear cached about-provider state so the next call to _get_about_provider reloads.
+
+    Intended for use in tests only.
+    """
+    global _about_provider_fn, _about_provider_loaded
+    _about_provider_fn = None
+    _about_provider_loaded = False
 
 
 def _compute_expiration(config, mode, date_path_param, now):

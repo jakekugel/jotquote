@@ -46,7 +46,7 @@ ip = 127.0.0.1
 {web_extra}"""
 
 _GENERAL_KEYS = {'show_author_count'}
-_WEB_NO_PREFIX = {'header_provider_extension', 'quote_resolver_extension'}
+_WEB_NO_PREFIX = {'header_provider_extension', 'quote_resolver_extension', 'about_content_provider_extension'}
 
 
 def _make_env(tmp_path, quote_file, **extra_props):
@@ -543,3 +543,72 @@ def test_waitress_serve_startup_logs(tmp_path):
             'jotquote.web.viewer:app',
         ],
     )
+
+
+def test_about_content_provider_extension(tmp_path):
+    """Webserver with about_content_provider_extension renders the fragment into /about."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(
+        tmp_path,
+        quote_file,
+        about_content_provider_extension='tests.fixtures.test_about_provider',
+    )
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+
+        # /about should return 200 and contain the fixture fragment inside the about template
+        about_url = TEST_URL.rstrip('/') + '/about'
+        with urllib.request.urlopen(about_url, timeout=5) as resp:
+            assert resp.status == 200
+            body = resp.read().decode('utf-8')
+        assert '<h1>Test About Content</h1>' in body
+
+        # Root page should show the About button
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            assert resp.status == 200
+            body = resp.read().decode('utf-8')
+        assert 'href="/about"' in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_about_content_provider_uses_page_title(tmp_path):
+    """About page rendered with provider uses configured page_title from settings."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(
+        tmp_path,
+        quote_file,
+        about_content_provider_extension='tests.fixtures.test_about_provider',
+        web_page_title='Integration Title',
+    )
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        about_url = TEST_URL.rstrip('/') + '/about'
+        with urllib.request.urlopen(about_url, timeout=5) as resp:
+            assert resp.status == 200
+            body = resp.read().decode('utf-8')
+        assert '<title>Integration Title</title>' in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
