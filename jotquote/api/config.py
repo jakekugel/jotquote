@@ -48,6 +48,7 @@ _LINT_KEYS = frozenset(
 
 _WEB_KEYS = frozenset(
     {
+        'about_content_provider_extension',
         'header_provider_extension',
         'quote_resolver_extension',
         'web_port',

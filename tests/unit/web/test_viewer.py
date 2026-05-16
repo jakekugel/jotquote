@@ -547,6 +547,132 @@ def test_about_button_absent_when_no_about(flask_client, config):
 
 
 # ---------------------------------------------------------------------------
+# About page provider extension point
+# ---------------------------------------------------------------------------
+
+
+def test_about_provider_returns_html(flask_client, config, monkeypatch):
+    """About content provider fragment is injected into the rendered /about page."""
+    monkeypatch.setattr(web, '_about_provider_fn', lambda: '<p>custom about</p>')
+    monkeypatch.setattr(web, '_about_provider_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/about')
+    assert rv.status_code == 200
+    assert b'<p>custom about</p>' in rv.data
+
+
+def test_about_provider_renders_through_about_template(flask_client, config, monkeypatch):
+    """Provider's fragment is wrapped by the built-in about.html chrome (page_title, footer)."""
+    config[api.SECTION_WEB]['page_title'] = 'My Test Title'
+    monkeypatch.setattr(web, '_about_provider_fn', lambda: '<p>fragment</p>')
+    monkeypatch.setattr(web, '_about_provider_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/about')
+    assert rv.status_code == 200
+    assert b'<title>My Test Title</title>' in rv.data
+    assert b'<p>fragment</p>' in rv.data
+    assert b'theme-icon' in rv.data
+
+
+def test_about_provider_takes_priority_over_about_text(flask_client, config, monkeypatch):
+    """Extension fragment is rendered when both provider and about text are configured."""
+    config[api.SECTION_WEB]['about'] = 'config about text'
+    monkeypatch.setattr(web, '_about_provider_fn', lambda: '<p>extension fragment</p>')
+    monkeypatch.setattr(web, '_about_provider_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/about')
+    assert rv.status_code == 200
+    assert b'<p>extension fragment</p>' in rv.data
+    assert b'config about text' not in rv.data
+
+
+def test_about_provider_exception_returns_500(flask_client, config, monkeypatch):
+    """About content provider that raises returns 500."""
+
+    def _bad_provider():
+        raise RuntimeError('provider error')
+
+    monkeypatch.setattr(web, '_about_provider_fn', _bad_provider)
+    monkeypatch.setattr(web, '_about_provider_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/about')
+    assert rv.status_code == 500
+
+
+def test_no_provider_falls_back_to_about_text(flask_client, config, monkeypatch):
+    """When no extension is configured, about text config is rendered."""
+    monkeypatch.setattr(web, '_about_provider_fn', None)
+    monkeypatch.setattr(web, '_about_provider_loaded', True)
+    config[api.SECTION_WEB]['about'] = 'Fallback text'
+    client, quote_file = flask_client
+    rv = client.get('/about')
+    assert rv.status_code == 200
+    assert b'Fallback text' in rv.data
+
+
+def test_no_provider_no_about_text_returns_404(flask_client, config, monkeypatch):
+    """When neither extension nor about text is configured, /about returns 404."""
+    monkeypatch.setattr(web, '_about_provider_fn', None)
+    monkeypatch.setattr(web, '_about_provider_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/about')
+    assert rv.status_code == 404
+
+
+def test_about_button_shown_with_provider(flask_client, config, monkeypatch):
+    """About button appears on viewer when extension is configured, even without about text."""
+    monkeypatch.setattr(web, '_about_provider_fn', lambda: '<p>x</p>')
+    monkeypatch.setattr(web, '_about_provider_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'href="/about"' in rv.data
+    assert b'about-icon' in rv.data
+
+
+def test_about_button_shown_with_about_text(flask_client, config, monkeypatch):
+    """About button appears on viewer when about text is set (backward-compat regression guard)."""
+    monkeypatch.setattr(web, '_about_provider_fn', None)
+    monkeypatch.setattr(web, '_about_provider_loaded', True)
+    config[api.SECTION_WEB]['about'] = 'Some text'
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'href="/about"' in rv.data
+
+
+def test_about_button_hidden_with_neither(flask_client, config, monkeypatch):
+    """About button is absent when neither extension nor about text is configured."""
+    monkeypatch.setattr(web, '_about_provider_fn', None)
+    monkeypatch.setattr(web, '_about_provider_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'href="/about"' not in rv.data
+
+
+def test_get_about_provider_caches_result(config, monkeypatch):
+    """_get_about_provider returns None and sets loaded flag when no extension configured."""
+    web._reset_about_provider()
+    with web.app.app_context():
+        result1 = web._get_about_provider(config)
+        assert result1 is None
+        assert web._about_provider_loaded is True
+        result2 = web._get_about_provider(config)
+        assert result2 is None
+
+
+def test_get_about_provider_import_error(config, monkeypatch):
+    """_get_about_provider returns None and logs error when module cannot be imported."""
+    web._reset_about_provider()
+    config[api.SECTION_WEB]['about_content_provider_extension'] = 'nonexistent.module.path'
+    with web.app.app_context():
+        result = web._get_about_provider(config)
+    assert result is None
+    assert web._about_provider_loaded is True
+
+
+# ---------------------------------------------------------------------------
 # Fullscreen button
 # ---------------------------------------------------------------------------
 
