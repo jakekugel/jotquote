@@ -253,6 +253,30 @@ def test_today(config, tmp_path):
     assert len(result.output.strip()) > 0
 
 
+def test_today_passes_timezone_to_get_random_choice(config, tmp_path, monkeypatch):
+    """The today command passes the configured timezone through to get_random_choice."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    config[api.SECTION_GENERAL]['quote_file'] = path
+    config[api.SECTION_GENERAL]['timezone'] = 'America/Chicago'
+
+    captured = {}
+
+    def fake_choice(numquotes, timezone=None):
+        captured['timezone'] = timezone
+        return 0
+
+    monkeypatch.setattr(api, 'get_random_choice', fake_choice)
+    # The CLI imports get_random_choice via the api facade, so we also need to
+    # patch the binding the cli module looked up.
+    monkeypatch.setattr('jotquote.cli.cli.api.get_random_choice', fake_choice)
+
+    runner = CliRunner()
+    result = runner.invoke(cli.jotquote, ['today'], obj={})
+
+    assert result.exit_code == 0
+    assert captured['timezone'] == 'America/Chicago'
+
+
 def test_today_empty_file(config, tmp_path):
     """today subcommand exits silently when the quote file is empty."""
     empty = tmp_path / 'empty.txt'

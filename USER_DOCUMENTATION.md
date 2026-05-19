@@ -248,6 +248,7 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 | `quote_file` | `~/.jotquote/quotes.txt` | Path to the quote file |
 | `line_separator` | `platform` | Line ending style: `platform`, `unix`, or `windows` |
 | `show_author_count` | `false` | If `true`, shows the number of quotes per author on the web server |
+| `timezone` | _(empty)_ | IANA timezone name (e.g. `America/Chicago`) used to determine "today" for the daily-quote rollover. When empty, the system's local time is used. Invalid names raise a `ConfigError` at first use. On Linux/macOS, IANA data ships with the OS; on Windows it is pulled in via the `tzdata` dependency. |
 
 ### `[lint]` section
 
@@ -262,7 +263,7 @@ The `settings.conf` file lives at `~/.jotquote/settings.conf` and controls jotqu
 
 | Property | Default | Description |
 |---|---|---|
-| `mode` | `daily` | Quote selection mode. `daily` shows a deterministic daily quote (changes at midnight). `random` shows a truly random quote on each page load, disabling the permalink feature. |
+| `mode` | `daily` | Quote selection mode. `daily` shows a deterministic daily quote (changes at local midnight — see `[general].timezone`). `random` shows a truly random quote on each page load, disabling the permalink feature. |
 | `about_content_provider_extension` | _(empty)_ | Dotted Python module path for an about content provider (see [About Content Provider](#about-content-provider)) |
 | `header_provider_extension` | _(empty)_ | Dotted Python module path for a header provider (see [Header Provider](#header-provider)) |
 | `quote_resolver_extension` | _(empty)_ | Dotted Python module path for a quote resolver (see [Quote Resolver](#quote-resolver)) |

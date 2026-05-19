@@ -37,6 +37,7 @@ _GENERAL_KEYS = frozenset(
         'quote_file',
         'line_separator',
         'show_author_count',
+        'timezone',
     }
 )
 
