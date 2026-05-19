@@ -232,7 +232,9 @@ def today(ctx):
 
     if len(quotes) > 0:
         # Get random random quote based on date and number of quotes
-        index = api.get_random_choice(len(quotes))
+        config = api.get_config()
+        tz = config[api.SECTION_GENERAL].get('timezone') or None
+        index = api.get_random_choice(len(quotes), timezone=tz)
         quote = quotes[index]
 
         print_quote_short(quote)

@@ -57,6 +57,80 @@ def test_get_random_choice_uses_tomorrow_at_cutoff(monkeypatch):
     assert result == selection_mod._get_random_value(days, 100)
 
 
+def test_get_random_choice_uses_timezone_before_cutoff(monkeypatch):
+    """With a configured timezone, "today" is the date in that timezone."""
+    import zoneinfo
+
+    chicago = zoneinfo.ZoneInfo('America/Chicago')
+
+    class FakeDatetime(real_datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return real_datetime.datetime(2026, 3, 15, 4, 44, 0)
+            return real_datetime.datetime(2026, 3, 14, 23, 44, 0, tzinfo=chicago)
+
+    monkeypatch.setattr('jotquote.api.selection.datetime.datetime', FakeDatetime)
+    result = api.get_random_choice(100, timezone='America/Chicago')
+    beginday = real_datetime.date(2016, 1, 1)
+    days = (real_datetime.date(2026, 3, 14) - beginday).days
+    assert result == selection_mod._get_random_value(days, 100)
+
+
+def test_get_random_choice_uses_timezone_advances_at_cutoff(monkeypatch):
+    """The 11:45 PM cutoff is evaluated in the configured timezone."""
+    import zoneinfo
+
+    chicago = zoneinfo.ZoneInfo('America/Chicago')
+
+    class FakeDatetime(real_datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return real_datetime.datetime(2026, 3, 15, 4, 45, 0)
+            return real_datetime.datetime(2026, 3, 14, 23, 45, 0, tzinfo=chicago)
+
+    monkeypatch.setattr('jotquote.api.selection.datetime.datetime', FakeDatetime)
+    result = api.get_random_choice(100, timezone='America/Chicago')
+    beginday = real_datetime.date(2016, 1, 1)
+    days = (real_datetime.date(2026, 3, 15) - beginday).days
+    assert result == selection_mod._get_random_value(days, 100)
+
+
+def test_get_random_choice_timezone_fixes_utc_rollover_bug(monkeypatch):
+    """On a UTC host, supplying timezone='America/Chicago' selects the Chicago date.
+
+    Reproduces the bug: at 02:00 UTC on March 15 it is still 21:00 Chicago time
+    on March 14, so the quote must not have rolled over yet.
+    """
+    import zoneinfo
+
+    chicago = zoneinfo.ZoneInfo('America/Chicago')
+
+    class FakeDatetime(real_datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return real_datetime.datetime(2026, 3, 15, 2, 0, 0)
+            return real_datetime.datetime(2026, 3, 14, 21, 0, 0, tzinfo=chicago)
+
+    monkeypatch.setattr('jotquote.api.selection.datetime.datetime', FakeDatetime)
+    result_tz = api.get_random_choice(100, timezone='America/Chicago')
+    result_naive = api.get_random_choice(100)
+    beginday = real_datetime.date(2016, 1, 1)
+    days_chicago = (real_datetime.date(2026, 3, 14) - beginday).days
+    days_utc = (real_datetime.date(2026, 3, 15) - beginday).days
+    assert result_tz == selection_mod._get_random_value(days_chicago, 100)
+    assert result_naive == selection_mod._get_random_value(days_utc, 100)
+    assert result_tz != result_naive
+
+
+def test_get_random_choice_invalid_timezone_raises_config_error():
+    """An unknown IANA name surfaces as a ConfigError, not a raw ZoneInfoNotFoundError."""
+    with pytest.raises(api.ConfigError, match='timezone'):
+        api.get_random_choice(100, timezone='Not/AZone')
+
+
 # --- get_first_match() tests ---
 
 

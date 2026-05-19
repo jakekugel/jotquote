@@ -7,10 +7,12 @@ import importlib
 import logging
 import os
 import random
+import zoneinfo
 
 from flask import Flask, abort, g, make_response, render_template, request, send_file
 
 from jotquote import api
+from jotquote.api.exceptions import ConfigError
 from jotquote.web import helpers as web_helpers
 
 app = Flask(__name__)
@@ -128,10 +130,9 @@ def datepage(date_path_param):
 def showpage(date_path_param=None):
     """Render the template"""
 
-    now = datetime.datetime.now()
-
     # Read page configuration
     config = api.get_config()
+    now, tz_name = _get_local_now(config)
     page_title = config[api.SECTION_WEB].get('page_title', 'jotquote')
     show_stars = config[api.SECTION_WEB].get('show_stars', 'false').lower() == 'true'
     mode = config[api.SECTION_WEB].get('mode', 'daily')
@@ -195,14 +196,14 @@ def showpage(date_path_param=None):
                 abort(404)
             else:
                 # Hash not found, fall back to seeded RNG
-                index = api.get_random_choice(len(quotes))
+                index = api.get_random_choice(len(quotes), timezone=tz_name)
                 quote = quotes[index]
         elif date_path_param:
             # Date route requested but no resolver or resolver returned None — 404
             abort(404)
         else:
             # Root route, fall back to seeded RNG
-            index = api.get_random_choice(len(quotes))
+            index = api.get_random_choice(len(quotes), timezone=tz_name)
             quote = quotes[index]
 
     stars = quote.get_num_stars()
@@ -336,6 +337,36 @@ def _reset_about_provider():
     global _about_provider_fn, _about_provider_loaded
     _about_provider_fn = None
     _about_provider_loaded = False
+
+
+def _get_local_now(config):
+    """Return ``(now, tz_name)`` for use in :func:`showpage`.
+
+    Reads the optional ``timezone`` property from the ``[general]`` section
+    of settings.conf.  When set, returns an aware ``datetime`` in that IANA
+    timezone.  When empty or absent, returns a naive ``datetime`` from the
+    system local clock — preserving legacy behavior.
+
+    Args:
+        config (ConfigParser): The application configuration.
+
+    Returns:
+        tuple[datetime.datetime, str | None]: The current time and the raw
+            timezone name (or ``None`` when unset).
+
+    Raises:
+        ConfigError: If the configured timezone is not a known IANA name.
+    """
+    tz_name = config[api.SECTION_GENERAL].get('timezone') or None
+    if tz_name:
+        try:
+            tz = zoneinfo.ZoneInfo(tz_name)
+        except zoneinfo.ZoneInfoNotFoundError as e:
+            raise ConfigError(
+                f"Invalid timezone '{tz_name}' in [general] section of settings.conf."
+            ) from e
+        return datetime.datetime.now(tz), tz_name
+    return datetime.datetime.now(), None
 
 
 def _compute_expiration(config, mode, date_path_param, now):

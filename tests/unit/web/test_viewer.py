@@ -5,6 +5,7 @@
 import datetime
 import os
 
+import pytest
 from flask import g
 
 import tests.test_util
@@ -215,7 +216,7 @@ def test_stars_displayed(flask_client, config, monkeypatch):
     client, quote_file = flask_client
     with open(quote_file, 'w', encoding='utf-8') as f:
         f.write('Some quote | Some Author | | 3stars\n')
-    monkeypatch.setattr(api, 'get_random_choice', lambda _: 0)
+    monkeypatch.setattr(api, 'get_random_choice', lambda _n, timezone=None: 0)
     web.app.config['QUOTE_FILE'] = quote_file
     rv = client.get('/')
     assert '\u2605\u2605\u2605\u2606\u2606'.encode('utf-8') in rv.data  # ★★★☆☆
@@ -227,7 +228,7 @@ def test_stars_hidden_when_show_stars_false(flask_client, config, monkeypatch):
     client, quote_file = flask_client
     with open(quote_file, 'w', encoding='utf-8') as f:
         f.write('Some quote | Some Author | | 3stars\n')
-    monkeypatch.setattr(api, 'get_random_choice', lambda _: 0)
+    monkeypatch.setattr(api, 'get_random_choice', lambda _n, timezone=None: 0)
     web.app.config['QUOTE_FILE'] = quote_file
     rv = client.get('/')
     assert '\u2605'.encode('utf-8') not in rv.data
@@ -285,6 +286,61 @@ def test_date_route_invalid_calendar_date(flask_client):
     assert rv.status_code == 404
     rv = client.get('/20260230')  # Feb 30
     assert rv.status_code == 404
+
+
+def test_showpage_passes_timezone_to_get_random_choice(flask_client, config, monkeypatch):
+    """showpage forwards the configured [general] timezone to get_random_choice."""
+    config[api.SECTION_GENERAL]['timezone'] = 'America/Chicago'
+    client, quote_file = flask_client
+
+    captured = {}
+
+    def fake_choice(numquotes, timezone=None):
+        captured['timezone'] = timezone
+        return 0
+
+    monkeypatch.setattr(api, 'get_random_choice', fake_choice)
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert captured['timezone'] == 'America/Chicago'
+
+
+def test_showpage_uses_configured_timezone_for_date_display(flask_client, config, monkeypatch):
+    """The displayed date matches the configured timezone, not the system clock.
+
+    Simulates the bug scenario: system clock is at 02:00 UTC on March 15,
+    but in America/Chicago it is still 21:00 on March 14, so the page must
+    show "Saturday, March 14, 2026", not the UTC date.
+    """
+    import zoneinfo
+
+    config[api.SECTION_GENERAL]['timezone'] = 'America/Chicago'
+    chicago = zoneinfo.ZoneInfo('America/Chicago')
+
+    class FakeDatetime(datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return datetime.datetime(2026, 3, 15, 2, 0, 0)
+            return datetime.datetime(2026, 3, 14, 21, 0, 0, tzinfo=chicago)
+
+    monkeypatch.setattr('jotquote.web.viewer.datetime.datetime', FakeDatetime)
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert rv.status_code == 200
+    assert b'March 14, 2026' in rv.data
+    assert b'March 15, 2026' not in rv.data
+
+
+def test_showpage_invalid_timezone_raises_config_error(flask_client, config, monkeypatch):
+    """An invalid timezone produces a ConfigError with a friendly message."""
+    config[api.SECTION_GENERAL]['timezone'] = 'Not/AZone'
+    client, quote_file = flask_client
+    # Flask's test client surfaces unhandled exceptions as a 500 by default;
+    # bypass that to inspect the raised error directly.
+    web.app.testing = True
+    with pytest.raises(api.ConfigError, match='timezone'):
+        client.get('/')
 
 
 def test_root_with_resolver_today(flask_client, config, monkeypatch):

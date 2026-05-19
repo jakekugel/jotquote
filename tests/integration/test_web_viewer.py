@@ -45,7 +45,7 @@ port = {port}
 ip = 127.0.0.1
 {web_extra}"""
 
-_GENERAL_KEYS = {'show_author_count'}
+_GENERAL_KEYS = {'show_author_count', 'timezone'}
 _WEB_NO_PREFIX = {
     'header_provider_extension',
     'quote_resolver_extension',
@@ -400,6 +400,38 @@ def test_legacy_jotquote_section_warns_on_web_start(tmp_path):
         assert wait_for_log_line(stderr_lines, 'deprecated', timeout=5), (
             'Expected deprecation warning in stderr; got: {}'.format(stderr_lines)
         )
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_timezone_renders_local_date(tmp_path):
+    """With [general] timezone configured, the page renders the local date in that zone.
+
+    Reproduces the user's bug: on a UTC host, the page must show the Chicago
+    local date, not the UTC date.
+    """
+    import zoneinfo
+
+    chicago_today = datetime.datetime.now(zoneinfo.ZoneInfo('America/Chicago')).strftime('%B %d, %Y')
+
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file, timezone='America/Chicago')
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        with urllib.request.urlopen(TEST_URL, timeout=5) as resp:
+            body = resp.read().decode('utf-8')
+        assert chicago_today in body, 'Expected Chicago local date {!r} in body'.format(chicago_today)
     finally:
         proc.terminate()
         proc.wait(timeout=10)

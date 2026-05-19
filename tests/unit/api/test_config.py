@@ -152,6 +152,47 @@ def test_get_config_missing_quote_file_raises_config_error(tmp_path, monkeypatch
         api.get_config()
 
 
+def test_get_config_reads_timezone_from_general(tmp_path, monkeypatch):
+    """A timezone property in [general] is exposed via the loaded config."""
+    quotes_file = tmp_path / 'quotes.txt'
+    quotes_file.write_text('', encoding='utf-8')
+    config_file = tmp_path / 'settings.conf'
+    config_file.write_text(
+        '[general]\nquote_file = ./quotes.txt\ntimezone = America/Chicago\n',
+        encoding='utf-8',
+    )
+    monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
+
+    config = api.get_config()
+
+    assert config.get(api.SECTION_GENERAL, 'timezone') == 'America/Chicago'
+
+
+def test_get_config_timezone_absent_by_default(tmp_path, monkeypatch):
+    """A fresh default config has no timezone option (opt-in)."""
+    config_file = tmp_path / 'settings.conf'
+    monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
+
+    config = api.get_config()
+
+    assert not config.has_option(api.SECTION_GENERAL, 'timezone')
+
+
+def test_get_config_legacy_jotquote_timezone_migrates(tmp_path, monkeypatch):
+    """Legacy [jotquote] timezone property migrates into [general]."""
+    config_file = tmp_path / 'settings.conf'
+    config_file.write_text(
+        '[jotquote]\nquote_file = /some/path/quotes.txt\ntimezone = America/Chicago\n',
+        encoding='utf-8',
+    )
+    monkeypatch.setenv('JOTQUOTE_CONFIG', str(config_file))
+
+    with pytest.warns(UserWarning, match=r'\[jotquote\]'):
+        config = api.get_config()
+
+    assert config.get(api.SECTION_GENERAL, 'timezone') == 'America/Chicago'
+
+
 def test_migrate_legacy_section_prefix_stripping():
     """_migrate_legacy_section() strips lint_ and web_ prefixes correctly."""
     config = ConfigParser()

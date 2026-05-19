@@ -4,7 +4,9 @@
 
 import datetime
 import random as randomlib
+import zoneinfo
 
+from jotquote.api.exceptions import ConfigError
 from jotquote.api.quote import parse_tags
 
 
@@ -49,7 +51,7 @@ def get_first_match(quotes, tags=None, keyword=None, number=None, hash_arg=None,
     return matched[0]
 
 
-def get_random_choice(numquotes):
+def get_random_choice(numquotes, timezone=None):
     """Return a deterministic quote index for today's date.
 
     The same value is returned for any call on the same day; after 11:45 PM
@@ -58,14 +60,29 @@ def get_random_choice(numquotes):
 
     Args:
         numquotes (int): Total number of quotes.
+        timezone (str | None): IANA timezone name (e.g. ``'America/Chicago'``)
+            used to determine "today" and the 11:45 PM cutoff.  When ``None``,
+            the system's local time is used.
 
     Returns:
         int: A value in ``[0, numquotes - 1]``.
+
+    Raises:
+        ConfigError: If ``timezone`` is not a known IANA timezone name.
     """
 
     # Get days since epoch, advancing to next day after 11:45 PM so caches
     # expiring at midnight will already contain the next day's quote
-    now = datetime.datetime.now()
+    if timezone:
+        try:
+            tz = zoneinfo.ZoneInfo(timezone)
+        except zoneinfo.ZoneInfoNotFoundError as e:
+            raise ConfigError(
+                f"Invalid timezone '{timezone}' in [general] section of settings.conf."
+            ) from e
+        now = datetime.datetime.now(tz)
+    else:
+        now = datetime.datetime.now()
     if now.hour == 23 and now.minute >= 45:
         endday = (now + datetime.timedelta(days=1)).date()
     else:
