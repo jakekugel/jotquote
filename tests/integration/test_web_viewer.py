@@ -557,6 +557,15 @@ def _run_startup_log_test(tmp_path, cmd):
         assert wait_for_log_line(stderr_lines, 'jotquote package version:'), (
             'Expected version log line in stderr; got: {}'.format(stderr_lines)
         )
+        assert wait_for_log_line(stderr_lines, 'configured timezone:'), (
+            'Expected timezone log line in stderr; got: {}'.format(stderr_lines)
+        )
+        assert wait_for_log_line(stderr_lines, 'current local time:'), (
+            'Expected current local time log line in stderr; got: {}'.format(stderr_lines)
+        )
+        assert wait_for_log_line(
+            stderr_lines, 'quote of the day will refresh at 12:00 AM local time'
+        ), 'Expected midnight refresh log line in stderr; got: {}'.format(stderr_lines)
     finally:
         proc.terminate()
         proc.wait(timeout=10)
