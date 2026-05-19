@@ -817,3 +817,61 @@ def test_toggle_buttons_function_present(flask_client):
     rv = client.get('/')
     assert rv.status_code == 200
     assert b'toggleButtons' in rv.data
+
+
+# ---------------------------------------------------------------------------
+# Startup logging: timezone + daily-refresh notice
+# ---------------------------------------------------------------------------
+
+
+def test_startup_logs_configured_timezone(config, caplog):
+    """Startup logs the configured timezone, current local time, and midnight notice in daily mode."""
+    import logging
+
+    config[api.SECTION_GENERAL]['timezone'] = 'America/Chicago'
+    config[api.SECTION_WEB]['mode'] = 'daily'
+    with caplog.at_level(logging.INFO, logger='jotquote.web.viewer'):
+        web._log_startup_info()
+    messages = [r.getMessage() for r in caplog.records]
+    assert any('configured timezone: America/Chicago' in m for m in messages)
+    assert any('current local time:' in m for m in messages)
+    assert any('quote of the day will refresh at 12:00 AM local time' in m for m in messages)
+
+
+def test_startup_logs_unset_timezone_falls_back(config, caplog):
+    """When timezone is unset, startup notes the fallback and still logs current local time."""
+    import logging
+
+    config[api.SECTION_WEB]['mode'] = 'daily'
+    with caplog.at_level(logging.INFO, logger='jotquote.web.viewer'):
+        web._log_startup_info()
+    messages = [r.getMessage() for r in caplog.records]
+    assert any('configured timezone: <not set; using system local time>' in m for m in messages)
+    assert any('current local time:' in m for m in messages)
+
+
+def test_startup_skips_midnight_line_in_random_mode(config, caplog):
+    """In random mode, the midnight refresh line is omitted but timezone lines remain."""
+    import logging
+
+    config[api.SECTION_GENERAL]['timezone'] = 'America/Chicago'
+    config[api.SECTION_WEB]['mode'] = 'random'
+    with caplog.at_level(logging.INFO, logger='jotquote.web.viewer'):
+        web._log_startup_info()
+    messages = [r.getMessage() for r in caplog.records]
+    assert any('configured timezone: America/Chicago' in m for m in messages)
+    assert any('current local time:' in m for m in messages)
+    assert not any('quote of the day will refresh' in m for m in messages)
+
+
+def test_startup_logs_warning_on_invalid_timezone(config, caplog):
+    """An invalid timezone logs a warning, doesn't raise, and skips the midnight line."""
+    import logging
+
+    config[api.SECTION_GENERAL]['timezone'] = 'Not/A_Zone'
+    config[api.SECTION_WEB]['mode'] = 'daily'
+    with caplog.at_level(logging.WARNING, logger='jotquote.web.viewer'):
+        web._log_startup_info()
+    messages = [r.getMessage() for r in caplog.records]
+    assert any('invalid timezone' in m and 'Not/A_Zone' in m for m in messages)
+    assert not any('quote of the day will refresh' in m for m in messages)

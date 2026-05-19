@@ -47,8 +47,24 @@ def _log_startup_info():
     _logger.info('path to the quote file: %s', quote_file)
     _logger.info('jotquote package version: %s', jotquote.__version__)
 
+    # Log configured timezone, current local time, and (in daily mode) the midnight refresh notice
+    mode = config[api.SECTION_WEB].get('mode', 'daily')
+    try:
+        now, tz_name = _get_local_now(config)
+    except ConfigError:
+        raw_tz = config[api.SECTION_GENERAL].get('timezone') or ''
+        _logger.warning(
+            'invalid timezone in [general] section: %s; skipping timezone log lines', raw_tz
+        )
+        return
+    if tz_name:
+        _logger.info('configured timezone: %s', tz_name)
+    else:
+        _logger.info('configured timezone: <not set; using system local time>')
+    _logger.info('current local time: %s', now.strftime('%Y-%m-%d %I:%M:%S %p %Z').strip())
+    if mode != 'random':
+        _logger.info('quote of the day will refresh at 12:00 AM local time')
 
-_log_startup_info()
 
 # Cached quote resolver function, loaded lazily on first request.
 _resolver_fn = None
@@ -493,3 +509,7 @@ def run_server():
     from waitress import serve
 
     serve(app, host=listen_ip, port=int(listen_port))
+
+
+# Run startup logging once at module import time, after all helpers (e.g. _get_local_now) are defined.
+_log_startup_info()
