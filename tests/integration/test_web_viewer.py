@@ -188,6 +188,38 @@ def test_waitress_serve_command(tmp_path):
     )
 
 
+def test_date_route_future_date_returns_404(tmp_path):
+    """A clearly future date returns 404 from the live server."""
+    # Given
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        # When
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        future_url = TEST_URL.rstrip('/') + '/99991231'
+        try:
+            with urllib.request.urlopen(future_url, timeout=5) as resp:
+                status = resp.status
+        except urllib.error.HTTPError as e:
+            status = e.code
+
+        # Then
+        assert status == 404, 'Expected 404 for future date, got {}'.format(status)
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
 def test_web_page_title(tmp_path):
     """jotquote webserver uses web_page_title from config as the HTML page title."""
     quote_file = _copy_quotes(tmp_path)

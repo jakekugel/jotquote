@@ -166,6 +166,8 @@ def showpage(date_path_param=None):
             display_date = datetime.datetime.strptime(date_path_param, '%Y%m%d')
         except ValueError:
             abort(404)
+        if display_date.date() > now.date():
+            abort(404)
         date1 = display_date.strftime('%A, %B %d, %Y')
     else:
         date1 = now.strftime('%A, %B %d, %Y')
