@@ -288,6 +288,91 @@ def test_date_route_invalid_calendar_date(flask_client):
     assert rv.status_code == 404
 
 
+def test_date_route_future_date_returns_404(flask_client, config, monkeypatch):
+    """A date strictly after today's local date returns 404 even when a resolver would map it."""
+
+    class FakeDatetime(datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return datetime.datetime(2026, 3, 19, 12, 0, 0)
+            return datetime.datetime(2026, 3, 19, 12, 0, 0, tzinfo=tz)
+
+    monkeypatch.setattr('jotquote.web.viewer.datetime.datetime', FakeDatetime)
+    # Resolver would otherwise return a 200 for the future date — the guard must fire first.
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'd4a5c5a909517953')
+    monkeypatch.setattr(web, '_resolver_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/20260320')
+    assert rv.status_code == 404
+
+
+def test_date_route_today_is_allowed(flask_client, config, monkeypatch):
+    """Today's local date is allowed (boundary: 'after' the current date, not 'on or after')."""
+    import zoneinfo
+
+    config[api.SECTION_GENERAL]['timezone'] = 'America/Chicago'
+    chicago = zoneinfo.ZoneInfo('America/Chicago')
+
+    class FakeDatetime(datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return datetime.datetime(2026, 3, 19, 12, 0, 0)
+            return datetime.datetime(2026, 3, 19, 12, 0, 0, tzinfo=chicago)
+
+    monkeypatch.setattr('jotquote.web.viewer.datetime.datetime', FakeDatetime)
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'd4a5c5a909517953' if d == '20260319' else None)
+    monkeypatch.setattr(web, '_resolver_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/20260319')
+    assert rv.status_code == 200
+    assert b'March 19, 2026' in rv.data
+
+
+def test_date_route_future_check_uses_configured_timezone(flask_client, config, monkeypatch):
+    """Future-date check uses the configured timezone, not the system clock's UTC date."""
+    import zoneinfo
+
+    config[api.SECTION_GENERAL]['timezone'] = 'America/Chicago'
+    chicago = zoneinfo.ZoneInfo('America/Chicago')
+
+    # System clock has rolled to 2026-03-15 in UTC, but locally it's still 2026-03-14
+    class FakeDatetime(datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return datetime.datetime(2026, 3, 15, 2, 0, 0)
+            return datetime.datetime(2026, 3, 14, 21, 0, 0, tzinfo=chicago)
+
+    monkeypatch.setattr('jotquote.web.viewer.datetime.datetime', FakeDatetime)
+    # Resolver would otherwise return 200 — the guard must fire first based on local date.
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'd4a5c5a909517953')
+    monkeypatch.setattr(web, '_resolver_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/20260315')
+    assert rv.status_code == 404
+
+
+def test_date_route_past_date_still_works(flask_client, config, monkeypatch):
+    """Regression: past dates remain reachable when a resolver maps them."""
+
+    class FakeDatetime(datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return datetime.datetime(2026, 5, 19, 12, 0, 0)
+            return datetime.datetime(2026, 5, 19, 12, 0, 0, tzinfo=tz)
+
+    monkeypatch.setattr('jotquote.web.viewer.datetime.datetime', FakeDatetime)
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'd4a5c5a909517953' if d == '20260319' else None)
+    monkeypatch.setattr(web, '_resolver_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/20260319')
+    assert rv.status_code == 200
+    assert b'March 19, 2026' in rv.data
+
+
 def test_showpage_passes_timezone_to_get_random_choice(flask_client, config, monkeypatch):
     """showpage forwards the configured [general] timezone to get_random_choice."""
     config[api.SECTION_GENERAL]['timezone'] = 'America/Chicago'
