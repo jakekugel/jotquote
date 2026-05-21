@@ -9,7 +9,7 @@ import os
 import random
 import zoneinfo
 
-from flask import Flask, abort, g, make_response, render_template, request, send_file
+from flask import Flask, abort, g, jsonify, make_response, render_template, request, send_file
 
 from jotquote import api
 from jotquote.api.exceptions import ConfigError
@@ -128,6 +128,56 @@ def aboutpage():
     return render_template('about.html', about_text=about_text, page_title=page_title, **colors)
 
 
+@app.route('/api')
+def apiroute():
+    """Return the current quote as JSON.
+
+    Honors ``[web].mode`` like the HTML root route: ``daily`` returns the
+    deterministic daily quote, ``random`` returns a fresh random quote on
+    each request.  Custom HTTP headers from ``header_provider_extension``
+    are applied to both success and 503-unavailable responses.
+
+    Returns flask.Response with a JSON body containing ``quote``, ``author``,
+    ``publication``, ``date`` (YYYYMMDD), ``date_formatted`` (long form),
+    and ``expires_at`` (UTC ISO-8601).
+    """
+    # Read configuration and current local time
+    config = api.get_config()
+    now, tz_name = _get_local_now(config)
+    mode = config[api.SECTION_WEB].get('mode', 'daily')
+
+    # Compute cache lifetime (capped at midnight in daily mode) and expires_at
+    expiration_seconds, expires_at = _compute_expiration(config, mode, None, now)
+    g.expires_at = expires_at
+
+    # Build both date representations
+    date_url = now.strftime('%Y%m%d')
+    date_formatted = now.strftime('%A, %B %d, %Y')
+
+    # Return 503 JSON when quotes unavailable, still applying extension headers
+    quotes = get_quotes()
+    if quotes is None:
+        response = make_response(jsonify({'error': 'quotes unavailable'}), 503)
+        _apply_headers(response, config, expiration_seconds)
+        return response
+
+    # Select the quote (mirrors HTML root: random | resolver | seeded RNG)
+    quote, _index, _permalink = _select_quote(config, quotes, mode, None, now, tz_name)
+
+    # Build and return the JSON response
+    body = {
+        'quote': quote.quote,
+        'author': quote.author,
+        'publication': quote.publication,
+        'date': date_url,
+        'date_formatted': date_formatted,
+        'expires_at': expires_at,
+    }
+    response = make_response(jsonify(body), 200)
+    _apply_headers(response, config, expiration_seconds)
+    return response
+
+
 @app.route('/favicon.ico')
 def favicon():
     """Serve the configured favicon, or the bundled default when none is set."""
@@ -187,42 +237,8 @@ def showpage(date_path_param=None):
         _apply_headers(response, config, expiration_seconds)
         return response
 
-    # Select quote based on mode
-    permalink = None
-    if mode == 'random' and date_path_param is None:
-        quote = api.get_first_match(quotes, rand=True)
-        index = quotes.index(quote)
-    else:
-        # Try the configured quote resolver
-        resolver = _get_resolver(config)
-        lookup_date = date_path_param if date_path_param else now.strftime('%Y%m%d')
-        resolved_hash = None
-        if resolver:
-            try:
-                resolved_hash = resolver(lookup_date)
-            except Exception:
-                app.logger.exception('quote resolver error for date %s', lookup_date)
-
-        if resolved_hash:
-            quote = api.get_first_match(quotes, hash_arg=resolved_hash)
-            if quote:
-                index = quotes.index(quote)
-                # Show permalink on root page when resolver maps today's quote
-                if date_path_param is None:
-                    permalink = f'/{lookup_date}'
-            elif date_path_param:
-                abort(404)
-            else:
-                # Hash not found, fall back to seeded RNG
-                index = api.get_random_choice(len(quotes), timezone=tz_name)
-                quote = quotes[index]
-        elif date_path_param:
-            # Date route requested but no resolver or resolver returned None — 404
-            abort(404)
-        else:
-            # Root route, fall back to seeded RNG
-            index = api.get_random_choice(len(quotes), timezone=tz_name)
-            quote = quotes[index]
+    # Select quote (random | resolver | seeded RNG fallback)
+    quote, index, permalink = _select_quote(config, quotes, mode, date_path_param, now, tz_name)
 
     stars = quote.get_num_stars()
     response = make_response(
@@ -245,6 +261,57 @@ def showpage(date_path_param=None):
     )
     _apply_headers(response, config, expiration_seconds)
     return response
+
+
+def _select_quote(config, quotes, mode, date_path_param, now, tz_name):
+    """Return ``(quote, index, permalink)`` for the configured selection mode.
+
+    In ``random`` mode (and only when no ``date_path_param`` is supplied),
+    returns a truly random quote with no permalink.  Otherwise, tries the
+    configured quote resolver first; on a miss or when no resolver is
+    configured, falls back to seeded RNG on the root/api route or aborts
+    with 404 on a dated permalink route.
+
+    config (ConfigParser) -- the application configuration object.
+    quotes (list[Quote]) -- the loaded quote list.
+    mode (str) -- the configured viewer mode ('daily' or 'random').
+    date_path_param (str | None) -- the URL date parameter, or None.
+    now (datetime) -- current local datetime (used for daily lookup).
+    tz_name (str | None) -- IANA timezone name for seeded RNG.
+    Returns tuple[Quote, int, str | None].
+    """
+    # Truly random selection only when no date is requested
+    if mode == 'random' and date_path_param is None:
+        quote = api.get_first_match(quotes, rand=True)
+        return quote, quotes.index(quote), None
+
+    # Daily / dated path: try the configured resolver first
+    resolver = _get_resolver(config)
+    lookup_date = date_path_param if date_path_param else now.strftime('%Y%m%d')
+    resolved_hash = None
+    if resolver:
+        try:
+            resolved_hash = resolver(lookup_date)
+        except Exception:
+            app.logger.exception('quote resolver error for date %s', lookup_date)
+
+    # Resolver returned a hash: look it up and fall back to RNG if not found
+    if resolved_hash:
+        quote = api.get_first_match(quotes, hash_arg=resolved_hash)
+        if quote:
+            index = quotes.index(quote)
+            permalink = f'/{lookup_date}' if date_path_param is None else None
+            return quote, index, permalink
+        if date_path_param:
+            abort(404)
+        index = api.get_random_choice(len(quotes), timezone=tz_name)
+        return quotes[index], index, None
+
+    # No resolver match: 404 for dated routes, seeded RNG for the root/api route
+    if date_path_param:
+        abort(404)
+    index = api.get_random_choice(len(quotes), timezone=tz_name)
+    return quotes[index], index, None
 
 
 def _get_resolver(config):

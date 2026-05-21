@@ -960,3 +960,152 @@ def test_startup_logs_warning_on_invalid_timezone(config, caplog):
     messages = [r.getMessage() for r in caplog.records]
     assert any('invalid timezone' in m and 'Not/A_Zone' in m for m in messages)
     assert not any('quote of the day will refresh' in m for m in messages)
+
+
+# ---------------------------------------------------------------------------
+# /api JSON endpoint
+# ---------------------------------------------------------------------------
+
+
+def test_api_returns_json_content_type(flask_client, config):
+    """GET /api returns 200 with Content-Type application/json."""
+    client, _ = flask_client
+    rv = client.get('/api')
+    assert rv.status_code == 200
+    assert rv.headers.get('Content-Type', '').startswith('application/json')
+
+
+def test_api_response_has_all_fields(flask_client, config):
+    """JSON body has exactly the six documented keys."""
+    client, _ = flask_client
+    rv = client.get('/api')
+    body = rv.get_json()
+    expected = {'quote', 'author', 'publication', 'date', 'date_formatted', 'expires_at'}
+    assert set(body.keys()) == expected
+
+
+def test_api_field_types(flask_client, config):
+    """JSON field types: strings, with publication allowed to be None."""
+    client, _ = flask_client
+    rv = client.get('/api')
+    body = rv.get_json()
+    assert isinstance(body['quote'], str) and body['quote']
+    assert isinstance(body['author'], str) and body['author']
+    assert body['publication'] is None or isinstance(body['publication'], str)
+    assert isinstance(body['date'], str)
+    assert isinstance(body['date_formatted'], str)
+    assert isinstance(body['expires_at'], str)
+
+
+def test_api_date_format_yyyymmdd(flask_client, config):
+    """body['date'] is YYYYMMDD and round-trips through strptime."""
+    import re
+
+    client, _ = flask_client
+    rv = client.get('/api')
+    body = rv.get_json()
+    assert re.fullmatch(r'\d{8}', body['date'])
+    datetime.datetime.strptime(body['date'], '%Y%m%d')
+
+
+def test_api_date_formatted_long_form(flask_client, config):
+    """body['date_formatted'] parses with %A, %B %d, %Y."""
+    client, _ = flask_client
+    rv = client.get('/api')
+    body = rv.get_json()
+    datetime.datetime.strptime(body['date_formatted'], '%A, %B %d, %Y')
+
+
+def test_api_expires_at_iso_z_suffix(flask_client, config):
+    """body['expires_at'] is ISO-8601 with Z suffix and is in the future."""
+    import re
+
+    client, _ = flask_client
+    rv = client.get('/api')
+    body = rv.get_json()
+    assert re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', body['expires_at'])
+    parsed = datetime.datetime.strptime(body['expires_at'], '%Y-%m-%dT%H:%M:%SZ').replace(
+        tzinfo=datetime.timezone.utc
+    )
+    assert parsed > datetime.datetime.now(datetime.timezone.utc)
+
+
+def test_api_header_provider_applied(flask_client, config, monkeypatch):
+    """Custom header provider headers are applied to the JSON response."""
+    monkeypatch.setattr(web, '_header_fn', _cache_control_provider)
+    monkeypatch.setattr(web, '_header_loaded', True)
+    client, _ = flask_client
+    rv = client.get('/api')
+    cc = rv.headers.get('Cache-Control', '')
+    assert cc.startswith('public, max-age=')
+    max_age = int(cc.split('=')[1])
+    assert 0 < max_age <= 14400
+
+
+def test_api_no_header_provider(flask_client, config, monkeypatch):
+    """No Cache-Control on /api when no header provider is configured."""
+    monkeypatch.setattr(web, '_header_fn', None)
+    monkeypatch.setattr(web, '_header_loaded', True)
+    client, _ = flask_client
+    rv = client.get('/api')
+    assert rv.status_code == 200
+    assert 'Cache-Control' not in rv.headers
+
+
+def test_api_quote_file_missing_returns_503(flask_client, config, monkeypatch):
+    """When the quote file is unavailable, /api returns 503 JSON with headers applied."""
+    monkeypatch.setattr(web, '_header_fn', _cache_control_provider)
+    monkeypatch.setattr(web, '_header_loaded', True)
+    client, quote_file = flask_client
+    os.remove(quote_file)
+    rv = client.get('/api')
+    assert rv.status_code == 503
+    assert rv.headers.get('Content-Type', '').startswith('application/json')
+    assert rv.get_json() == {'error': 'quotes unavailable'}
+    assert rv.headers.get('Cache-Control', '').startswith('public, max-age=')
+
+
+def _swap_quote_file(quote_file, fixture_name):
+    """Replace the flask client's QUOTE_FILE with a different testdata fixture."""
+    new_path = tests.test_util.init_quotefile(os.path.dirname(quote_file), fixture_name)
+    web.app.config['QUOTE_FILE'] = new_path
+    return new_path
+
+
+def test_api_resolver_overrides_rng(flask_client, config, monkeypatch):
+    """When the resolver returns a hash, /api serves the mapped quote."""
+    client, quote_file = flask_client
+    new_path = _swap_quote_file(quote_file, 'quotes9.txt')
+
+    # Pick a target quote and use its hash as the resolver result
+    quotes = api.read_quotes(new_path)
+    target = quotes[4]  # Albert Einstein
+    target_hash = target.get_hash()
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: target_hash)
+    monkeypatch.setattr(web, '_resolver_loaded', True)
+
+    rv = client.get('/api')
+    body = rv.get_json()
+    assert body['quote'] == target.quote
+    assert body['author'] == target.author
+
+
+def test_api_daily_mode_stable(flask_client, config):
+    """In default daily mode, /api returns the same quote across calls."""
+    client, quote_file = flask_client
+    _swap_quote_file(quote_file, 'quotes9.txt')
+    rv1 = client.get('/api').get_json()
+    rv2 = client.get('/api').get_json()
+    assert rv1['quote'] == rv2['quote']
+    assert rv1['author'] == rv2['author']
+
+
+def test_api_random_mode_varies(flask_client, config):
+    """In random mode, /api eventually returns more than one distinct quote."""
+    config[api.SECTION_WEB]['mode'] = 'random'
+    client, quote_file = flask_client
+    _swap_quote_file(quote_file, 'quotes9.txt')
+    seen = set()
+    for _ in range(30):
+        seen.add(client.get('/api').get_json()['quote'])
+    assert len(seen) >= 2

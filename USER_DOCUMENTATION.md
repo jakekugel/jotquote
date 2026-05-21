@@ -235,6 +235,23 @@ The `mode` property in the `[web]` section controls how quotes are selected:
 - **`daily`** (default): A deterministic daily quote is selected using a seeded random number generator. The same quote is shown all day and changes at midnight. A quote resolver (if configured) takes precedence for mapped dates.
 - **`random`**: A truly random quote is selected on each page load. The quote resolver is bypassed and permalinks are disabled. The cache expiration is based solely on `expiration_seconds` without the midnight cap.
 
+### JSON API
+
+`GET /api` returns the current quote as JSON. The endpoint honors the configured `mode` the same way the HTML root route does — a deterministic daily quote in `daily` mode, or a fresh random quote on each request in `random` mode. Response body:
+
+```json
+{
+  "quote": "...",
+  "author": "...",
+  "publication": "..." | null,
+  "date": "YYYYMMDD",
+  "date_formatted": "Weekday, Month DD, YYYY",
+  "expires_at": "YYYY-MM-DDTHH:MM:SSZ"
+}
+```
+
+When the quote file is unavailable the endpoint returns HTTP 503 with body `{"error": "quotes unavailable"}`. Custom HTTP headers from `header_provider_extension` are applied to both success and error responses.
+
 ---
 
 ## settings.conf
