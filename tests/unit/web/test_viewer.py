@@ -437,7 +437,7 @@ def test_root_with_resolver_today(flask_client, config, monkeypatch):
     rv = client.get('/')
     assert rv.status_code == 200
     assert b'Ben Franklin' in rv.data
-    assert f"copyPermalink('/{today}')".encode() in rv.data
+    assert f'data-permalink="/{today}"'.encode() in rv.data
     assert b'permalink-btn' in rv.data
 
 
@@ -570,7 +570,7 @@ def test_expires_at_present_on_root(flask_client, config):
     rv = client.get('/')
     assert b'scheduleAutoRefresh' in rv.data
     # expires_at should be a non-null ISO 8601 string in the JS
-    assert b'const expiresAt = null' not in rv.data
+    assert b'expiresAt = null' not in rv.data
     assert b'expires_at' not in rv.data or b'T' in rv.data  # contains ISO 8601 timestamp
 
 
@@ -581,14 +581,49 @@ def test_expires_at_null_on_date_route(flask_client, config, monkeypatch):
     monkeypatch.setattr(web, '_resolver_loaded', True)
     rv = client.get('/20260319')
     assert rv.status_code == 200
-    assert b'const expiresAt = null' in rv.data
+    assert b'expiresAt = null' in rv.data
 
 
 def test_view_transition_css(flask_client):
-    """View Transitions CSS rule is present in the page."""
+    """Same-document view transition setup is present (DOM updates via startViewTransition)."""
     client, quote_file = flask_client
     rv = client.get('/')
-    assert b'@view-transition' in rv.data
+    assert b'::view-transition-old(root)' in rv.data
+    assert b'startViewTransition' in rv.data
+    # The cross-document rule is gone — we update DOM in place now.
+    assert b'@view-transition {' not in rv.data
+
+
+def test_publication_div_always_rendered(flask_client):
+    """Publication div is always in the DOM, with `hidden` when the quote has no publication."""
+    client, quote_file = flask_client  # quotes5.txt has empty publication
+    rv = client.get('/')
+    assert b'id="publication"' in rv.data
+    assert b'class="publication" hidden' in rv.data
+
+
+def test_refresh_calls_api_endpoint(flask_client):
+    """Auto-refresh fetches /api rather than reloading the page."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b"fetch('/api'" in rv.data
+
+
+def test_no_navigation_navigate(flask_client):
+    """Full-document reload is gone — no navigation.navigate in rendered JS."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'navigation.navigate' not in rv.data
+
+
+def test_permalink_button_uses_data_attribute(flask_client, config, monkeypatch):
+    """Permalink button stores its path in data-permalink so JS can update it after refresh."""
+    monkeypatch.setattr(web, '_resolver_fn', lambda d: 'd4a5c5a909517953')
+    monkeypatch.setattr(web, '_resolver_loaded', True)
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'data-permalink=' in rv.data
+    assert b'this.dataset.permalink' in rv.data
 
 
 # ---------------------------------------------------------------------------

@@ -223,3 +223,93 @@ def test_migrate_legacy_section_prefix_stripping():
     assert config.get(api.SECTION_WEB, 'quote_resolver_extension') == 'mypackage.resolver'
     # Old section removed
     assert not config.has_section('jotquote')
+
+
+def _write_conf(tmp_path, monkeypatch, body):
+    """Write a settings.conf for the test and point JOTQUOTE_CONFIG at it."""
+    conf = tmp_path / 'settings.conf'
+    conf.write_text(body, encoding='utf-8')
+    monkeypatch.setenv('JOTQUOTE_CONFIG', str(conf))
+    return conf
+
+
+def test_unknown_key_in_web_section_warns(tmp_path, monkeypatch):
+    """A typo'd property in [web] (e.g. cache_seconds) raises a UserWarning."""
+    _write_conf(
+        tmp_path,
+        monkeypatch,
+        '[general]\nquote_file = /q.txt\n\n[web]\ncache_seconds = 10\n',
+    )
+    with pytest.warns(UserWarning, match=r"unrecognized key 'cache_seconds' in \[web\]"):
+        api.get_config()
+
+
+def test_unknown_key_in_general_section_warns(tmp_path, monkeypatch):
+    """A typo'd property in [general] raises a UserWarning."""
+    _write_conf(
+        tmp_path,
+        monkeypatch,
+        '[general]\nquote_file = /q.txt\ntimezon = America/Chicago\n',
+    )
+    with pytest.warns(UserWarning, match=r"unrecognized key 'timezon' in \[general\]"):
+        api.get_config()
+
+
+def test_unknown_key_in_lint_section_warns(tmp_path, monkeypatch):
+    """A typo'd property in [lint] raises a UserWarning."""
+    _write_conf(
+        tmp_path,
+        monkeypatch,
+        '[general]\nquote_file = /q.txt\n\n[lint]\nmax_qoute_length = 100\n',
+    )
+    with pytest.warns(UserWarning, match=r"unrecognized key 'max_qoute_length' in \[lint\]"):
+        api.get_config()
+
+
+def test_required_group_keys_not_warned(tmp_path, monkeypatch, recwarn):
+    """required_group_<name> keys in [lint] are accepted (dynamic naming)."""
+    _write_conf(
+        tmp_path,
+        monkeypatch,
+        '[general]\nquote_file = /q.txt\n\n[lint]\nrequired_group_stars = 1star, 2stars\n',
+    )
+    api.get_config()
+    assert not any('required_group_stars' in str(w.message) for w in recwarn.list)
+
+
+def test_all_known_keys_no_warning(tmp_path, monkeypatch, recwarn):
+    """A config containing only documented keys raises no unrecognized-key warning."""
+    body = (
+        '[general]\n'
+        'quote_file = /q.txt\n'
+        'line_separator = platform\n'
+        'show_author_count = false\n'
+        'timezone = America/Chicago\n'
+        '\n'
+        '[lint]\n'
+        'enabled_checks = smart-quotes\n'
+        'lint_on_add = false\n'
+        'max_quote_length = 0\n'
+        '\n'
+        '[web]\n'
+        'mode = daily\n'
+        'port = 5544\n'
+        'ip = 127.0.0.1\n'
+        'editor_port = 5545\n'
+        'editor_ip = 127.0.0.1\n'
+        'expiration_seconds = 14400\n'
+        'page_title = jotquote\n'
+        'about = Some text\n'
+        'about_content_provider_extension =\n'
+        'header_provider_extension =\n'
+        'quote_resolver_extension =\n'
+        'favicon_file =\n'
+        'show_stars = false\n'
+        'light_foreground_color = #000000\n'
+        'light_background_color = #ffffff\n'
+        'dark_foreground_color = #ffffff\n'
+        'dark_background_color = #000000\n'
+    )
+    _write_conf(tmp_path, monkeypatch, body)
+    api.get_config()
+    assert not any('unrecognized key' in str(w.message) for w in recwarn.list)
