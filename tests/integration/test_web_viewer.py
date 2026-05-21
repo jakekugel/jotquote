@@ -3,7 +3,9 @@
 # file in the root of this repository for complete details.
 
 import datetime
+import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -717,6 +719,91 @@ def test_about_content_provider_uses_page_title(tmp_path):
             assert resp.status == 200
             body = resp.read().decode('utf-8')
         assert '<title>Integration Title</title>' in body
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_api_endpoint_returns_json(tmp_path):
+    """jotquote webserver serves /api as JSON with all documented fields."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file)
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        api_url = TEST_URL.rstrip('/') + '/api'
+        with urllib.request.urlopen(api_url, timeout=5) as resp:
+            assert resp.status == 200
+            assert resp.headers.get('Content-Type', '').startswith('application/json')
+            body = json.loads(resp.read().decode('utf-8'))
+        assert set(body.keys()) == {'quote', 'author', 'publication', 'date', 'date_formatted', 'expires_at'}
+        assert body['quote'] and isinstance(body['quote'], str)
+        assert body['author'] and isinstance(body['author'], str)
+        assert body['publication'] is None or isinstance(body['publication'], str)
+        assert re.fullmatch(r'\d{8}', body['date'])
+        assert re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', body['expires_at'])
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_api_header_provider_applied(tmp_path):
+    """/api response carries headers from the configured header_provider_extension."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file, header_provider_extension='tests.fixtures.test_header_provider')
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        api_url = TEST_URL.rstrip('/') + '/api'
+        with urllib.request.urlopen(api_url, timeout=5) as resp:
+            assert resp.status == 200
+            assert resp.headers.get('X-Custom-Test') == 'hello'
+            assert 'max-age=' in resp.headers.get('Cache-Control', '')
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def test_api_random_mode(tmp_path):
+    """With web_mode=random, /api returns more than one distinct quote across calls."""
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file, web_mode='random')
+
+    proc = subprocess.Popen(
+        [_script('jotquote'), 'webserver'],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    stderr_lines = []
+    reader = threading.Thread(target=_collect_stderr, args=(proc, stderr_lines), daemon=True)
+    reader.start()
+    try:
+        assert wait_for_server(TEST_URL), 'Server did not start within timeout'
+        api_url = TEST_URL.rstrip('/') + '/api'
+        seen = set()
+        for _ in range(8):
+            with urllib.request.urlopen(api_url, timeout=5) as resp:
+                seen.add(json.loads(resp.read().decode('utf-8'))['quote'])
+        assert len(seen) >= 2
     finally:
         proc.terminate()
         proc.wait(timeout=10)
