@@ -16,10 +16,6 @@
 </noscript>
 <style>
 
-@view-transition {
-    navigation: auto;
-}
-
 ::view-transition-old(root),
 ::view-transition-new(root) {
     animation-duration: 2s;
@@ -210,15 +206,14 @@ body {
         <div class="horiz-line"></div>
         <div class="quote">{{ quote }}</div>
         <div class="author">{{ author }}</div>
-        {% if publication is not none %}
-   	        <div class="publication">{{ publication }}</div>
-   	    {% endif %}
+        <div id="publication" class="publication"{% if not publication %} hidden{% endif %}>{{ publication or '' }}</div>
         <div class="horiz-line"></div>
         <div class="footer-row">
             <div class="btn-group">
               <span id="expandable-btns">
                 {% if permalink %}
-                  <button class="icon-btn" id="permalink-btn" onclick="copyPermalink('{{ permalink }}')"
+                  <button class="icon-btn" id="permalink-btn" data-permalink="{{ permalink }}"
+                          onclick="copyPermalink(this.dataset.permalink)"
                           title="Copy permalink" aria-label="Copy permalink" style="margin-right: 1.25em;"><span class="copy-link-icon"></span></button>
                 {% endif %}
                 {% if show_about %}
@@ -285,22 +280,63 @@ body {
             toggleBtn.querySelector('span').className = expanding ? 'collapse-icon' : 'expand-icon';
         }
 
-        // Schedule an automatic page refresh at the server-provided expires_at instant.
-        // The server already includes jitter past its cache lifetime, so this is the
-        // exact moment the page should reload.  Called once when the page loads.
-        function scheduleAutoRefresh() {
-            const expiresAt = {{ expires_at | tojson }};
+        // Schedule the next quote refresh at the server-provided expires_at instant.
+        // Instead of a full-page reload, fetch /api and update the DOM in place.
+        // On AJAX failure (network or 5xx), retry in 60s and keep the stale quote.
+        async function scheduleAutoRefresh(expiresAt) {
+            // First call uses the value Jinja embedded; subsequent calls pass in
+            // the value from the most recent /api response.
+            if (expiresAt === undefined) {
+                expiresAt = {{ expires_at | tojson }};
+            }
             if (!expiresAt) return;
 
             const reloadTime = new Date(expiresAt).getTime();
             const delay = Math.max(reloadTime - Date.now(), 0);
-
             console.log('The page will refresh automatically on ' + new Date(reloadTime).toLocaleString() + '.');
 
-            setTimeout(() => {
-                console.log('Refreshing now.');
-                navigation.navigate(location.href);
+            setTimeout(async () => {
+                try {
+                    const resp = await fetch('/api', {cache: 'no-store'});
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    const body = await resp.json();
+                    applyQuoteUpdate(body);
+                    scheduleAutoRefresh(body.expires_at);
+                } catch (err) {
+                    console.warn('Quote refresh failed, retrying in 60s:', err);
+                    setTimeout(scheduleAutoRefresh, 60000);
+                }
             }, delay);
+        }
+
+        // Apply quote DOM updates inside a same-document view transition so the
+        // cross-fade animation defined in CSS still plays.  Falls back to a plain
+        // update on browsers without document.startViewTransition (e.g. Firefox).
+        function applyQuoteUpdate(body) {
+            const update = () => {
+                document.querySelector('.quote').textContent = body.quote;
+                document.querySelector('.author').textContent = body.author;
+                document.querySelector('.date').textContent = body.date_formatted;
+
+                const pub = document.getElementById('publication');
+                pub.textContent = body.publication || '';
+                pub.hidden = !body.publication;
+
+                const permalinkBtn = document.getElementById('permalink-btn');
+                if (permalinkBtn) {
+                    permalinkBtn.dataset.permalink = '/' + body.date;
+                }
+            };
+            // Skip the view transition when the tab is hidden — the browser
+            // aborts it with InvalidStateError, which would surface as an
+            // unhandled promise rejection.  Also defensively swallow benign
+            // rejections (e.g. transition canceled mid-animation).
+            if (document.startViewTransition && !document.hidden) {
+                const t = document.startViewTransition(update);
+                t.finished.catch(() => {});
+            } else {
+                update();
+            }
         }
 
         scheduleAutoRefresh();

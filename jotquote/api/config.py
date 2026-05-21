@@ -65,6 +65,49 @@ _WEB_KEYS = frozenset(
     }
 )
 
+# Recognized property keys per section in the modern [general]/[lint]/[web] format.
+# Used by _warn_unknown_keys() to catch typos at config load time.  Distinct from
+# _GENERAL_KEYS/_LINT_KEYS/_WEB_KEYS above, which describe the legacy [jotquote]
+# single-section layout.
+_KNOWN_GENERAL_KEYS = frozenset(
+    {
+        'quote_file',
+        'line_separator',
+        'show_author_count',
+        'timezone',
+    }
+)
+
+_KNOWN_LINT_KEYS = frozenset(
+    {
+        'enabled_checks',
+        'lint_on_add',
+        'max_quote_length',
+    }
+)
+
+_KNOWN_WEB_KEYS = frozenset(
+    {
+        'mode',
+        'about',
+        'about_content_provider_extension',
+        'header_provider_extension',
+        'quote_resolver_extension',
+        'port',
+        'ip',
+        'editor_port',
+        'editor_ip',
+        'expiration_seconds',
+        'favicon_file',
+        'page_title',
+        'show_stars',
+        'light_foreground_color',
+        'light_background_color',
+        'dark_foreground_color',
+        'dark_background_color',
+    }
+)
+
 
 def get_config():
     """Load settings.conf and return the parsed config plus a migration flag.
@@ -141,6 +184,8 @@ def get_config():
     if not config.has_option(SECTION_LINT, 'enabled_checks'):
         config[SECTION_LINT]['enabled_checks'] = ', '.join(sorted(ALL_CHECKS))
 
+    _warn_unknown_keys(config)
+
     return config
 
 
@@ -191,6 +236,35 @@ def _migrate_legacy_section(config):
 
     config.remove_section(_SECTION_LEGACY)
     return True
+
+
+def _warn_unknown_keys(config):
+    """Emit a UserWarning for each unrecognized key in [general], [lint], or [web].
+
+    Catches typos like ``cache_seconds`` (should be ``expiration_seconds``)
+    that ConfigParser would otherwise silently ignore, causing the default
+    value to be used.  Keys starting with ``required_group_`` in [lint] are
+    accepted as a dynamic-naming convention used by the
+    ``required-tag-group`` check.
+    """
+    known_by_section = {
+        SECTION_GENERAL: _KNOWN_GENERAL_KEYS,
+        SECTION_LINT: _KNOWN_LINT_KEYS,
+        SECTION_WEB: _KNOWN_WEB_KEYS,
+    }
+    for section, known in known_by_section.items():
+        if not config.has_section(section):
+            continue
+        for key in config[section]:
+            # Skip the required_group_<name> family — dynamic naming by design
+            if section == SECTION_LINT and key.startswith('required_group_'):
+                continue
+            if key not in known:
+                warnings.warn(
+                    f"settings.conf: unrecognized key '{key}' in [{section}] section will be ignored.",
+                    UserWarning,
+                    stacklevel=3,
+                )
 
 
 def _resolve_config_paths(config, config_dir):
