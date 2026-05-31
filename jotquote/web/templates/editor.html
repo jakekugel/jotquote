@@ -73,13 +73,57 @@ body {
     font-size: 90%;
 }
 
+.lint-cell {
+    max-height: 5.5em;
+    overflow-y: auto;
+}
+
 .edit-field {
     width: 100%;
+    height: 5.5em;
     box-sizing: border-box;
     font-family: "Open Sans", Palatino, serif;
     font-size: 95%;
     padding: 4px 6px;
     resize: vertical;
+    background-color: var(--input-bg);
+    color: var(--fg);
+    border: 1px solid var(--border-color);
+}
+
+.stats-table {
+    margin-top: 1em;
+    border: 1px solid var(--border-color);
+    border-collapse: collapse;
+    font-size: 90%;
+}
+
+.stats-table td {
+    border: 1px solid var(--border-color);
+    padding: 4px 10px;
+}
+
+.stats-table td:first-child {
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.stats-table td:last-child {
+    text-align: right;
+}
+
+.jump-form {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+}
+
+.jump-input {
+    width: 5em;
+    box-sizing: border-box;
+    font-family: "Open Sans", Palatino, serif;
+    font-size: 90%;
+    padding: 3px 6px;
     background-color: var(--input-bg);
     color: var(--fg);
     border: 1px solid var(--border-color);
@@ -171,6 +215,11 @@ body {
         <div class="header-row">
             {% if line_number and totalquotes %}
             <span class="quote-counter">Editing quote {{ line_number }} of {{ totalquotes }}</span>
+            <form class="jump-form" onsubmit="return jumpToLine()">
+                <label for="jump-input">Jump to:</label>
+                <input type="number" min="1" id="jump-input" class="jump-input">
+                <button type="submit" class="save-button" id="jump-btn">Go</button>
+            </form>
             {% else %}
             <span></span>
             {% endif %}
@@ -182,36 +231,44 @@ body {
                     <td>Quote</td>
                     <td><textarea name="quote" id="field-quote" rows="4" class="edit-field">{{ quote }}</textarea></td>
                     <td>
+                        <div class="lint-cell">
                         {% for issue in lint_issues if issue.field == 'quote' %}
                             <div class="lint-error">{{ issue.message }}</div>
                         {% endfor %}
+                        </div>
                     </td>
                 </tr>
                 <tr>
                     <td>Author</td>
                     <td><textarea name="author" id="field-author" rows="1" class="edit-field">{{ author }}</textarea></td>
                     <td>
+                        <div class="lint-cell">
                         {% for issue in lint_issues if issue.field == 'author' %}
                             <div class="lint-error">{{ issue.message }}</div>
                         {% endfor %}
+                        </div>
                     </td>
                 </tr>
                 <tr>
                     <td>Publication</td>
                     <td><textarea name="publication" id="field-publication" rows="1" class="edit-field">{{ publication or '' }}</textarea></td>
                     <td>
+                        <div class="lint-cell">
                         {% for issue in lint_issues if issue.field == 'publication' %}
                             <div class="lint-error">{{ issue.message }}</div>
                         {% endfor %}
+                        </div>
                     </td>
                 </tr>
                 <tr>
                     <td>Tags</td>
                     <td><textarea name="tags" id="field-tags" rows="1" class="edit-field">{{ tags | join(', ') }}</textarea></td>
                     <td>
+                        <div class="lint-cell">
                         {% for issue in lint_issues if issue.field == 'tags' %}
                             <div class="lint-error">{{ issue.message }}</div>
                         {% endfor %}
+                        </div>
                     </td>
                 </tr>
             </table>
@@ -231,12 +288,29 @@ body {
                         onclick="window.location='/{{ next_line_num }}'"
                         {% if not next_line_num %}disabled{% endif %}>Next &gt;</button>
             </div>
+            <table class="stats-table">
+                <tr>
+                    <td>Total quotes</td>
+                    <td>{{ totalquotes }}</td>
+                </tr>
+                <tr>
+                    <td>Quotes with lint errors</td>
+                    <td>{{ error_quote_count }}</td>
+                </tr>
+            </table>
             {% if error %}
                 <div class="error-message">{{ error }}</div>
             {% endif %}
         </form>
     </div>
     <script>
+        function jumpToLine() {
+            var input = document.getElementById('jump-input');
+            var val = input.value.trim();
+            if (val) window.location = '/' + val;
+            return false;
+        }
+
         function toggleTheme() {
             var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', next);

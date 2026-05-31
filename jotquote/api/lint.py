@@ -321,8 +321,8 @@ def _check_required_tag_groups(quote, lint_cfg):
                     line_number=quote.line_number,
                     check='required-tag-group',
                     field='tags',
-                    message='Quote missing required tag from group {!r} (expected one of: {})'.format(
-                        group_name, ', '.join(sorted(required_tags))
+                    message='Quote must have one of the following tags: {}'.format(
+                        ', '.join(sorted(required_tags))
                     ),
                 )
             )

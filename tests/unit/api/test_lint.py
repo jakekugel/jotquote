@@ -297,7 +297,8 @@ def test_required_tag_groups_multiple_groups_one_missing():
     issues = _check_required_tag_groups(q, cfg)
     assert len(issues) == 1
     assert issues[0].check == 'required-tag-group'
-    assert 'visibility' in issues[0].message
+    assert 'public' in issues[0].message
+    assert 'private' in issues[0].message
 
 
 # ---------------------------------------------------------------------------

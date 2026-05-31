@@ -20,6 +20,20 @@ web_helpers.configure_logging()
 _access_logger = logging.getLogger('jotquote.access')
 _access_logger.setLevel(logging.INFO)
 
+# Named logger for startup messages.
+_logger = logging.getLogger(__name__)
+
+
+def _log_startup_info():
+    """Log settings.conf path, quote file path, and package version at startup.
+
+    Called once at module load time so the messages appear regardless of whether
+    the editor is launched via 'jotquote webeditor' or directly via a WSGI server
+    such as waitress-serve.
+    """
+    web_helpers.log_paths_and_version(_logger)
+
+
 _lint_cache = {'sha256': None, 'checks': None, 'issues': []}
 
 
@@ -273,6 +287,9 @@ def _render_editor(config, quotes, quote, line_number=None, error=None, lint_iss
         lint_issues = [issue for issue in all_issues if issue.line_number == line_number]
     prev_error_line_num, next_error_line_num = _error_nav(quotes, idx if idx is not None else 0, all_issues)
 
+    # Count distinct quotes that have at least one lint error (for the stats table)
+    error_quote_count = len({issue.line_number for issue in all_issues})
+
     # Render the editor template with all computed values
     return render_template(
         'editor.html',
@@ -290,6 +307,11 @@ def _render_editor(config, quotes, quote, line_number=None, error=None, lint_iss
         next_line_num=next_line_num,
         prev_error_line_num=prev_error_line_num,
         next_error_line_num=next_error_line_num,
+        error_quote_count=error_quote_count,
         error=error,
         **colors,
     )
+
+
+# Run startup logging once at module import time, after all helpers are defined.
+_log_startup_info()

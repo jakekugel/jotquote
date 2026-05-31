@@ -52,6 +52,26 @@ def configure_logging():
         logging.root.addHandler(handler)
 
 
+def log_paths_and_version(logger):
+    """Log settings.conf path, quote file path, and jotquote package version.
+
+    Shared by the viewer and editor startup paths so both surface the same
+    diagnostic information when launched.  The settings file path is read from
+    the ``JOTQUOTE_CONFIG`` environment variable when set, otherwise from
+    ``api.CONFIG_FILE``.  The quote file path is read from the resolved config.
+
+    logger (logging.Logger) -- the logger to emit the INFO messages on.
+    """
+    import jotquote
+
+    config_file = os.environ.get('JOTQUOTE_CONFIG') or api.CONFIG_FILE
+    config = api.get_config()
+    quote_file = config.get(api.SECTION_GENERAL, 'quote_file')
+    logger.info('path to settings.conf file: %s', config_file)
+    logger.info('path to the quote file: %s', quote_file)
+    logger.info('jotquote package version: %s', jotquote.__version__)
+
+
 def sanitize_for_log(value):
     """Remove newline and carriage return characters to prevent log injection."""
     return value.replace('\r', '').replace('\n', '')
