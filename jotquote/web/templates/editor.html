@@ -217,7 +217,7 @@ body {
             <span class="quote-counter">Editing quote {{ line_number }} of {{ totalquotes }}</span>
             <form class="jump-form" onsubmit="return jumpToLine()">
                 <label for="jump-input">Jump to:</label>
-                <input type="number" min="1" id="jump-input" class="jump-input">
+                <input type="number" min="1" max="{{ totalquotes }}" step="1" id="jump-input" class="jump-input">
                 <button type="submit" class="save-button" id="jump-btn">Go</button>
             </form>
             {% else %}
@@ -306,8 +306,10 @@ body {
     <script>
         function jumpToLine() {
             var input = document.getElementById('jump-input');
-            var val = input.value.trim();
-            if (val) window.location = '/' + val;
+            var n = input.valueAsNumber;
+            if (isNaN(n)) return false;
+            n = Math.max(1, Math.min({{ totalquotes }}, Math.trunc(n)));
+            window.location = '/' + n;
             return false;
         }
 
