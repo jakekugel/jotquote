@@ -403,6 +403,105 @@ def test_lint_cache_miss_on_check_change(editor_client, config, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# Startup logging
+# ---------------------------------------------------------------------------
+
+
+def test_editor_startup_logs_paths_and_version(config, caplog):
+    """Editor startup logs settings.conf path, quote file path, and package version."""
+    import logging
+
+    config[api.SECTION_GENERAL]['quote_file'] = '/tmp/editor-quotes.txt'
+    with caplog.at_level(logging.INFO, logger='jotquote.web.editor'):
+        web_editor._log_startup_info()
+    messages = [r.getMessage() for r in caplog.records]
+    assert any('path to settings.conf file:' in m for m in messages)
+    assert any('path to the quote file: /tmp/editor-quotes.txt' in m for m in messages)
+    assert any('jotquote package version:' in m for m in messages)
+
+
+# ---------------------------------------------------------------------------
+# Stats table
+# ---------------------------------------------------------------------------
+
+
+def test_stats_table_total_quotes(editor_client, config):
+    """Stats table shows the total number of quotes from the file."""
+    client, quote_file = editor_client
+    quotes = api.read_quotes(quote_file)
+    rv = client.get('/')
+    body = rv.data.decode('utf-8')
+    assert 'Total quotes' in body
+    # The row should pair the label with the numeric count
+    assert re.search(r'Total quotes.*?(\d+)', body, re.DOTALL).group(1) == str(len(quotes))
+
+
+def test_stats_table_error_count_zero(editor_client, config):
+    """Stats table shows 0 lint errors for a clean fixture with no enabled checks that fire."""
+    config[api.SECTION_LINT]['enabled_checks'] = 'no-tags'
+    client, quote_file = editor_client
+    # All quotes have tags — no lint errors
+    with open(quote_file, 'w', encoding='utf-8') as f:
+        f.write('Quote one | Author | | tag1\n')
+        f.write('Quote two | Author | | tag2\n')
+    rv = client.get('/')
+    body = rv.data.decode('utf-8')
+    assert 'Quotes with lint errors' in body
+    match = re.search(r'Quotes with lint errors.*?(\d+)', body, re.DOTALL)
+    assert match.group(1) == '0'
+
+
+def test_stats_table_error_count_nonzero(editor_client, config):
+    """Stats table counts the number of quotes with at least one lint error."""
+    config[api.SECTION_LINT]['enabled_checks'] = 'no-tags'
+    client, quote_file = editor_client
+    _write_error_nav_quotes(quote_file)
+    rv = client.get('/')
+    body = rv.data.decode('utf-8')
+    match = re.search(r'Quotes with lint errors.*?(\d+)', body, re.DOTALL)
+    assert match.group(1) == '2'
+
+
+def test_stats_table_error_count_dedupes(editor_client, config):
+    """A quote with multiple lint issues is counted once."""
+    config[api.SECTION_LINT]['enabled_checks'] = 'no-tags, double-spaces'
+    client, quote_file = editor_client
+    # Single quote with no tags AND a double space — triggers both checks on one quote
+    with open(quote_file, 'w', encoding='utf-8') as f:
+        f.write('A quote with  a double space | Author | |\n')
+    rv = client.get('/')
+    body = rv.data.decode('utf-8')
+    match = re.search(r'Quotes with lint errors.*?(\d+)', body, re.DOTALL)
+    assert match.group(1) == '1'
+
+
+# ---------------------------------------------------------------------------
+# Jump-to widget
+# ---------------------------------------------------------------------------
+
+
+def test_jump_to_widget_present(editor_client, config):
+    """Jump-to label, input, and Go button are rendered on a normal GET."""
+    client, quote_file = editor_client
+    rv = client.get('/')
+    body = rv.data.decode('utf-8')
+    assert 'Jump to:' in body
+    assert 'id="jump-input"' in body
+    assert 'id="jump-btn"' in body
+
+
+def test_jump_to_widget_absent_when_no_quotes(editor_client, config):
+    """Empty quote file: page returns 200 and does not contain the Jump-to widget."""
+    client, quote_file = editor_client
+    with open(quote_file, 'w', encoding='utf-8') as f:
+        f.write('')
+    rv = client.get('/')
+    assert rv.status_code == 200
+    body = rv.data.decode('utf-8')
+    assert 'Jump to:' not in body
+
+
+# ---------------------------------------------------------------------------
 # Favicon
 # ---------------------------------------------------------------------------
 

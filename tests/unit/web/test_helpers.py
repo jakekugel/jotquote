@@ -14,6 +14,7 @@ from jotquote.web.helpers import (
     LOG_FORMAT,
     TimestampFormatter,
     get_color_config,
+    log_paths_and_version,
     resolve_favicon_path,
     sanitize_for_log,
 )
@@ -189,3 +190,31 @@ def test_resolve_favicon_path_missing_file_falls_back(web_config, tmp_path, capl
 def test_resolve_favicon_path_bundled_exists():
     """The bundled favicon path actually exists on disk."""
     assert os.path.isfile(_bundled_favicon())
+
+
+# ---------------------------------------------------------------------------
+# log_paths_and_version
+# ---------------------------------------------------------------------------
+
+
+def test_log_paths_and_version_emits_three_lines(config, caplog, monkeypatch):
+    """Helper logs settings.conf path, quote file path, and package version."""
+    monkeypatch.delenv('JOTQUOTE_CONFIG', raising=False)
+    config[api.SECTION_GENERAL]['quote_file'] = '/tmp/my-quotes.txt'
+    logger = logging.getLogger('jotquote.test.startup')
+    with caplog.at_level(logging.INFO, logger='jotquote.test.startup'):
+        log_paths_and_version(logger)
+    messages = [r.getMessage() for r in caplog.records]
+    assert any('path to settings.conf file:' in m for m in messages)
+    assert any('path to the quote file: /tmp/my-quotes.txt' in m for m in messages)
+    assert any('jotquote package version:' in m for m in messages)
+
+
+def test_log_paths_and_version_honors_env(config, caplog, monkeypatch):
+    """When JOTQUOTE_CONFIG is set, helper logs that path for settings.conf."""
+    monkeypatch.setenv('JOTQUOTE_CONFIG', '/etc/jotquote/custom.conf')
+    logger = logging.getLogger('jotquote.test.startup')
+    with caplog.at_level(logging.INFO, logger='jotquote.test.startup'):
+        log_paths_and_version(logger)
+    messages = [r.getMessage() for r in caplog.records]
+    assert any('path to settings.conf file: /etc/jotquote/custom.conf' in m for m in messages)

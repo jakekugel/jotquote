@@ -311,7 +311,6 @@ def _check_required_tag_groups(quote, lint_cfg):
     for key, value in lint_cfg.items():
         if not key.startswith('required_group_'):
             continue
-        group_name = key[len('required_group_') :]
         required_tags = {t.strip() for t in value.split(',') if t.strip()}
         if not required_tags:
             continue
@@ -321,8 +320,8 @@ def _check_required_tag_groups(quote, lint_cfg):
                     line_number=quote.line_number,
                     check='required-tag-group',
                     field='tags',
-                    message='Quote missing required tag from group {!r} (expected one of: {})'.format(
-                        group_name, ', '.join(sorted(required_tags))
+                    message='Quote must have one of the following tags: {}'.format(
+                        ', '.join(sorted(required_tags))
                     ),
                 )
             )

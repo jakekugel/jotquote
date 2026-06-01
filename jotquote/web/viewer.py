@@ -37,17 +37,11 @@ def _log_startup_info():
     the server is launched via 'jotquote webserver' or directly via a WSGI server
     such as waitress-serve.
     """
-    import jotquote
-
-    # Compute config file path using the same logic as api.get_config()
-    config_file = os.environ.get('JOTQUOTE_CONFIG') or api.CONFIG_FILE
-    config = api.get_config()
-    quote_file = config.get(api.SECTION_GENERAL, 'quote_file')
-    _logger.info('path to settings.conf file: %s', config_file)
-    _logger.info('path to the quote file: %s', quote_file)
-    _logger.info('jotquote package version: %s', jotquote.__version__)
+    # Log settings.conf path, quote file path, and package version
+    web_helpers.log_paths_and_version(_logger)
 
     # Log configured timezone, current local time, and (in daily mode) the midnight refresh notice
+    config = api.get_config()
     mode = config[api.SECTION_WEB].get('mode', 'daily')
     try:
         now, tz_name = _get_local_now(config)
