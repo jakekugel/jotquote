@@ -311,7 +311,6 @@ def _check_required_tag_groups(quote, lint_cfg):
     for key, value in lint_cfg.items():
         if not key.startswith('required_group_'):
             continue
-        group_name = key[len('required_group_') :]
         required_tags = {t.strip() for t in value.split(',') if t.strip()}
         if not required_tags:
             continue
