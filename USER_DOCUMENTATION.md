@@ -170,11 +170,17 @@ $ jotquote lint --ignore no-tags
 $ jotquote lint --fix
 ```
 
-Available checks: `smart-quotes`, `smart-dashes`, `unicode-ellipsis`, `double-spaces`, `quote-too-long`, `no-tags`, `no-author`, `required-tag-group`, `duplicate-hash`.
+Available checks: `smart-quotes`, `smart-dashes`, `unicode-ellipsis`, `double-spaces`, `quote-too-long`, `no-tags`, `no-author`, `required-tag-group`, `duplicate-hash`, `missing-end-punctuation`, `lowercase-start`.
 
 The `unicode-ellipsis` check flags the Unicode horizontal ellipsis character (`…`, U+2026) in any text field. With `--fix`, each occurrence is replaced with three ASCII periods (`...`).
 
 The `duplicate-hash` check flags any quote whose fuzzy hash (the first letter of each word, MD5-hashed) collides with another quote in the file. This catches near-duplicates that differ only in punctuation, casing, or whitespace, as well as the rare unrelated quote that happens to share the same word-initial-letter sequence.
+
+The `missing-end-punctuation` check flags any quote whose text does not end with `.`, `!`, or `?`. Trailing closing quotes and parentheses are ignored, so a quote ending in `."` still passes. With `--fix`, a period is appended.
+
+The `lowercase-start` check flags any quote whose first alphabetic character is lowercase (leading punctuation such as `"` or `(` is skipped). With `--fix`, that character is uppercased.
+
+The `no-author` check flags any quote whose author field is empty or whitespace-only. With `--fix`, the author is set to `Unknown`.
 
 ---
 
