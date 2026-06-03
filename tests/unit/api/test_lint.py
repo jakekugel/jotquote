@@ -334,18 +334,22 @@ def test_check_lowercase_start_detected():
     assert issues[0].fix_value == 'Hello world.'
 
 
-def test_check_lowercase_start_with_leading_quote():
+def test_check_lowercase_start_ignored_with_leading_quote():
+    # First character is non-alphabetic, so the check does not apply.
     q = _make_quote(quote="'hello world.'")
-    issues = CHECKS['lowercase-start'].check(q)
-    assert len(issues) == 1
-    assert issues[0].fix_value == "'Hello world.'"
+    assert CHECKS['lowercase-start'].check(q) == []
 
 
-def test_check_lowercase_start_with_leading_paren():
+def test_check_lowercase_start_ignored_with_leading_paren():
+    # First character is non-alphabetic, so the check does not apply.
     q = _make_quote(quote='(hello world.)')
-    issues = CHECKS['lowercase-start'].check(q)
-    assert len(issues) == 1
-    assert issues[0].fix_value == '(Hello world.)'
+    assert CHECKS['lowercase-start'].check(q) == []
+
+
+def test_check_lowercase_start_ignored_with_leading_digit():
+    # First character is non-alphabetic, so the check does not apply.
+    q = _make_quote(quote='3 hello world.')
+    assert CHECKS['lowercase-start'].check(q) == []
 
 
 # ---------------------------------------------------------------------------

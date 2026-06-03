@@ -178,7 +178,7 @@ The `duplicate-hash` check flags any quote whose fuzzy hash (the first letter of
 
 The `missing-end-punctuation` check flags any quote whose text does not end with `.`, `!`, or `?`. Trailing closing quotes and parentheses are ignored, so a quote ending in `."` still passes. With `--fix`, a period is appended.
 
-The `lowercase-start` check flags any quote whose first alphabetic character is lowercase (leading punctuation such as `"` or `(` is skipped). With `--fix`, that character is uppercased.
+The `lowercase-start` check flags any quote whose very first character is a lowercase letter. The check is skipped entirely when the quote begins with anything other than an alphabetic character (e.g. leading punctuation, digits, or whitespace). With `--fix`, the first character is uppercased.
 
 The `no-author` check flags any quote whose author field is empty or whitespace-only. With `--fix`, the author is set to `Unknown`.
 

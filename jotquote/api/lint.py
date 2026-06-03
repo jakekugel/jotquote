@@ -471,35 +471,35 @@ class MissingEndPunctuationCheck(Check):
 
 
 class LowercaseStartCheck(Check):
-    """Flag and fix quotes whose first alphabetic character is lowercase."""
+    """Flag and fix quotes that begin with a lowercase letter.
+
+    Only applies when the very first character of the quote text is
+    alphabetic; quotes starting with punctuation, digits, or whitespace are
+    skipped.
+    """
 
     name = 'lowercase-start'
     fixable = True
 
     def check(self, quote, *, config=None):
         text = quote.quote
-        for idx, ch in enumerate(text):
-            if ch.isalpha():
-                if ch.islower():
-                    return [
-                        LintIssue(
-                            line_number=quote.line_number,
-                            check=self.name,
-                            field='quote',
-                            message='Quote should start with a capital letter',
-                            fixable=True,
-                            fix_value=text[:idx] + ch.upper() + text[idx + 1 :],
-                        )
-                    ]
-                return []
-        return []
+        if not text or not text[0].isalpha() or not text[0].islower():
+            return []
+        return [
+            LintIssue(
+                line_number=quote.line_number,
+                check=self.name,
+                field='quote',
+                message='Quote should start with a capital letter',
+                fixable=True,
+                fix_value=text[0].upper() + text[1:],
+            )
+        ]
 
     def fix(self, quote, issue):
         text = quote.quote
-        for idx, ch in enumerate(text):
-            if ch.isalpha():
-                quote.quote = text[:idx] + ch.upper() + text[idx + 1 :]
-                return
+        if text and text[0].isalpha():
+            quote.quote = text[0].upper() + text[1:]
 
 
 # Canonical, frozen view of the registered check names. Derived from CHECKS
