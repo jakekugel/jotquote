@@ -288,13 +288,19 @@ def add_quotes(filename, newquotes):
     # Read in quotes from the quote file given.  Exception raised on I/O error
     quotes, sha256 = read_quotes_with_hash(filename)
 
-    # Build a set of existing quote hashes for O(1) lookup, then check each new quote once.
-    existing_hashes = {q.get_hash() for q in quotes}
+    # Build a hash-to-text map for O(1) lookup, then check each new quote against existing ones.
+    existing_by_hash = {q.get_hash(): q.quote for q in quotes}
     for new_quote in newquotes:
-        if new_quote.get_hash() in existing_hashes:
-            raise DuplicateQuoteError(
-                'the quote "{}" is already in the quote file {}.'.format(new_quote.quote, filename)
-            )
+        h = new_quote.get_hash()
+        if h in existing_by_hash:
+            if new_quote.quote == existing_by_hash[h]:
+                raise DuplicateQuoteError(
+                    'the quote "{}" is already in the quote file {}.'.format(new_quote.quote, filename)
+                )
+            else:
+                raise DuplicateQuoteError(
+                    'a quote similar to "{}" is already in the quote file {}.'.format(new_quote.quote, filename)
+                )
 
     # Rewrite quote file with any additional quotes
     quotes.extend(newquotes)
@@ -440,16 +446,20 @@ def _sha256_hex(data):
 
 
 def _check_for_duplicates(quotes, source):
-    """Throws an exception if the given list of quotes contains duplicates."""
+    """Throws an exception if the given list of quotes contains duplicates or near-duplicates."""
 
-    hashes = set()
+    seen = {}
     for index, quote in enumerate(quotes):
         quote_hash = quote.get_hash()
-        if quote_hash not in hashes:
-            hashes.add(quote_hash)
-        else:
+        if quote_hash not in seen:
+            seen[quote_hash] = quote.quote
+        elif quote.quote == seen[quote_hash]:
             raise DuplicateQuoteError(
                 'a duplicate quote was found on line {} of \'{}\'.  Quote: "{}".'.format(index + 1, source, quote.quote)
+            )
+        else:
+            raise DuplicateQuoteError(
+                'a similar quote was found on line {} of \'{}\'.  Quote: "{}".'.format(index + 1, source, quote.quote)
             )
 
 

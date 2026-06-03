@@ -160,6 +160,34 @@ def test_add_quotes_hash_detects_duplicate_in_batch(config, tmp_path):
         api.add_quotes(path, [brand_new, duplicate])
 
 
+def test_add_quotes_similar_quote_against_file(config, tmp_path):
+    """add_quotes() raises DuplicateQuoteError with 'similar' when hash matches but text differs."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    # Same first-letter sequence as the Maya Angelou quote in quotes1.txt, but different text.
+    similar = api.Quote('Ask for what you would and be prepared to get it.', 'Maya Angelou', None, [])
+    with pytest.raises(
+        api.DuplicateQuoteError,
+        match=re.escape(
+            'a quote similar to "Ask for what you would and be prepared to get it."'
+            ' is already in the quote file {}.'.format(path)
+        ),
+    ):
+        api.add_quotes(path, [similar])
+
+
+def test_add_quotes_similar_quote_in_batch(config, tmp_path):
+    """add_quotes() raises DuplicateQuoteError with 'similar' for a hash-matching but text-differing batch pair."""
+    path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
+    # 'added' and 'aged' both start with 'a', so these two quotes share the same fuzzy hash.
+    q1 = api.Quote('This is an added quote.', 'Author One', None, [])
+    q2 = api.Quote('This is an aged quote.', 'Author Two', None, [])
+    with pytest.raises(
+        api.DuplicateQuoteError,
+        match='similar',
+    ):
+        api.add_quotes(path, [q1, q2])
+
+
 def test_check_for_duplicates_with_duplicates():
     """The _check_for_duplicates function should raise exception if there are duplicate quotes."""
     quotes = [
@@ -171,6 +199,20 @@ def test_check_for_duplicates_with_duplicates():
     with pytest.raises(
         Exception,
         match=re.escape('a duplicate quote was found on line 2 of \'stdin\'.  Quote: "This is an added quote."'),
+    ):
+        store_mod._check_for_duplicates(quotes, 'stdin')
+
+
+def test_check_for_duplicates_similar():
+    """_check_for_duplicates raises DuplicateQuoteError with 'similar' when quotes share a hash but differ in text."""
+    # 'added' and 'aged' both start with 'a', giving identical fuzzy hashes.
+    quotes = [
+        api.Quote('This is an added quote.', 'Author One', 'Publication', []),
+        api.Quote('This is an aged quote.', 'Author Two', 'Publication', []),
+    ]
+    with pytest.raises(
+        api.DuplicateQuoteError,
+        match='similar',
     ):
         store_mod._check_for_duplicates(quotes, 'stdin')
 

@@ -12,20 +12,6 @@ from jotquote.api.exceptions import ConfigError
 APP_NAME = 'jotquote'
 CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.jotquote', 'settings.conf')
 
-ALL_CHECKS = frozenset(
-    {
-        'smart-quotes',  # Flag (and fix) typographic/smart quote characters
-        'smart-dashes',  # Flag (and fix) unicode dash/hyphen variants
-        'unicode-ellipsis',  # Flag (and fix) the Unicode horizontal ellipsis (U+2026)
-        'double-spaces',  # Flag (and fix) runs of multiple spaces in any field
-        'quote-too-long',  # Flag quotes exceeding a configurable max length (max_quote_length)
-        'no-tags',  # Flag quotes with no tags
-        'no-author',  # Flag quotes with no author
-        'required-tag-group',  # Flag quotes missing a tag from any user-defined required tag group
-        'duplicate-hash',  # Flag quotes whose fuzzy first-letter hash collides with another quote in the file
-    }
-)
-
 SECTION_GENERAL = 'general'
 SECTION_LINT = 'lint'
 SECTION_WEB = 'web'
@@ -180,9 +166,11 @@ def get_config():
             )
         )
 
-    # Add lint defaults in memory if not present
+    # Add lint defaults in memory if not present. Lazy-imported to avoid the
+    # import cycle (lint imports this module for SECTION_LINT).
     if not config.has_option(SECTION_LINT, 'enabled_checks'):
-        config[SECTION_LINT]['enabled_checks'] = ', '.join(sorted(ALL_CHECKS))
+        from jotquote.api.lint import ALL_CHECKS as _ALL_CHECKS
+        config[SECTION_LINT]['enabled_checks'] = ', '.join(sorted(_ALL_CHECKS))
 
     _warn_unknown_keys(config)
 

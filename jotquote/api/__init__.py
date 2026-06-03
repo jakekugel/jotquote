@@ -3,7 +3,6 @@
 # file in the root of this repository for complete details.
 
 from jotquote.api.config import (
-    ALL_CHECKS,
     APP_NAME,
     CONFIG_FILE,
     SECTION_GENERAL,
@@ -21,7 +20,7 @@ from jotquote.api.exceptions import (
     QuoteValidationError,
     StorageError,
 )
-from jotquote.api.lint import LintIssue, apply_fixes, lint_quotes
+from jotquote.api.lint import ALL_CHECKS, LintIssue, apply_fixes, lint_quotes
 from jotquote.api.quote import (
     INVALID_CHARS,
     INVALID_CHARS_QUOTE,

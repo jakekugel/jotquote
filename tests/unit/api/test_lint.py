@@ -6,16 +6,8 @@ from configparser import ConfigParser
 
 from jotquote import api
 from jotquote.api.lint import (
+    CHECKS,
     LintIssue,
-    _check_double_spaces,
-    _check_duplicate_hash,
-    _check_no_author,
-    _check_no_tags,
-    _check_quote_length,
-    _check_required_tag_groups,
-    _check_smart_dashes,
-    _check_smart_quotes,
-    _check_unicode_ellipsis,
     apply_fixes,
     lint_quotes,
 )
@@ -49,12 +41,12 @@ def _make_config(enabled_checks='', max_quote_length='0', required_tag_groups=No
 
 def test_check_smart_quotes_clean():
     q = _make_quote(quote="It's a test")
-    assert _check_smart_quotes(q) == []
+    assert CHECKS['smart-quotes'].check(q) == []
 
 
 def test_check_smart_quotes_in_quote():
     q = _make_quote(quote='\u201cHello\u201d')
-    issues = _check_smart_quotes(q)
+    issues = CHECKS['smart-quotes'].check(q)
     assert len(issues) == 1
     assert issues[0].check == 'smart-quotes'
     assert issues[0].fixable
@@ -63,7 +55,7 @@ def test_check_smart_quotes_in_quote():
 
 def test_check_smart_quotes_in_author():
     q = _make_quote(author='\u2018Author\u2019')
-    issues = _check_smart_quotes(q)
+    issues = CHECKS['smart-quotes'].check(q)
     assert len(issues) == 1
     assert issues[0].field == 'author'
     assert issues[0].fix_value == "'Author'"
@@ -71,7 +63,7 @@ def test_check_smart_quotes_in_author():
 
 def test_check_smart_quotes_multiple_fields():
     q = _make_quote(quote='\u201cQuote\u201d', author='\u2018Author\u2019', publication='\u00abPub\u00bb')
-    issues = _check_smart_quotes(q)
+    issues = CHECKS['smart-quotes'].check(q)
     assert len(issues) == 3
 
 
@@ -82,12 +74,12 @@ def test_check_smart_quotes_multiple_fields():
 
 def test_check_smart_dashes_clean():
     q = _make_quote(quote='A regular - hyphen')
-    assert _check_smart_dashes(q) == []
+    assert CHECKS['smart-dashes'].check(q) == []
 
 
 def test_check_smart_dashes_en_dash():
     q = _make_quote(quote='pages 10\u201320')
-    issues = _check_smart_dashes(q)
+    issues = CHECKS['smart-dashes'].check(q)
     assert len(issues) == 1
     assert issues[0].fixable
     assert issues[0].fix_value == 'pages 10-20'
@@ -95,14 +87,14 @@ def test_check_smart_dashes_en_dash():
 
 def test_check_smart_dashes_em_dash():
     q = _make_quote(quote='word\u2014word')
-    issues = _check_smart_dashes(q)
+    issues = CHECKS['smart-dashes'].check(q)
     assert len(issues) == 1
     assert issues[0].fix_value == 'word-word'
 
 
 def test_check_smart_dashes_in_author():
     q = _make_quote(author='Mary\u2010Jane')
-    issues = _check_smart_dashes(q)
+    issues = CHECKS['smart-dashes'].check(q)
     assert len(issues) == 1
     assert issues[0].field == 'author'
     assert issues[0].fix_value == 'Mary-Jane'
@@ -110,7 +102,7 @@ def test_check_smart_dashes_in_author():
 
 def test_check_smart_dashes_multiple_fields():
     q = _make_quote(quote='a\u2013b', author='c\u2014d', publication='e\u2015f')
-    issues = _check_smart_dashes(q)
+    issues = CHECKS['smart-dashes'].check(q)
     assert len(issues) == 3
 
 
@@ -131,12 +123,12 @@ def test_apply_fixes_smart_dashes():
 
 def test_check_double_spaces_clean():
     q = _make_quote(quote='No double spaces here.')
-    assert _check_double_spaces(q) == []
+    assert CHECKS['double-spaces'].check(q) == []
 
 
 def test_check_double_spaces_in_quote():
     q = _make_quote(quote='One thing I know.  This is wisdom.')
-    issues = _check_double_spaces(q)
+    issues = CHECKS['double-spaces'].check(q)
     assert len(issues) == 1
     assert issues[0].field == 'quote'
     assert issues[0].fixable
@@ -145,7 +137,7 @@ def test_check_double_spaces_in_quote():
 
 def test_check_double_spaces_in_author():
     q = _make_quote(author='Jane  Doe')
-    issues = _check_double_spaces(q)
+    issues = CHECKS['double-spaces'].check(q)
     assert len(issues) == 1
     assert issues[0].field == 'author'
     assert issues[0].fix_value == 'Jane Doe'
@@ -153,7 +145,7 @@ def test_check_double_spaces_in_author():
 
 def test_check_double_spaces_in_publication():
     q = _make_quote(publication='Some  Book')
-    issues = _check_double_spaces(q)
+    issues = CHECKS['double-spaces'].check(q)
     assert len(issues) == 1
     assert issues[0].field == 'publication'
     assert issues[0].fix_value == 'Some Book'
@@ -161,7 +153,7 @@ def test_check_double_spaces_in_publication():
 
 def test_check_double_spaces_three_spaces():
     q = _make_quote(quote='Too   many spaces')
-    issues = _check_double_spaces(q)
+    issues = CHECKS['double-spaces'].check(q)
     assert len(issues) == 1
     assert issues[0].fix_value == 'Too many spaces'
 
@@ -187,19 +179,19 @@ def test_check_quote_length_no_limit():
     """When lint_max_quote_length is 0 (default), no issues are raised."""
     cfg = _make_config()[api.SECTION_LINT]
     q = _make_quote(quote='x' * 500)
-    assert _check_quote_length(q, cfg) == []
+    assert CHECKS['quote-too-long'].check(q, config=cfg) == []
 
 
 def test_check_quote_length_within_limit():
     cfg = _make_config(max_quote_length='100')[api.SECTION_LINT]
     q = _make_quote(quote='x' * 100)
-    assert _check_quote_length(q, cfg) == []
+    assert CHECKS['quote-too-long'].check(q, config=cfg) == []
 
 
 def test_check_quote_length_exceeds_limit():
     cfg = _make_config(max_quote_length='100')[api.SECTION_LINT]
     q = _make_quote(quote='x' * 101)
-    issues = _check_quote_length(q, cfg)
+    issues = CHECKS['quote-too-long'].check(q, config=cfg)
     assert len(issues) == 1
     assert issues[0].check == 'quote-too-long'
     assert issues[0].field == 'quote'
@@ -215,12 +207,12 @@ def test_check_quote_length_exceeds_limit():
 
 def test_check_no_tags_has_tags():
     q = _make_quote(tags=['funny'])
-    assert _check_no_tags(q) == []
+    assert CHECKS['no-tags'].check(q) == []
 
 
 def test_check_no_tags_empty():
     q = _make_quote(tags=[])
-    issues = _check_no_tags(q)
+    issues = CHECKS['no-tags'].check(q)
     assert len(issues) == 1
     assert issues[0].check == 'no-tags'
     assert not issues[0].fixable
@@ -233,7 +225,7 @@ def test_check_no_tags_empty():
 
 def test_check_no_author_has_author():
     q = _make_quote(author='Jane Doe')
-    assert _check_no_author(q) == []
+    assert CHECKS['no-author'].check(q) == []
 
 
 def test_check_no_author_empty():
@@ -241,9 +233,123 @@ def test_check_no_author_empty():
     q = api.Quote('Test', 'x', None, [])
     q.author = ''
     q.line_number = 1
-    issues = _check_no_author(q)
+    issues = CHECKS['no-author'].check(q)
     assert len(issues) == 1
     assert issues[0].check == 'no-author'
+    assert issues[0].field == 'author'
+    assert issues[0].fixable
+    assert issues[0].fix_value == 'Unknown'
+
+
+def test_check_no_author_whitespace_only():
+    q = api.Quote('Test', 'x', None, [])
+    q.author = '   '
+    q.line_number = 1
+    issues = CHECKS['no-author'].check(q)
+    assert len(issues) == 1
+    assert issues[0].fixable
+    assert issues[0].fix_value == 'Unknown'
+
+
+# ---------------------------------------------------------------------------
+# _check_missing_end_punctuation
+# ---------------------------------------------------------------------------
+
+
+def test_check_missing_end_punctuation_clean_period():
+    q = _make_quote(quote='Hello world.')
+    assert CHECKS['missing-end-punctuation'].check(q) == []
+
+
+def test_check_missing_end_punctuation_clean_question():
+    q = _make_quote(quote='What is this?')
+    assert CHECKS['missing-end-punctuation'].check(q) == []
+
+
+def test_check_missing_end_punctuation_clean_exclamation():
+    q = _make_quote(quote='Look out!')
+    assert CHECKS['missing-end-punctuation'].check(q) == []
+
+
+def test_check_missing_end_punctuation_clean_trailing_close_quote():
+    # Period before a closing quote character is still terminal punctuation.
+    q = _make_quote(quote="He said, 'hello.'")
+    assert CHECKS['missing-end-punctuation'].check(q) == []
+
+
+def test_check_missing_end_punctuation_clean_trailing_paren():
+    q = _make_quote(quote='Some statement (and an aside.)')
+    assert CHECKS['missing-end-punctuation'].check(q) == []
+
+
+def test_check_missing_end_punctuation_detected():
+    q = _make_quote(quote='Hello world')
+    issues = CHECKS['missing-end-punctuation'].check(q)
+    assert len(issues) == 1
+    assert issues[0].check == 'missing-end-punctuation'
+    assert issues[0].field == 'quote'
+    assert issues[0].fixable
+    assert issues[0].fix_value == 'Hello world.'
+
+
+def test_check_missing_end_punctuation_only_quote_field():
+    # Missing punctuation in author/publication is NOT flagged - only quote text.
+    q = _make_quote(quote='Hello world.', author='Jane Doe', publication='The Times')
+    assert CHECKS['missing-end-punctuation'].check(q) == []
+
+
+# ---------------------------------------------------------------------------
+# _check_lowercase_start
+# ---------------------------------------------------------------------------
+
+
+def test_check_lowercase_start_clean_uppercase():
+    q = _make_quote(quote='Hello world.')
+    assert CHECKS['lowercase-start'].check(q) == []
+
+
+def test_check_lowercase_start_clean_leading_quote():
+    q = _make_quote(quote="'Hello,' she said.")
+    assert CHECKS['lowercase-start'].check(q) == []
+
+
+def test_check_lowercase_start_clean_leading_paren():
+    q = _make_quote(quote='(Hello world.)')
+    assert CHECKS['lowercase-start'].check(q) == []
+
+
+def test_check_lowercase_start_clean_no_alpha():
+    # No alphabetic characters at all - silently pass.
+    q = _make_quote(quote='123 456.')
+    assert CHECKS['lowercase-start'].check(q) == []
+
+
+def test_check_lowercase_start_detected():
+    q = _make_quote(quote='hello world.')
+    issues = CHECKS['lowercase-start'].check(q)
+    assert len(issues) == 1
+    assert issues[0].check == 'lowercase-start'
+    assert issues[0].field == 'quote'
+    assert issues[0].fixable
+    assert issues[0].fix_value == 'Hello world.'
+
+
+def test_check_lowercase_start_ignored_with_leading_quote():
+    # First character is non-alphabetic, so the check does not apply.
+    q = _make_quote(quote="'hello world.'")
+    assert CHECKS['lowercase-start'].check(q) == []
+
+
+def test_check_lowercase_start_ignored_with_leading_paren():
+    # First character is non-alphabetic, so the check does not apply.
+    q = _make_quote(quote='(hello world.)')
+    assert CHECKS['lowercase-start'].check(q) == []
+
+
+def test_check_lowercase_start_ignored_with_leading_digit():
+    # First character is non-alphabetic, so the check does not apply.
+    q = _make_quote(quote='3 hello world.')
+    assert CHECKS['lowercase-start'].check(q) == []
 
 
 # ---------------------------------------------------------------------------
@@ -255,19 +361,19 @@ def test_required_tag_groups_not_configured():
     """When no lint_required_group_* keys exist, no issues are raised."""
     cfg = _make_config()[api.SECTION_LINT]
     q = _make_quote(tags=['funny'])
-    assert _check_required_tag_groups(q, cfg) == []
+    assert CHECKS['required-tag-group'].check(q, config=cfg) == []
 
 
 def test_required_tag_groups_quote_has_required_tag():
     cfg = _make_config(required_tag_groups={'stars': '1star, 2stars, 3stars, 4stars, 5stars'})[api.SECTION_LINT]
     q = _make_quote(tags=['3stars', 'funny'])
-    assert _check_required_tag_groups(q, cfg) == []
+    assert CHECKS['required-tag-group'].check(q, config=cfg) == []
 
 
 def test_required_tag_groups_missing_tag():
     cfg = _make_config(required_tag_groups={'stars': '1star, 2stars, 3stars, 4stars, 5stars'})[api.SECTION_LINT]
     q = _make_quote(tags=['funny'])
-    issues = _check_required_tag_groups(q, cfg)
+    issues = CHECKS['required-tag-group'].check(q, config=cfg)
     assert len(issues) == 1
     assert issues[0].check == 'required-tag-group'
     assert issues[0].field == 'tags'
@@ -283,7 +389,7 @@ def test_required_tag_groups_multiple_groups_all_satisfied():
         }
     )[api.SECTION_LINT]
     q = _make_quote(tags=['3stars', 'public', 'funny'])
-    assert _check_required_tag_groups(q, cfg) == []
+    assert CHECKS['required-tag-group'].check(q, config=cfg) == []
 
 
 def test_required_tag_groups_multiple_groups_one_missing():
@@ -294,7 +400,7 @@ def test_required_tag_groups_multiple_groups_one_missing():
         }
     )[api.SECTION_LINT]
     q = _make_quote(tags=['3stars', 'funny'])
-    issues = _check_required_tag_groups(q, cfg)
+    issues = CHECKS['required-tag-group'].check(q, config=cfg)
     assert len(issues) == 1
     assert issues[0].check == 'required-tag-group'
     assert 'public' in issues[0].message
@@ -312,7 +418,7 @@ def test_check_duplicate_hash_clean():
         _make_quote(quote='Alpha bravo charlie delta.', line_number=1),
         _make_quote(quote='Echo foxtrot golf hotel.', line_number=2),
     ]
-    assert _check_duplicate_hash(quotes) == []
+    assert CHECKS['duplicate-hash'].check(quotes) == []
 
 
 def test_check_duplicate_hash_detects_pair():
@@ -321,7 +427,7 @@ def test_check_duplicate_hash_detects_pair():
         _make_quote(quote='Apples bake cherries deliciously.', line_number=3),
         _make_quote(quote='Ants bother cats daily.', line_number=7),
     ]
-    issues = _check_duplicate_hash(quotes)
+    issues = CHECKS['duplicate-hash'].check(quotes)
     assert len(issues) == 1
     assert issues[0].check == 'duplicate-hash'
     assert issues[0].field == 'quote'
@@ -337,7 +443,7 @@ def test_check_duplicate_hash_detects_group_of_three():
         _make_quote(quote='Ants bother cats daily.', line_number=5),
         _make_quote(quote='Alligators build canals daily.', line_number=9),
     ]
-    issues = _check_duplicate_hash(quotes)
+    issues = CHECKS['duplicate-hash'].check(quotes)
     assert len(issues) == 2
     assert {i.line_number for i in issues} == {5, 9}
 
@@ -349,12 +455,12 @@ def test_check_duplicate_hash_detects_group_of_three():
 
 def test_check_unicode_ellipsis_clean():
     q = _make_quote(quote='Three dots... not a single codepoint')
-    assert _check_unicode_ellipsis(q) == []
+    assert CHECKS['unicode-ellipsis'].check(q) == []
 
 
 def test_check_unicode_ellipsis_in_quote():
     q = _make_quote(quote='Wait… really?')
-    issues = _check_unicode_ellipsis(q)
+    issues = CHECKS['unicode-ellipsis'].check(q)
     assert len(issues) == 1
     assert issues[0].check == 'unicode-ellipsis'
     assert issues[0].field == 'quote'
@@ -364,7 +470,7 @@ def test_check_unicode_ellipsis_in_quote():
 
 def test_check_unicode_ellipsis_in_author():
     q = _make_quote(author='Jane Doe…')
-    issues = _check_unicode_ellipsis(q)
+    issues = CHECKS['unicode-ellipsis'].check(q)
     assert len(issues) == 1
     assert issues[0].field == 'author'
     assert issues[0].fix_value == 'Jane Doe...'
@@ -372,7 +478,7 @@ def test_check_unicode_ellipsis_in_author():
 
 def test_check_unicode_ellipsis_in_publication():
     q = _make_quote(publication='The Times…')
-    issues = _check_unicode_ellipsis(q)
+    issues = CHECKS['unicode-ellipsis'].check(q)
     assert len(issues) == 1
     assert issues[0].field == 'publication'
     assert issues[0].fix_value == 'The Times...'
@@ -380,7 +486,7 @@ def test_check_unicode_ellipsis_in_publication():
 
 def test_check_unicode_ellipsis_multiple_occurrences():
     q = _make_quote(quote='Wait… really…')
-    issues = _check_unicode_ellipsis(q)
+    issues = CHECKS['unicode-ellipsis'].check(q)
     assert len(issues) == 1
     assert issues[0].fix_value == 'Wait... really...'
 
@@ -426,6 +532,85 @@ def test_apply_fixes_no_fixable_issues():
     assert count == 0
 
 
+def test_apply_fixes_missing_end_punctuation():
+    q = _make_quote(quote='Hello world', line_number=1)
+    issues = [
+        LintIssue(
+            line_number=1,
+            check='missing-end-punctuation',
+            field='quote',
+            message='',
+            fixable=True,
+            fix_value='Hello world.',
+        ),
+    ]
+    quotes, count = apply_fixes([q], issues)
+    assert count == 1
+    assert quotes[0].quote == 'Hello world.'
+
+
+def test_apply_fixes_lowercase_start():
+    q = _make_quote(quote='hello world.', line_number=1)
+    issues = [
+        LintIssue(
+            line_number=1,
+            check='lowercase-start',
+            field='quote',
+            message='',
+            fixable=True,
+            fix_value='Hello world.',
+        ),
+    ]
+    quotes, count = apply_fixes([q], issues)
+    assert count == 1
+    assert quotes[0].quote == 'Hello world.'
+
+
+def test_apply_fixes_lowercase_and_end_punct_together():
+    # A single quote with both issues should get both fixes in one pass.
+    q = _make_quote(quote='hello world', line_number=1)
+    issues = [
+        LintIssue(
+            line_number=1,
+            check='lowercase-start',
+            field='quote',
+            message='',
+            fixable=True,
+            fix_value='Hello world',
+        ),
+        LintIssue(
+            line_number=1,
+            check='missing-end-punctuation',
+            field='quote',
+            message='',
+            fixable=True,
+            fix_value='hello world.',
+        ),
+    ]
+    quotes, count = apply_fixes([q], issues)
+    assert count == 2
+    assert quotes[0].quote == 'Hello world.'
+
+
+def test_apply_fixes_no_author():
+    q = api.Quote('Test quote.', 'x', None, [])
+    q.author = ''
+    q.line_number = 1
+    issues = [
+        LintIssue(
+            line_number=1,
+            check='no-author',
+            field='author',
+            message='',
+            fixable=True,
+            fix_value='Unknown',
+        ),
+    ]
+    quotes, count = apply_fixes([q], issues)
+    assert count == 1
+    assert quotes[0].author == 'Unknown'
+
+
 # ---------------------------------------------------------------------------
 # lint_quotes integration
 # ---------------------------------------------------------------------------
@@ -444,3 +629,81 @@ def test_lint_quotes_empty_checks():
     q = _make_quote(tags=[])
     issues = lint_quotes([q], set(), cfg)
     assert issues == []
+
+
+# ---------------------------------------------------------------------------
+# Dispatcher behaviour (Check registry)
+# ---------------------------------------------------------------------------
+
+
+def test_lint_quotes_unknown_check_name_silently_ignored():
+    """An unrecognized check name does not raise — it just produces no issues."""
+    cfg = _make_config()
+    q = _make_quote(tags=[])
+    issues = lint_quotes([q], {'no-tags', 'no-such-check-exists'}, cfg)
+    # Only the known check ran; the unknown one contributed nothing.
+    assert all(i.check == 'no-tags' for i in issues)
+    assert len(issues) == 1
+
+
+def test_lint_quotes_file_scope_check_runs_once_across_all_quotes():
+    """File-scope checks (duplicate-hash) see the full quote list, not one quote at a time."""
+    cfg = _make_config()
+    quotes = [
+        _make_quote(quote='Apples bake cherries deliciously.', line_number=1),
+        _make_quote(quote='Ants bother cats daily.', line_number=5),
+    ]
+    issues = lint_quotes(quotes, {'duplicate-hash'}, cfg)
+    # Both quotes share the same fuzzy hash, so the file-scope check finds 1.
+    assert len(issues) == 1
+    assert issues[0].check == 'duplicate-hash'
+    assert issues[0].line_number == 5
+
+
+def test_apply_fixes_dispatches_to_check_fix_method():
+    """A fixable issue triggers the corresponding Check.fix on the matching quote."""
+    q = _make_quote(quote='“hello”', line_number=1)
+    issues = lint_quotes([q], {'smart-quotes'}, _make_config())
+    assert len(issues) == 1
+    quotes, count = apply_fixes([q], issues)
+    assert count == 1
+    # The smart-quote characters in the quote field have been translated to ASCII.
+    assert '“' not in quotes[0].quote
+    assert '”' not in quotes[0].quote
+    assert quotes[0].quote == "'hello'"
+
+
+def test_apply_fixes_ignores_unknown_check_name():
+    """An issue whose check is not in the registry is skipped without crashing."""
+    q = _make_quote(quote='Hello.', line_number=1)
+    issues = [
+        LintIssue(
+            line_number=1,
+            check='no-such-check',
+            field='quote',
+            message='',
+            fixable=True,
+            fix_value='whatever',
+        ),
+    ]
+    quotes, count = apply_fixes([q], issues)
+    assert count == 0
+    assert quotes[0].quote == 'Hello.'
+
+
+def test_check_subclass_self_registers():
+    """Defining a new Check subclass adds it to CHECKS automatically."""
+    from jotquote.api.lint import CHECKS, Check
+
+    class _TempProbeCheck(Check):
+        name = 'temp-probe-test-only'
+
+        def check(self, quote, *, config=None):
+            return []
+
+    try:
+        assert 'temp-probe-test-only' in CHECKS
+        assert isinstance(CHECKS['temp-probe-test-only'], _TempProbeCheck)
+    finally:
+        # Don't leak the probe into other tests via the module-global registry.
+        CHECKS.pop('temp-probe-test-only', None)

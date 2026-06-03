@@ -24,7 +24,7 @@ To invent, you need a good imagination and a pile of junk. | Thomas Edison |  | 
 Try to live your life the way you wish other people would live theirs. | Raymond Burr |  | life
 The best way to have a good idea is to have a lot of ideas and throw the bad ones away. | Linus Pauling |  | creativity, work
 On two occasions I have been asked (by members of Parliament!), 'Pray, Mr. Babbage, if you put into the machine wrong figures, will the right answers come out?' I am not able rightly to apprehend the kind of confusion of ideas that could provoke such a question. | Charles Babbage |  | funny, historical
-lottery, n.: A tax on people who are bad at mathematics. | Unknown |  | funny, math
+Lottery, n.: A tax on people who are bad at mathematics. | Unknown |  | funny, math
 The reluctance to put away childish things may be a requirement of genius. | Rebecca Pepper Sinkler |  | play
 Do not worry; eat three square meals a day; say your prayers; be courteous to your creditors; keep your digestion good; exercise; go slow and easy. Maybe there are other things your special case requires to make you happy; but, my friend, these I reckon will give you a good life. | Abraham Lincoln |  | life
 I'm a slow walker, but I never walk back. | Abraham Lincoln |  | motivational
@@ -35,7 +35,7 @@ The key to golf is managing your worst shots. | Jack Nicklaus |  | life, sports
 Educating the mind without educating the heart is no education at all. | Aristotle |  | learning
 It's kind of fun to do the impossible. | Walt Disney |  | motivational
 Men occasionally stumble over the truth, but most of them pick themselves up and hurry off as if nothing had happened. | Winston Churchill |  | knowledge
-our worst foes are not belligerent circumstances, but wavering spirits. | Helen Keller |  | motivational
+Our worst foes are not belligerent circumstances, but wavering spirits. | Helen Keller |  | motivational
 Don't wait. The time will never be just right. | Napoleon Hill |  | motivational
 What, then, is the right way of living? Life must be lived as play. | Plato |  | play
 As long as I am faced in the right direction, it does not matter the size of my steps. | Unknown |  | motivational
@@ -97,4 +97,4 @@ They that can give up essential liberty to obtain a little temporary safety dese
 Life does not have to be perfect to be wonderful. | Annette Funicello |  | life
 Don't bend; don't water it down; don't try to make it logical; don't edit your own soul according to the fashion. Rather, follow your most intense obsessions mercilessly. | Franz Kafka |  | motivational
 If you have good values, you will believe that you are a good person. | Brian Tracey |  | values
-My mission in life is not merely to survive, but to thrive; and to do so with some passion, some compassion, some humor, and some style | Maya Angelou |  | life
+My mission in life is not merely to survive, but to thrive; and to do so with some passion, some compassion, some humor, and some style. | Maya Angelou |  | life

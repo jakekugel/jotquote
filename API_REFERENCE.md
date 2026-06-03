@@ -255,7 +255,7 @@ A single lint finding attached to a specific quote.  `LintIssue` is a
 | `field`       | `str`            | Field the issue applies to — one of `'quote'`, `'author'`, `'publication'`, or `'tags'`.    |
 | `message`     | `str`            | Human-readable description of the issue.                                                    |
 | `fixable`     | `bool`           | `True` if [`apply_fixes`](#apply_fixes) can auto-correct this issue (default `False`).      |
-| `fix_value`   | `str` \| `None`  | The corrected value, when `fixable` is `True`; `None` otherwise.                            |
+| `fix_value`   | `str` \| `None`  | Single-issue preview: the value the field would take if this one issue alone were applied to the original text. Useful for dry-run output. `apply_fixes` does not consume this field — applying the fix to multiple issues on the same field requires recomputing against the live attribute, not stacking stored previews — so callers should treat `fix_value` as a preview only. `None` when `fixable` is `False`. |
 
 **Example:**
 

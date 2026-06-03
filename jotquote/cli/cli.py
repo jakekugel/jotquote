@@ -318,7 +318,15 @@ def lint(ctx, fix, select_checks, ignore_checks):
     if issue_count == 0:
         click.echo('No issues found.')
     else:
-        click.echo('{} issue{} found.'.format(issue_count, 's' if issue_count != 1 else ''))
+        fixable_count = sum(1 for i in issues if i.fixable)
+        click.echo(
+            '{} issue{} found, {} {} fixable.'.format(
+                issue_count,
+                's' if issue_count != 1 else '',
+                fixable_count,
+                'is' if fixable_count == 1 else 'are',
+            )
+        )
 
     sys.exit(1 if issues else 0)
 
