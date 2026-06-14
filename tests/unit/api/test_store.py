@@ -165,10 +165,11 @@ def test_add_quotes_similar_quote_against_file(config, tmp_path):
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     # Same first-letter sequence as the Maya Angelou quote in quotes1.txt, but different text.
     similar = api.Quote('Ask for what you would and be prepared to get it.', 'Maya Angelou', None, [])
+    # The error message embeds the existing (already-stored) quote, not the new one.
     with pytest.raises(
         api.DuplicateQuoteError,
         match=re.escape(
-            'a quote similar to "Ask for what you would and be prepared to get it."'
+            'a quote similar to "Ask for what you want and be prepared to get it."'
             ' is already in the quote file {}.'.format(path)
         ),
     ):
