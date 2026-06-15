@@ -77,9 +77,7 @@ def get_random_choice(numquotes, timezone=None):
         try:
             tz = zoneinfo.ZoneInfo(timezone)
         except zoneinfo.ZoneInfoNotFoundError as e:
-            raise ConfigError(
-                f"Invalid timezone '{timezone}' in [general] section of settings.conf."
-            ) from e
+            raise ConfigError(f"Invalid timezone '{timezone}' in [general] section of settings.conf.") from e
         now = datetime.datetime.now(tz)
     else:
         now = datetime.datetime.now()

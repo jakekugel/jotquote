@@ -286,8 +286,7 @@ def test_lint_duplicate_hash_integration(tmp_path):
     """jotquote lint flags quotes with colliding fuzzy hashes."""
     quote_file = tmp_path / 'quotes.txt'
     quote_file.write_text(
-        'Apples bake cherries deliciously. | Author A | | x\n'
-        'Ants bother cats daily. | Author B | | y\n',
+        'Apples bake cherries deliciously. | Author A | | x\nAnts bother cats daily. | Author B | | y\n',
         encoding='utf-8',
     )
     env = _make_env(tmp_path, quote_file)

@@ -296,11 +296,11 @@ def add_quotes(filename, newquotes):
             existing_quote = existing_by_hash[h]
             if new_quote.quote == existing_quote:
                 raise DuplicateQuoteError(
-                    'the quote "{}" is already in the quote file {}.'.format(existing_quote, filename)
+                    'The quote "{}" is already in the quote file {}.'.format(existing_quote, filename)
                 )
             else:
                 raise DuplicateQuoteError(
-                    'a quote similar to "{}" is already in the quote file {}.'.format(existing_quote, filename)
+                    'A similar quote, "{}", is already in the quote file {}.'.format(existing_quote, filename)
                 )
 
     # Rewrite quote file with any additional quotes

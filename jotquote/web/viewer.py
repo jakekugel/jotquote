@@ -47,9 +47,7 @@ def _log_startup_info():
         now, tz_name = _get_local_now(config)
     except ConfigError:
         raw_tz = config[api.SECTION_GENERAL].get('timezone') or ''
-        _logger.warning(
-            'invalid timezone in [general] section: %s; skipping timezone log lines', raw_tz
-        )
+        _logger.warning('invalid timezone in [general] section: %s; skipping timezone log lines', raw_tz)
         return
     if tz_name:
         _logger.info('configured timezone: %s', tz_name)
@@ -441,9 +439,7 @@ def _get_local_now(config):
         try:
             tz = zoneinfo.ZoneInfo(tz_name)
         except zoneinfo.ZoneInfoNotFoundError as e:
-            raise ConfigError(
-                f"Invalid timezone '{tz_name}' in [general] section of settings.conf."
-            ) from e
+            raise ConfigError(f"Invalid timezone '{tz_name}' in [general] section of settings.conf.") from e
         return datetime.datetime.now(tz), tz_name
     return datetime.datetime.now(), None
 

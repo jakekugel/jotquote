@@ -597,9 +597,9 @@ def _run_startup_log_test(tmp_path, cmd):
         assert wait_for_log_line(stderr_lines, 'current local time:'), (
             'Expected current local time log line in stderr; got: {}'.format(stderr_lines)
         )
-        assert wait_for_log_line(
-            stderr_lines, 'quote of the day will refresh at 12:00 AM local time'
-        ), 'Expected midnight refresh log line in stderr; got: {}'.format(stderr_lines)
+        assert wait_for_log_line(stderr_lines, 'quote of the day will refresh at 12:00 AM local time'), (
+            'Expected midnight refresh log line in stderr; got: {}'.format(stderr_lines)
+        )
     finally:
         proc.terminate()
         proc.wait(timeout=10)
@@ -666,9 +666,7 @@ def test_about_content_provider_extension(tmp_path):
 def test_custom_favicon(tmp_path):
     """Webserver with favicon_file configured serves that file at /favicon.ico."""
     quote_file = _copy_quotes(tmp_path)
-    fixture_favicon = os.path.normpath(
-        os.path.join(os.path.dirname(__file__), '..', 'fixtures', 'test_favicon.svg')
-    )
+    fixture_favicon = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'fixtures', 'test_favicon.svg'))
     env = _make_env(tmp_path, quote_file, favicon_file=fixture_favicon)
 
     proc = subprocess.Popen(

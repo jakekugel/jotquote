@@ -337,7 +337,7 @@ def test_add_when_quote_already_in_file(config, tmp_path):
 
     assert result.exit_code == 1
     assert result.output == (
-        'Error: the quote "Ask for what you want and be prepared to get it." is already '
+        'Error: The quote "Ask for what you want and be prepared to get it." is already '
         + 'in the quote file {0}.\n'.format(path)
     )
 

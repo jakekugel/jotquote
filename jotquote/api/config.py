@@ -170,6 +170,7 @@ def get_config():
     # import cycle (lint imports this module for SECTION_LINT).
     if not config.has_option(SECTION_LINT, 'enabled_checks'):
         from jotquote.api.lint import ALL_CHECKS as _ALL_CHECKS
+
         config[SECTION_LINT]['enabled_checks'] = ', '.join(sorted(_ALL_CHECKS))
 
     _warn_unknown_keys(config)
