@@ -184,7 +184,9 @@ def test_resolve_favicon_path_missing_file_falls_back(web_config, tmp_path, capl
     with caplog.at_level(logging.ERROR, logger='jotquote.web.helpers'):
         result = resolve_favicon_path(web_config)
     assert result == _bundled_favicon()
-    assert any('favicon_file' in rec.getMessage() and 'does-not-exist.ico' in rec.getMessage() for rec in caplog.records)
+    assert any(
+        'favicon_file' in rec.getMessage() and 'does-not-exist.ico' in rec.getMessage() for rec in caplog.records
+    )
 
 
 def test_resolve_favicon_path_bundled_exists():

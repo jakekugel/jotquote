@@ -293,13 +293,14 @@ def add_quotes(filename, newquotes):
     for new_quote in newquotes:
         h = new_quote.get_hash()
         if h in existing_by_hash:
-            if new_quote.quote == existing_by_hash[h]:
+            existing_quote = existing_by_hash[h]
+            if new_quote.quote == existing_quote:
                 raise DuplicateQuoteError(
-                    'the quote "{}" is already in the quote file {}.'.format(new_quote.quote, filename)
+                    'The quote "{}" is already in the quote file {}.'.format(existing_quote, filename)
                 )
             else:
                 raise DuplicateQuoteError(
-                    'a quote similar to "{}" is already in the quote file {}.'.format(new_quote.quote, filename)
+                    'A similar quote, "{}", is already in the quote file {}.'.format(existing_quote, filename)
                 )
 
     # Rewrite quote file with any additional quotes

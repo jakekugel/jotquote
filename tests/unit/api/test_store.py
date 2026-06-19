@@ -126,7 +126,7 @@ def test_add_quote_but_file_contains_quote_already(config, tmp_path):
     api.add_quote(path, quote)
 
     with pytest.raises(
-        Exception, match=re.escape('the quote "This is an added quote." is already in the quote file {0}.'.format(path))
+        Exception, match=re.escape('The quote "This is an added quote." is already in the quote file {0}.'.format(path))
     ):
         api.add_quote(path, quote)
 
@@ -138,8 +138,7 @@ def test_add_quotes_hash_detects_duplicate_against_file(config, tmp_path):
     with pytest.raises(
         api.DuplicateQuoteError,
         match=re.escape(
-            'the quote "Ask for what you want and be prepared to get it."'
-            ' is already in the quote file {}.'.format(path)
+            'The quote "Ask for what you want and be prepared to get it." is already in the quote file {}.'.format(path)
         ),
     ):
         api.add_quotes(path, [duplicate])
@@ -153,8 +152,7 @@ def test_add_quotes_hash_detects_duplicate_in_batch(config, tmp_path):
     with pytest.raises(
         api.DuplicateQuoteError,
         match=re.escape(
-            'the quote "Ask for what you want and be prepared to get it."'
-            ' is already in the quote file {}.'.format(path)
+            'The quote "Ask for what you want and be prepared to get it." is already in the quote file {}.'.format(path)
         ),
     ):
         api.add_quotes(path, [brand_new, duplicate])
@@ -165,11 +163,13 @@ def test_add_quotes_similar_quote_against_file(config, tmp_path):
     path = tests.test_util.init_quotefile(str(tmp_path), 'quotes1.txt')
     # Same first-letter sequence as the Maya Angelou quote in quotes1.txt, but different text.
     similar = api.Quote('Ask for what you would and be prepared to get it.', 'Maya Angelou', None, [])
+    # The error message embeds the existing (already-stored) quote, not the new one.
     with pytest.raises(
         api.DuplicateQuoteError,
         match=re.escape(
-            'a quote similar to "Ask for what you would and be prepared to get it."'
-            ' is already in the quote file {}.'.format(path)
+            'A similar quote, "Ask for what you want and be prepared to get it.", is already in the quote file {}.'.format(
+                path
+            )
         ),
     ):
         api.add_quotes(path, [similar])

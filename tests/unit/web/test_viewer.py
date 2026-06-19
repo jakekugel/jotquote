@@ -1059,9 +1059,7 @@ def test_api_expires_at_iso_z_suffix(flask_client, config):
     rv = client.get('/api')
     body = rv.get_json()
     assert re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', body['expires_at'])
-    parsed = datetime.datetime.strptime(body['expires_at'], '%Y-%m-%dT%H:%M:%SZ').replace(
-        tzinfo=datetime.timezone.utc
-    )
+    parsed = datetime.datetime.strptime(body['expires_at'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=datetime.timezone.utc)
     assert parsed > datetime.datetime.now(datetime.timezone.utc)
 
 

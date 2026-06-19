@@ -248,9 +248,7 @@ class SmartDashesCheck(Check):
                         line_number=quote.line_number,
                         check=self.name,
                         field=field_name,
-                        message='Non-standard {} in {} (use ASCII hyphen)'.format(
-                            ', '.join(names), field_name
-                        ),
+                        message='Non-standard {} in {} (use ASCII hyphen)'.format(', '.join(names), field_name),
                         fixable=True,
                         fix_value=value.translate(_SMART_DASH_MAP),
                     )
@@ -339,9 +337,7 @@ class QuoteLengthCheck(Check):
                     line_number=quote.line_number,
                     check=self.name,
                     field='quote',
-                    message='Quote is {} characters, exceeds maximum of {}'.format(
-                        length, max_len
-                    ),
+                    message='Quote is {} characters, exceeds maximum of {}'.format(length, max_len),
                 )
             ]
         return []
