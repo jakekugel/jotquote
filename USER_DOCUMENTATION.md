@@ -230,6 +230,10 @@ When a quote resolver is configured, the resolver takes precedence over the seed
 
 The web server supports light and dark mode. Colors are controlled via properties in the `[web]` section of `settings.conf` (`light_foreground_color`, `light_background_color`, `dark_foreground_color`, `dark_background_color`). See the [settings.conf](#settingsconf) section for defaults.
 
+### Font
+
+The viewer page includes a change-font button that toggles the quote, author, and publication font between `Inter` (a sans-serif) and `Libre Baskerville` (a serif). The choice is made in the browser and remembered across page loads; it is not a server setting.
+
 ### Auto-refresh
 
 The web server instructs the browser to automatically reload the page after the HTTP cache expires. The server passes the cache expiration time (UTC ISO 8601) to the browser, which adds a random delay of 60–120 seconds before reloading to ensure the cache has expired. On browsers that support the View Transitions API, the reload includes a smooth cross-fade animation. Date permalink pages (`/<YYYYMMDD>`) do not auto-refresh.

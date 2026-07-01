@@ -40,3 +40,8 @@ Source:    https://www.svgrepo.com/svg/509835/circled-left-chevron
 Collection: Zest Interface Icons
 License:   MIT License
 Author:    zest
+--------------------------------------------------------------------------------
+Change Typographic Button Icon
+Source:    https://www.svgrepo.com/svg/58667/change-typographic-button
+Collection: Text Edition
+License:   CC0 License

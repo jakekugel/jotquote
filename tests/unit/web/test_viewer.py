@@ -210,6 +210,33 @@ def test_web_page_title_default(flask_client, config):
     assert b'<title>jotquote</title>' in rv.data
 
 
+def test_font_uses_css_variable(flask_client, config):
+    """Quote-display font rules reference the --quote-font CSS variable."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'.quote {\n    font-family: var(--quote-font), sans-serif;' in rv.data
+    assert b'.author {\n    font-family: var(--quote-font), sans-serif;' in rv.data
+    assert b'.publication {\n    font-family: var(--quote-font), sans-serif;' in rv.data
+
+
+def test_font_toggle_button_present(flask_client, config):
+    """The change-font toggle button and its icon span render on the page."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'id="change-font-btn"' in rv.data
+    assert b'class="change-font-icon"' in rv.data
+
+
+def test_font_toggle_client_side_only(flask_client, config):
+    """Font switching is client-side: the data-font selector and toggleFont() exist,
+    and no server-side font_family value leaks into the page."""
+    client, quote_file = flask_client
+    rv = client.get('/')
+    assert b'[data-font="libre-baskerville"]' in rv.data
+    assert b'function toggleFont()' in rv.data
+    assert b'font_family' not in rv.data
+
+
 def test_stars_displayed(flask_client, config, monkeypatch):
     """Star tag causes the correct number of star characters to appear when web_show_stars is true."""
     config[api.SECTION_WEB]['show_stars'] = 'true'
