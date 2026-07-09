@@ -7,6 +7,7 @@ import os
 import random as randomlib
 import sys
 import time
+import warnings
 
 import click
 
@@ -514,7 +515,30 @@ def _select_quotes(quotes, tags=None, keyword=None, number=None, hash_arg=None, 
     return selected_quotes
 
 
+def _install_clean_warning_handler():
+    """Print each unique warning once as a clean one-line message to stderr.
+
+    The CLI calls get_config() several times per invocation and each call
+    re-emits config warnings; Python's default filter dedups by call site,
+    so the same warning would otherwise print once per caller. This handler
+    collapses duplicates (by message text) and strips the noisy
+    file:line/source-line formatting.
+    """
+    seen = set()
+
+    # Replace the default showwarning so repeated warnings collapse to one clean line.
+    def _show(message, category, filename, lineno, file=None, line=None):
+        text = str(message)
+        if text in seen:
+            return
+        seen.add(text)
+        print('Warning: {}'.format(text), file=sys.stderr)
+
+    warnings.showwarning = _show
+
+
 def main():
+    _install_clean_warning_handler()
     return jotquote(obj={})
 
 

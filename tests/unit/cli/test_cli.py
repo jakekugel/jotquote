@@ -4,6 +4,7 @@
 
 import os
 import time
+import warnings
 from unittest.mock import patch
 
 import click
@@ -935,3 +936,45 @@ def test_add_lint_on_add_true_runs_checks(config, tmp_path):
     assert result.exit_code == 0
     assert 'Warning:' in result.output
     assert '1 quote added' in result.output
+
+
+def test_clean_warning_handler_dedups(capsys, monkeypatch):
+    """The CLI warning handler prints an identical warning only once."""
+    # Restore the original showwarning after the test so global state doesn't leak.
+    monkeypatch.setattr(warnings, 'showwarning', warnings.showwarning)
+    cli._install_clean_warning_handler()
+
+    msg = "settings.conf: unrecognized key 'font_family' in [web] section will be ignored."
+    warnings.warn(msg, UserWarning)
+    warnings.warn(msg, UserWarning)
+
+    err = capsys.readouterr().err
+    assert err.count('font_family') == 1
+    assert err == 'Warning: {}\n'.format(msg)
+
+
+def test_clean_warning_handler_distinct_messages(capsys, monkeypatch):
+    """Distinct warning messages are each printed once."""
+    monkeypatch.setattr(warnings, 'showwarning', warnings.showwarning)
+    cli._install_clean_warning_handler()
+
+    warnings.warn('first problem', UserWarning)
+    warnings.warn('second problem', UserWarning)
+    warnings.warn('first problem', UserWarning)
+
+    err = capsys.readouterr().err
+    assert err.count('first problem') == 1
+    assert err.count('second problem') == 1
+
+
+def test_clean_warning_handler_format(capsys, monkeypatch):
+    """The handler emits a clean one-line message with no file:line/UserWarning noise."""
+    monkeypatch.setattr(warnings, 'showwarning', warnings.showwarning)
+    cli._install_clean_warning_handler()
+
+    warnings.warn('a config problem', UserWarning)
+
+    err = capsys.readouterr().err
+    assert err.startswith('Warning: ')
+    assert 'UserWarning' not in err
+    assert '.py:' not in err

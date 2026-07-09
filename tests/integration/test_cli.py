@@ -470,3 +470,30 @@ def test_hash_stress(tmp_path):
 
     assert len(hashes) == 10_000, 'Expected 10,000 hashes, got {}'.format(len(hashes))
     assert len(set(hashes)) == 10_000, 'Hash collisions detected: {} unique out of 10,000'.format(len(set(hashes)))
+
+
+def test_add_bad_config_key_warns_once(tmp_path):
+    """jotquote add prints a single clean warning for an unrecognized [web] key."""
+    quote_file = _copy_quotes(tmp_path)
+    # web_font_family lands as font_family in [web] (an unrecognized key).
+    env = _make_env(tmp_path, quote_file, web_font_family='serif')
+
+    result = subprocess.run(
+        [_script('jotquote'), 'add', '--no-lint', 'New wisdom - Ben Franklin'],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode == 0
+    stdout = result.stdout.decode('utf-8', errors='replace')
+    stderr = result.stderr.decode('utf-8', errors='replace')
+    combined = stdout + stderr
+
+    # The quote was still added despite the bad config key.
+    assert 'quote added' in stdout
+    # The warning appears exactly once and is cleanly formatted (no file:line noise).
+    assert combined.count("unrecognized key 'font_family'") == 1
+    assert 'UserWarning' not in combined
+    assert 'cli.py:' not in combined
+    assert 'Warning: settings.conf: unrecognized key' in stderr
