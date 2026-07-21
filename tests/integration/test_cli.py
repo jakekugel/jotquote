@@ -237,6 +237,59 @@ def test_lint_required_tag_group_integration(tmp_path):
     assert 'stars' in output
 
 
+def test_add_single_stdin_quote_with_author_count(tmp_path):
+    """jotquote add - with a single stdin quote prints the author count without crashing.
+
+    Reproduces the NameError in _add_quotes: the stdin branch never binds `quote`,
+    so the shared show_author_count block (default-enabled) crashes when exactly one
+    quote is read from stdin. The quote is persisted before the crash, so this also
+    confirms a clean zero exit.
+    """
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file, show_author_count='true')
+
+    result = subprocess.run(
+        [_script('jotquote'), 'add', '--no-lint', '-'],
+        env=env,
+        input=b'A brand new quote. - Jane Doe\n',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    stdout = result.stdout.decode('utf-8', errors='replace')
+    stderr = result.stderr.decode('utf-8', errors='replace')
+    assert result.returncode == 0, stderr
+    assert 'NameError' not in stderr
+    assert 'Traceback' not in stderr
+    assert '1 quote added' in stdout
+    assert 'You now have 1 quote by Jane Doe.' in stdout
+
+
+def test_add_extended_single_stdin_quote_with_author_count(tmp_path):
+    """jotquote add -e - with a single extended-format stdin quote prints the author count.
+
+    The extended (pipe-delimited) stdin path hits the same NameError as the simple path.
+    """
+    quote_file = _copy_quotes(tmp_path)
+    env = _make_env(tmp_path, quote_file, show_author_count='true')
+
+    result = subprocess.run(
+        [_script('jotquote'), 'add', '--no-lint', '-e', '-'],
+        env=env,
+        input=b'A brand new quote. | Jane Doe |  | \n',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    stdout = result.stdout.decode('utf-8', errors='replace')
+    stderr = result.stderr.decode('utf-8', errors='replace')
+    assert result.returncode == 0, stderr
+    assert 'NameError' not in stderr
+    assert 'Traceback' not in stderr
+    assert '1 quote added' in stdout
+    assert 'You now have 1 quote by Jane Doe.' in stdout
+
+
 def test_add_stdin_multiple_quotes_with_lint_errors(tmp_path):
     """jotquote add - reads multiple quotes from stdin and shows lint warnings when errors are found."""
     quote_file = _copy_quotes(tmp_path)
