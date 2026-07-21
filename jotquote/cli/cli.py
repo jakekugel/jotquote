@@ -389,6 +389,9 @@ def _add_quotes(quotefile, newquote_str, extended, no_lint=False):
 
         total_count = api.add_quotes(quotefile, quotes)
         new_count = len(quotes)
+        # Bind `quote` for the shared author-count block below when a single quote was added.
+        if new_count == 1:
+            quote = quotes[0]
     else:
         # Parse quote and rewrite quote file with new quote.
         if not extended:
