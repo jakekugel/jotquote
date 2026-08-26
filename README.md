@@ -24,9 +24,20 @@ new quotes is easy:
 ```bash
 $ jotquote add "The larger the island of knowledge, the longer the shoreline of wonder. - James Madison"
 1 quote added for total of 639 quotes.
+You now have 3 quotes by James Madison.
 ```
 
-## Breaking Change for 1.0.0
+## What's new in 1.0.0
+
+Highlights of this release compared to 0.9.4:
+
+- **Browser-based editor** — the new `jotquote webeditor` app lets you edit your quotes.
+- **New sectioned `settings.conf`** — settings are now organized into `[general]`,
+  `[lint]`, and `[web]` sections.
+- **`jotquote lint` command** — a configurable linter that checks your quote file for
+  common problems and can automatically fix many of them.
+
+## Breaking change for 1.0.0
 
 The `settings.conf` file format has changed. All settings previously under the
 single `[jotquote]` section are now split across three sections:
@@ -39,21 +50,22 @@ Existing `settings.conf` files with the old `[jotquote]` section continue to wor
 (jotquote migrates them in memory and emits a warning), but please update your
 file to the new format to silence the warning.
 
-See the [settings.conf section of USER_DOCUMENTATION.md](USER_DOCUMENTATION.md#settingsconf)
+See the [settings.conf section of DOCS_USER.md](DOCS_USER.md#settingsconf)
 for the full property reference and an example of the new format.
 
 ## Starting the web server
 
-In some cases, the command-line might be good enough for viewing the quotes in your
-collection, but you can start a web server that will show a quote of the day.  The simplest way to start the web server is with the built-in command:
+In some cases, the command-line might be good enough for viewing the quotes in your collection,
+but you can start a web server that will show a quote of the day.  The simplest way to start the
+web server is with the built-in command:
 
 ```bash
 $ jotquote webserver
 ```
 
-By default, the web server is only accessible on the system on which
-it is running.  But by editing the settings.conf file, the web server can be
-made accessible to computers on the network also.  See [USER_DOCUMENTATION.md](USER_DOCUMENTATION.md) for details.
+By default, the web server is only accessible on the system on which it is running.  But by editing
+the settings.conf file, the web server can be made accessible to computers on the network also.
+See [DOCS_USER.md](DOCS_USER.md) for details.
 
 ## The quote file
 
@@ -87,11 +99,11 @@ To display a random quote that has the 'motivational' tag, use the command:
 $ jotquote random -t motivational
 ```
 
-Or to display all quotes that have the word 'Einstein' in the quote, author name,
+Or to display all quotes that have the word 'Madison' in the quote, author name,
 or publication name, use this command:
 
 ```bash
-$ jotquote list -k Einstein
+$ jotquote list -k Madison
 ```
 
 The help for these extended functions can be accessed with the `-h` argument;
@@ -106,7 +118,7 @@ $ jotquote add -h
 
 The behavior of the jotquote command is controlled with the settings.conf
 file.  This file is always found at `~/.jotquote/settings.conf` on Windows, Mac,
-and Linux.  See [USER_DOCUMENTATION.md](USER_DOCUMENTATION.md) for the full table of available properties.
+and Linux.  See [DOCS_USER.md](DOCS_USER.md) for the full table of available properties.
 
 ## Supported environments
 
@@ -114,24 +126,18 @@ jotquote is tested on Python 3.9 through 3.14 on Windows, Mac, and Linux.
 
 ## Additional documentation
 
-[USER_DOCUMENTATION.md](USER_DOCUMENTATION.md) contains full reference documentation for the package, including:
+[DOCS_USER.md](DOCS_USER.md) contains full user reference documentation for the package, including:
 
 - Complete CLI command reference with all options and examples
-- The quote resolver extension point for mapping dates to specific quotes
-- The review app for managing quote tags from a browser
+- The web editor for managing quote tags from a browser
 - Full settings.conf property reference
 
-[API_REFERENCE.md](API_REFERENCE.md) documents the public Python API of the `jotquote.api` package, with signatures and code examples for every public function and class.
+The [API reference section of DOCS_DEVELOPER.md](DOCS_DEVELOPER.md#api-reference) documents the Python API of the `jotquote.api` package, with signatures and code examples for every public function and class.
 
 ## Credit
 
-This package was inspired by other similar utilities including Ken Arnold's original
-UNIX utility `fortune`.  This package also relies on the Flask and Click packages
-by Armin Ronacher.
-
-## Contributing
-
-Contributions are welcome, see [DEVELOPER_DOCUMENTATION.md](DEVELOPER_DOCUMENTATION.md) for details.
+This package was inspired by other similar utilities including Ken Arnold's original UNIX utility `fortune`.
+This package also relies on the Flask and Click packages by Armin Ronacher.
 
 ## License
 
