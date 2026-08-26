@@ -24,8 +24,10 @@ writing code.  This way, I can get you going in the right direction.
 - [Testing the built artifact](#testing-the-built-artifact)
 - [Submitting changes](#submitting-changes)
 - [Publishing to PyPI](#publishing-to-pypi)
-  - [Prerequisites](#prerequisites)
-  - [Steps](#steps)
+  - [How it works](#how-it-works)
+  - [One-time setup](#one-time-setup)
+  - [Making a release](#making-a-release)
+  - [Optional: TestPyPI dry-run](#optional-testpypi-dry-run)
 - [API reference](#api-reference)
   - [Classes](#classes)
   - [Quote parsing](#quote-parsing)
@@ -275,51 +277,94 @@ $ pip uninstall jotquote
 
 ## Publishing to PyPI
 
-### Prerequisites
+Releases are published to PyPI automatically by GitHub Actions using
+[PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/) (OpenID
+Connect). There are **no API tokens or passwords** stored anywhere — PyPI trusts
+a specific workflow in this repository to publish. Creating a GitHub Release is
+the only manual step.
 
-- PyPI and TestPyPI accounts with API tokens
-- uv installed and dev dependencies synced (`uv sync --group dev`)
+### How it works
 
----
+- The package version is derived from the git tag by
+  [`hatch-vcs`](https://github.com/ofek/hatch-vcs). `pyproject.toml`
+  declares `dynamic = ["version"]` and `[tool.hatch.version] source = "vcs"`, so
+  the tag is the single source of truth — there is no `version` field to edit and
+  no `.dev0` convention to maintain. A tag `X.Y.Z` builds version `X.Y.Z`; an
+  untagged local `uv build` produces a dev version like `0.9.6.devN+g<sha>`.
+- The [`.github/workflows/publish.yml`](.github/workflows/publish.yml) workflow
+  runs `on: release: [published]`. It first runs the full test/lint matrix, then
+  a `deploy` job builds with `uv build` and uploads via
+  `pypa/gh-action-pypi-publish`.
+- The `deploy` job runs in the protected `release` GitHub environment and
+  requests an OIDC token (`permissions: id-token: write`) that PyPI exchanges for
+  short-lived upload credentials.
 
-### Steps
+### One-time setup
 
-#### 1. Update version to release version
+These two owner-only steps must be completed once before the first automated
+release.
 
-Edit `pyproject.toml` and remove the `.dev0` suffix:
+1. **Register the trusted publisher on PyPI.** As an owner of the `jotquote`
+   project, go to
+   `https://pypi.org/manage/project/jotquote/settings/publishing/` and add a
+   GitHub Actions publisher:
 
-```toml
-# Before
-version = "1.0.0.dev0"
+   | Field             | Value          |
+   |-------------------|----------------|
+   | Owner             | *(GitHub org/user that owns this repo)* |
+   | Repository name   | `jotquote`     |
+   | Workflow name     | `publish.yml`  |
+   | Environment name  | `release`      |
 
-# After
-version = "1.0.0"
-```
+2. **Create the `release` GitHub environment.** In repository settings
+   (`Settings → Environments → New environment`), create an environment named
+   exactly `release`. Optionally add protection rules (required reviewers, or
+   restrict to the `main` branch) so that each publish requires explicit
+   approval.
 
-#### 2. Merge PR to main
+### Making a release
 
-Open a pull request with the version bump and merge it to `main`.
+1. Ensure `main` is green in CI.
+2. (Optional) Run the [TestPyPI dry-run](#optional-testpypi-dry-run) below.
+3. In the GitHub UI, **create a new Release**. Set the tag to the version number
+   (e.g. `1.0.0`) targeting `main`, write release notes, and publish it. Creating
+   the release also creates the git tag.
+4. The `publish.yml` workflow runs automatically: it tests, builds a distribution
+   whose version matches the tag, and uploads it to PyPI. Watch progress on the
+   repository's Actions tab. When it finishes, the release is live at
+   `https://pypi.org/project/jotquote/`.
 
-#### 3. Build the distribution
-
-Remove any previous build artifacts, then build:
+To verify:
 
 ```bash
+uv venv /tmp/jotquote-prod
+source /tmp/jotquote-prod/bin/activate          # Linux/Mac
+# or: /tmp/jotquote-prod/Scripts/activate       # Windows
+
+uv pip install jotquote==X.Y.Z
+
+jotquote --version
+jotquote random
+jotquote info
+deactivate
+```
+
+### Optional: TestPyPI dry-run
+
+Automated publishing goes straight to PyPI. If you want to smoke-test the built
+artifact on TestPyPI before creating the release, do it manually from a clean
+checkout at the intended release commit:
+
+```bash
+git tag X.Y.Z            # local tag so hatch-vcs stamps the right version
 rm -rf dist/
 uv build
-```
-
-This creates `dist/jotquote-X.Y.Z-py3-none-any.whl` and `dist/jotquote-X.Y.Z.tar.gz`.
-
-#### 4. Publish to TestPyPI
-
-```bash
 uv publish --publish-url https://test.pypi.org/legacy/ dist/*
+git tag -d X.Y.Z         # remove the local tag; the real one is created by the GitHub Release
 ```
 
-Authenticate with a TestPyPI API token via the `UV_PUBLISH_TOKEN` environment variable or the `--token` flag.
-
-#### 5. Install from TestPyPI and test
+Authenticate with a TestPyPI API token via the `UV_PUBLISH_TOKEN` environment
+variable or the `--token` flag, then install from TestPyPI to test:
 
 ```bash
 uv venv /tmp/jotquote-test
@@ -335,50 +380,6 @@ jotquote random
 jotquote info
 deactivate
 ```
-
-#### 6. Publish to PyPI
-
-```bash
-uv publish dist/*
-```
-
-Authenticate with a PyPI API token via the `UV_PUBLISH_TOKEN` environment variable or the `--token` flag.
-
-#### 7. Install from PyPI and test
-
-```bash
-uv venv /tmp/jotquote-prod
-source /tmp/jotquote-prod/bin/activate          # Linux/Mac
-# or: /tmp/jotquote-prod/Scripts/activate       # Windows
-
-uv pip install jotquote==X.Y.Z
-
-jotquote --version
-jotquote random
-jotquote info
-deactivate
-```
-
-#### 8. Tag the release in git
-
-```bash
-git tag -a X.Y.Z -m "version X.Y.Z"
-git push origin X.Y.Z
-```
-
-#### 9. Update version to next development version
-
-Edit `pyproject.toml` and bump to the next dev version:
-
-```toml
-# Before
-version = "1.0.0"
-
-# After
-version = "1.0.1.dev0"
-```
-
-Commit and push directly to `main` (or open a follow-up PR).
 
 ## API reference
 
