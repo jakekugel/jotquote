@@ -1,6 +1,388 @@
-# jotquote API Reference
+# Development
 
-This document describes the public Python API of the `jotquote` package.
+As an open source project, contributions are welcome.  Examples of
+contributions include:
+
+- Code patches
+- Documentation improvements
+- Bug reports and patch reviews
+
+If you have an idea for jotquote, run it by me before you begin
+writing code.  This way, I can get you going in the right direction.
+
+## Contents
+
+- [Quick-start guide](#quick-start-guide)
+- [Running unit tests](#running-unit-tests)
+- [Running the web server in development mode](#running-the-web-server-in-development-mode)
+- [Web server extensions](#web-server-extensions)
+  - [Quote resolver](#quote-resolver)
+  - [Header provider](#header-provider)
+- [Running lint](#running-lint)
+- [VS Code integration](#vs-code-integration)
+- [Multi-version CI](#multi-version-ci)
+- [Testing the built artifact](#testing-the-built-artifact)
+- [Submitting changes](#submitting-changes)
+- [Publishing to PyPI](#publishing-to-pypi)
+  - [Prerequisites](#prerequisites)
+  - [Steps](#steps)
+- [API reference](#api-reference)
+  - [Classes](#classes)
+  - [Quote parsing](#quote-parsing)
+  - [Configuration](#configuration-2)
+  - [Quote storage](#quote-storage)
+  - [Quote selection](#quote-selection)
+  - [Linting](#linting)
+  - [Exceptions](#exceptions)
+
+---
+
+## Quick-start guide
+Use the following steps for the first-time setup of your development environment.
+
+1. Install a recent version of Python.
+
+2. Install [uv](https://docs.astral.sh/uv/).
+
+3. Use uv to install all project dependencies.
+
+```bash
+$ uv sync --group dev
+```
+
+4. Test your environment by running all unit and integration tests.
+
+```bash
+$ uv run pytest
+```
+
+5. Test your environment by running the jotquote command under development.
+
+```bash
+$ uv run jotquote
+```
+
+## Running unit tests
+
+Once the development environment has been configured as described above,
+the unit tests can be run with this command:
+
+```bash
+$ uv run pytest
+```
+
+Or to run a single test file or individual test:
+
+```bash
+$ uv run pytest tests/api_test.py
+$ uv run pytest tests/api_test.py::TestClassName::test_method_name
+```
+
+Or to run and measure code coverage:
+
+```bash
+$ uv run coverage run -m pytest
+$ uv run coverage report
+```
+
+## Running the web server in development mode
+
+Use these commands to run the web server using the current code in your project folder.
+
+**Method 1 — `jotquote webserver` command (all platforms)**
+
+```bash
+$ uv run jotquote webserver
+```
+
+This reads the host and port from `~/.jotquote/settings.conf` and starts the server.
+
+**Method 2 — WSGI server directly (Linux/Mac)**
+
+```bash
+$ uv run gunicorn --bind 127.0.0.1:5544 jotquote.web:app
+```
+
+This bypasses the `jotquote webserver` command and lets the WSGI server control the
+host, port, and worker configuration.  Waitress can be used as a cross-platform
+alternative:
+
+```bash
+$ uv run waitress-serve --host 127.0.0.1 --port 5544 jotquote.web:app
+```
+
+## Web server extensions
+
+The web server exposes several pluggable extension points. Each is a Python module you write and install, wired up via a dotted module path in the `[web]` section of `settings.conf`. The module must be importable by the Python environment running the web server.
+
+### Quote resolver
+
+The quote resolver is a pluggable extension point that allows you to control which quote is displayed on a given date. When configured, the web server calls the resolver before falling back to the default seeded random selection. A resolver also enables permalink URLs (`/<YYYYMMDD>`) so that a specific date's quote can be shared and revisited.
+
+#### How it works
+
+A quote resolver is a Python module that you write and install. The module must define a `resolve` function with this signature:
+
+```python
+def resolve(date_str: str) -> str | None:
+    """Return a 16-char MD5 hash identifying the quote, or None."""
+```
+
+- `date_str` is a date in `YYYYMMDD` format (e.g., `20260319`)
+- Return a 16-character MD5 hash string to select a specific quote
+- Return `None` to fall back to the default seeded random selection
+
+To find a quote's hash, use `jotquote list -l` or `jotquote list -s <hash>`.
+
+#### Configuration
+
+Add the `quote_resolver_extension` property to `~/.jotquote/settings.conf` with the dotted Python module path:
+
+```ini
+[web]
+quote_resolver_extension = mypackage.my_resolver
+```
+
+The module must be importable by the Python environment running the web server. If you installed jotquote with `pip` or `uv`, install your resolver module into the same environment (e.g., `pip install mypackage` or `uv pip install mypackage`). If your resolver is a standalone script rather than an installed package, add its parent directory to `PYTHONPATH` before starting the server (e.g., `PYTHONPATH=/path/to/mymodules jotquote webserver`).
+
+#### Web server behavior
+
+- `/` — If the resolver returns a hash for today, that quote is shown along with a permalink. If the resolver returns `None` or is not configured, the default seeded random selection is used.
+- `/<YYYYMMDD>` — Calls the resolver for that date. If the resolver returns a hash, shows that quote. Returns 404 if the resolver returns `None`, is not configured, or the hash doesn't match any quote.
+
+#### Error handling
+
+- If the resolver module cannot be imported, an error is logged and the server falls back to seeded random selection for all requests.
+- If the resolver's `resolve` function raises an exception, the error is logged and the server falls back to seeded random selection on the root route, or returns 404 on date routes.
+- The resolver module is loaded once and cached for the lifetime of the server process.
+
+### Header provider
+
+The header provider is a pluggable extension point that controls which HTTP response headers the web server applies to quote page responses. The base package does not set any cache headers by default; configure a header provider to add `Cache-Control` or other headers.
+
+#### How it works
+
+A header provider is a Python module that you write and install. The module must define a `get_headers` function with this signature:
+
+```python
+def get_headers(max_age: int) -> dict[str, str]:
+    """Return HTTP response headers given the computed max-age value."""
+```
+
+- `max_age` is the cache duration in seconds, computed by the web server based on mode (`daily` vs `random`) and the `expiration_seconds` configuration.
+- Return a dictionary mapping header names to header values.
+- The returned headers are applied to every quote page response.
+
+#### Configuration
+
+Add the `header_provider_extension` property to `~/.jotquote/settings.conf` with the dotted Python module path:
+
+```ini
+[web]
+header_provider_extension = mypackage.my_headers
+```
+
+The module must be importable by the Python environment running the web server. If you installed jotquote with `pip` or `uv`, install your header provider module into the same environment. If your provider is a standalone script rather than an installed package, add its parent directory to `PYTHONPATH` before starting the server (e.g., `PYTHONPATH=/path/to/mymodules jotquote webserver`).
+
+When `header_provider_extension` is not set, no custom HTTP headers are applied to responses.
+
+#### Example
+
+A simple header provider that sets `Cache-Control`:
+
+```python
+def get_headers(max_age):
+    return {'Cache-Control': f'public, max-age={max_age}'}
+```
+
+#### Error handling
+
+- If the provider module cannot be imported, an error is logged and no custom headers are applied.
+- If the `get_headers` function raises an exception, the error is logged and no custom headers are applied to the response.
+- The provider module is loaded once and cached for the lifetime of the server process.
+
+## Running lint
+
+```bash
+$ uv run ruff check jotquote/
+```
+
+## VS Code integration
+
+Install the [Ruff extension](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) (`charliermarsh.ruff`), then add the following to your `settings.json` to enable format-on-save and lint auto-fixes:
+
+```json
+"[python]": {
+  "editor.defaultFormatter": "charliermarsh.ruff",
+  "editor.formatOnSave": true
+},
+"editor.codeActionsOnSave": {
+  "source.fixAll.ruff": "explicit",
+  "source.organizeImports.ruff": "explicit"
+}
+```
+
+This runs the Ruff formatter (style/quotes/spacing) and linter auto-fixes each time a Python file is saved. Quote style and other rules are read from `pyproject.toml` automatically.
+
+## Multi-version CI
+
+Multi-version testing (Python 3.9–3.14 on Linux, Mac, and Windows) is
+handled automatically by GitHub Actions on push and pull request.
+
+## Testing the built artifact
+
+Before uploading to PyPI, you can build the package and install it directly
+into a Python installation to verify it works end-to-end:
+
+1. Build the wheel and sdist:
+
+```bash
+$ uv build
+```
+
+This produces files in the `dist/` directory, e.g. `dist/jotquote-1.2.3-py3-none-any.whl`.
+
+2. Install the wheel into a Python environment with pip:
+
+```bash
+$ pip install dist/jotquote-1.2.3-py3-none-any.whl
+```
+
+To reinstall over an existing version, add `--force-reinstall`:
+
+```bash
+$ pip install --force-reinstall dist/jotquote-1.2.3-py3-none-any.whl
+```
+
+3. Verify the installed version:
+
+```bash
+$ jotquote --version
+```
+
+4. When done testing, uninstall with:
+
+```bash
+$ pip uninstall jotquote
+```
+
+## Submitting changes
+
+1. Open an issue or discuss your idea before writing code.
+2. Fork the repository and create a branch for your change.
+3. Ensure `uv run pytest` and `uv run ruff check jotquote/` both pass.
+4. Submit a pull request — CI must be green before merging.
+
+## Publishing to PyPI
+
+### Prerequisites
+
+- PyPI and TestPyPI accounts with API tokens
+- uv installed and dev dependencies synced (`uv sync --group dev`)
+
+---
+
+### Steps
+
+#### 1. Update version to release version
+
+Edit `pyproject.toml` and remove the `.dev0` suffix:
+
+```toml
+# Before
+version = "1.0.0.dev0"
+
+# After
+version = "1.0.0"
+```
+
+#### 2. Merge PR to main
+
+Open a pull request with the version bump and merge it to `main`.
+
+#### 3. Build the distribution
+
+Remove any previous build artifacts, then build:
+
+```bash
+rm -rf dist/
+uv build
+```
+
+This creates `dist/jotquote-X.Y.Z-py3-none-any.whl` and `dist/jotquote-X.Y.Z.tar.gz`.
+
+#### 4. Publish to TestPyPI
+
+```bash
+uv publish --publish-url https://test.pypi.org/legacy/ dist/*
+```
+
+Authenticate with a TestPyPI API token via the `UV_PUBLISH_TOKEN` environment variable or the `--token` flag.
+
+#### 5. Install from TestPyPI and test
+
+```bash
+uv venv /tmp/jotquote-test
+source /tmp/jotquote-test/bin/activate          # Linux/Mac
+# or: /tmp/jotquote-test/Scripts/activate       # Windows
+
+uv pip install --index-url https://test.pypi.org/simple/ \
+               --extra-index-url https://pypi.org/simple/ \
+               jotquote==X.Y.Z
+
+jotquote --version
+jotquote random
+jotquote info
+deactivate
+```
+
+#### 6. Publish to PyPI
+
+```bash
+uv publish dist/*
+```
+
+Authenticate with a PyPI API token via the `UV_PUBLISH_TOKEN` environment variable or the `--token` flag.
+
+#### 7. Install from PyPI and test
+
+```bash
+uv venv /tmp/jotquote-prod
+source /tmp/jotquote-prod/bin/activate          # Linux/Mac
+# or: /tmp/jotquote-prod/Scripts/activate       # Windows
+
+uv pip install jotquote==X.Y.Z
+
+jotquote --version
+jotquote random
+jotquote info
+deactivate
+```
+
+#### 8. Tag the release in git
+
+```bash
+git tag -a X.Y.Z -m "version X.Y.Z"
+git push origin X.Y.Z
+```
+
+#### 9. Update version to next development version
+
+Edit `pyproject.toml` and bump to the next dev version:
+
+```toml
+# Before
+version = "1.0.0"
+
+# After
+version = "1.0.1.dev0"
+```
+
+Commit and push directly to `main` (or open a follow-up PR).
+
+## API reference
+
+This section describes the public Python API of the `jotquote` package.
 All symbols documented here are re-exported from `jotquote.api`, which is
 the single supported entry point for programmatic use.  Import via:
 
@@ -22,49 +404,11 @@ Do not import from submodules such as `jotquote.api.store` or
 `jotquote.api.quote` directly — those paths are implementation detail and
 may change between releases.
 
-## Contents
-
-- [Classes](#classes)
-  - [Quote](#quote)
-  - [LintIssue](#lintissue)
-- [Quote parsing](#quote-parsing)
-  - [parse_quote](#parse_quote)
-  - [parse_tags](#parse_tags)
-- [Configuration](#configuration)
-  - [get_config](#get_config)
-  - [get_filename](#get_filename)
-- [Quote storage](#quote-storage)
-  - [read_quotes](#read_quotes)
-  - [read_quotes_with_hash](#read_quotes_with_hash)
-  - [read_tags](#read_tags)
-  - [parse_quotes](#parse_quotes)
-  - [add_quote](#add_quote)
-  - [add_quotes](#add_quotes)
-  - [set_quote](#set_quote)
-  - [settags](#settags)
-  - [get_sha256](#get_sha256)
-  - [write_quotes](#write_quotes)
-  - [format_quote](#format_quote)
-- [Quote selection](#quote-selection)
-  - [get_first_match](#get_first_match)
-  - [get_random_choice](#get_random_choice)
-- [Linting](#linting)
-  - [lint_quotes](#lint_quotes)
-  - [apply_fixes](#apply_fixes)
-- [Exceptions](#exceptions)
-  - [ApiException](#apiexception)
-  - [ConfigError](#configerror)
-  - [QuoteValidationError](#quotevalidationerror)
-  - [QuoteNotFoundError](#quotenotfounderror)
-  - [DuplicateQuoteError](#duplicatequoteerror)
-  - [ConcurrentModificationError](#concurrentmodificationerror)
-  - [StorageError](#storageerror)
-
 ---
 
-## Classes
+### Classes
 
-### `Quote`
+#### `Quote`
 
 A quote with author, optional publication, and tags.  This is the core
 data model used throughout the API.
@@ -102,7 +446,7 @@ print(q.quote)
 print(q.tags)
 ```
 
-#### `Quote.has_tag`
+##### `Quote.has_tag`
 
 ```python
 has_tag(tag: str) -> bool
@@ -120,7 +464,7 @@ if q.has_tag('motivational'):
     print('this one is motivational')
 ```
 
-#### `Quote.has_tags`
+##### `Quote.has_tags`
 
 ```python
 has_tags(tags: Iterable[str]) -> bool
@@ -138,7 +482,7 @@ q.has_tags(['motivational', 'short'])   # True
 q.has_tags(['motivational', 'funny'])   # False
 ```
 
-#### `Quote.has_keyword`
+##### `Quote.has_keyword`
 
 ```python
 has_keyword(keyword: str) -> bool
@@ -157,7 +501,7 @@ q.has_keyword('Einstein')   # True
 q.has_keyword('music')      # False
 ```
 
-#### `Quote.set_tags`
+##### `Quote.set_tags`
 
 ```python
 set_tags(tags: list[str] | None) -> None
@@ -178,7 +522,7 @@ q.set_tags(None)
 print(q.tags)   # []
 ```
 
-#### `Quote.get_hash`
+##### `Quote.get_hash`
 
 ```python
 get_hash() -> str
@@ -199,7 +543,7 @@ q = api.Quote('The best way out is always through.', 'Robert Frost', None, [])
 print(q.get_hash())   # e.g. 'a1b2c3d4e5f67890'
 ```
 
-#### `Quote.get_num_stars`
+##### `Quote.get_num_stars`
 
 ```python
 get_num_stars() -> int
@@ -219,7 +563,7 @@ q = api.Quote('Onward.', 'Anon.', None, ['motivational', '4stars'])
 print(q.get_num_stars())   # 4
 ```
 
-#### `Quote.get_line_number`
+##### `Quote.get_line_number`
 
 ```python
 get_line_number() -> int
@@ -240,7 +584,7 @@ print(f'line {first.get_line_number()}: {first.quote}')
 
 ---
 
-### `LintIssue`
+#### `LintIssue`
 
 A single lint finding attached to a specific quote.  `LintIssue` is a
 `@dataclass`; instances are usually produced by
@@ -272,9 +616,9 @@ for issue in issues:
 
 ---
 
-## Quote parsing
+### Quote parsing
 
-### `parse_quote`
+#### `parse_quote`
 
 ```python
 parse_quote(new_quote: str, simple_format: bool = True) -> Quote
@@ -309,7 +653,7 @@ print(q.tags)          # ['motivational']
 
 ---
 
-### `parse_tags`
+#### `parse_tags`
 
 ```python
 parse_tags(tag_string: str) -> list[str]
@@ -331,9 +675,9 @@ api.parse_tags('poetry, motivational, motivational')
 
 ---
 
-## Configuration
+### Configuration
 
-### `get_config`
+#### `get_config`
 
 ```python
 get_config() -> tuple[configparser.ConfigParser, bool]
@@ -368,7 +712,7 @@ print(config.get(api.SECTION_GENERAL, 'quote_file'))
 
 ---
 
-### `get_filename`
+#### `get_filename`
 
 ```python
 get_filename() -> str
@@ -389,9 +733,9 @@ print(f'{len(quotes)} quotes in {path}')
 
 ---
 
-## Quote storage
+### Quote storage
 
-### `read_quotes`
+#### `read_quotes`
 
 ```python
 read_quotes(filename: str) -> list[Quote]
@@ -417,7 +761,7 @@ for q in quotes[:3]:
 
 ---
 
-### `read_quotes_with_hash`
+#### `read_quotes_with_hash`
 
 ```python
 read_quotes_with_hash(filename: str) -> tuple[list[Quote], str]
@@ -445,7 +789,7 @@ api.write_quotes(path, quotes, expected_sha256=sha)
 
 ---
 
-### `read_tags`
+#### `read_tags`
 
 ```python
 read_tags(quotefile: str) -> list[str]
@@ -464,7 +808,7 @@ print(f'{len(tags)} distinct tags: {", ".join(tags[:5])}...')
 
 ---
 
-### `parse_quotes`
+#### `parse_quotes`
 
 ```python
 parse_quotes(
@@ -502,7 +846,7 @@ print([q.author for q in quotes])   # ['Robert Frost', 'Anonymous']
 
 ---
 
-### `add_quote`
+#### `add_quote`
 
 ```python
 add_quote(filename: str, quote: Quote) -> int
@@ -526,7 +870,7 @@ print(f'now {total} quotes in file')
 
 ---
 
-### `add_quotes`
+#### `add_quotes`
 
 ```python
 add_quotes(filename: str, newquotes: list[Quote]) -> int
@@ -553,7 +897,7 @@ print(f'added {len(new)}; file now contains {total} quotes')
 
 ---
 
-### `set_quote`
+#### `set_quote`
 
 ```python
 set_quote(quotefile: str, line_num: int, quote: Quote, sha256: str) -> None
@@ -583,7 +927,7 @@ api.set_quote(path, target.line_number, updated, sha)
 
 ---
 
-### `settags`
+#### `settags`
 
 ```python
 settags(
@@ -617,7 +961,7 @@ api.settags(api.get_filename(), n=None, hash='a1b2c3d4e5f67890', newtags=['funny
 
 ---
 
-### `get_sha256`
+#### `get_sha256`
 
 ```python
 get_sha256(filename: str) -> str
@@ -635,7 +979,7 @@ print(api.get_sha256(api.get_filename()))
 
 ---
 
-### `write_quotes`
+#### `write_quotes`
 
 ```python
 write_quotes(
@@ -668,7 +1012,7 @@ api.write_quotes(path, quotes, expected_sha256=sha)
 
 ---
 
-### `format_quote`
+#### `format_quote`
 
 ```python
 format_quote(quote: Quote) -> str
@@ -690,9 +1034,9 @@ print(api.format_quote(q))
 
 ---
 
-## Quote selection
+### Quote selection
 
-### `get_first_match`
+#### `get_first_match`
 
 ```python
 get_first_match(
@@ -730,7 +1074,7 @@ q = api.get_first_match(quotes, tags='poetry', excluded_tags='draft', rand=True)
 
 ---
 
-### `get_random_choice`
+#### `get_random_choice`
 
 ```python
 get_random_choice(numquotes: int) -> int
@@ -753,9 +1097,9 @@ print('today\'s quote:', quotes[index].quote)
 
 ---
 
-## Linting
+### Linting
 
-### `lint_quotes`
+#### `lint_quotes`
 
 ```python
 lint_quotes(
@@ -790,7 +1134,7 @@ for issue in issues:
 
 ---
 
-### `apply_fixes`
+#### `apply_fixes`
 
 ```python
 apply_fixes(
@@ -823,7 +1167,7 @@ if fixed:
 
 ---
 
-## Exceptions
+### Exceptions
 
 All user-facing errors raised by `jotquote.api` are subclasses of a
 single base class, [`ApiException`](#apiexception).  Callers that want to
@@ -867,7 +1211,7 @@ except api.ApiException as e:
 
 ---
 
-### `ApiException`
+#### `ApiException`
 
 Base class for all user-facing errors raised by `jotquote.api`.
 Subclasses `Exception`.
@@ -886,7 +1230,7 @@ except api.ApiException as e:
 
 ---
 
-### `ConfigError`
+#### `ConfigError`
 
 Raised for problems loading or interpreting `settings.conf`.  Subclasses
 [`ApiException`](#apiexception).
@@ -898,7 +1242,7 @@ configured `line_separator` value is invalid.
 
 ---
 
-### `QuoteValidationError`
+#### `QuoteValidationError`
 
 Raised when parsing a quote, tag, or field fails validation.  Subclasses
 [`ApiException`](#apiexception).
@@ -919,7 +1263,7 @@ line is malformed.
 
 ---
 
-### `QuoteNotFoundError`
+#### `QuoteNotFoundError`
 
 Raised when a quote selector (line number, hash) matches no quote.
 Subclasses [`ApiException`](#apiexception).
@@ -930,7 +1274,7 @@ not identify an existing quote.
 
 ---
 
-### `DuplicateQuoteError`
+#### `DuplicateQuoteError`
 
 Raised when adding a quote that is already present in the file.
 Subclasses [`ApiException`](#apiexception).
@@ -940,7 +1284,7 @@ Raised by [`add_quote`](#add_quote), [`add_quotes`](#add_quotes), and
 
 ---
 
-### `ConcurrentModificationError`
+#### `ConcurrentModificationError`
 
 Raised when the quote file's SHA-256 on disk no longer matches the hash
 the caller passed in.  Subclasses [`ApiException`](#apiexception).
@@ -958,7 +1302,7 @@ re-apply their changes.
 
 ---
 
-### `StorageError`
+#### `StorageError`
 
 Raised for I/O failures, missing quote files, and backup sanity
 failures.  Subclasses [`ApiException`](#apiexception).

@@ -1,5 +1,0 @@
-# Data file — pipe-delimited plain text, not code
-jotquote/resources/quotes.txt
-
-# Test fixtures — data files, not code under review
-tests/testdata/**
